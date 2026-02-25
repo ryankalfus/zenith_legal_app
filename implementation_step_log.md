@@ -248,3 +248,17 @@
   - Zenith admin account can access web dashboard and mobile inbox chat tools.
   - Non-Zenith users cannot perform admin reads/writes even with spoofed role claims.
   - Signup summary email sends once on profile completion to `mason@zenithlegal.com`.
+
+## Step 23 - Desktop Web Runtime Enablement (Expo)
+- What changed:
+  - Installed missing Expo web runtime packages in `@zenith/mobile`: `react-native-web`, `react-dom`, and `@expo/metro-runtime`.
+  - Fixed web bundling dependency gap by adding `expo-crypto` and aligning `@expo/metro-runtime` with Expo SDK 54 (`~6.1.2`).
+  - Retried desktop web startup after dependency failure from `expo start --web`.
+- Commands run + result:
+  - `npm run dev --workspace @zenith/mobile -- --web` -> BLOCKED first run (missing `react-native-web`)
+  - `npm install --workspace @zenith/mobile react-native-web@^0.21.0 react-dom@19.1.0 @expo/metro-runtime` -> PASS
+  - `npm install --workspace @zenith/mobile expo-crypto@~15.0.7 @expo/metro-runtime@~6.1.2` -> PASS
+  - `npm run dev --workspace @zenith/mobile -- --web` -> PASS (web server live at `http://localhost:8082`)
+- What to test next:
+  - Open `http://localhost:8082` on desktop and verify auth + dashboard render.
+  - Confirm Google auth flow behavior on web after dependency updates.

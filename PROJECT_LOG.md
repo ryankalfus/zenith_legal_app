@@ -63,3 +63,5 @@
 - 02.25.2026: Added mobile admin inbox/chat tools so Zenith admin can log in on mobile and send/receive candidate chats.
 - 02.25.2026: Added Cloud Function trigger to send applicant signup/profile summary emails to `mason@zenithlegal.com` via Resend with idempotency marker.
 - 02.25.2026: Updated env template, Firebase setup docs, acceptance checklist, and RBAC smoke test coverage for unified auth + Zenith-only admin behavior.
+- 02.25.2026: Added Expo web runtime dependencies for desktop testing in mobile workspace (`react-native-web`, `react-dom`, `@expo/metro-runtime`) after `expo start --web` dependency error.
+- 02.25.2026: Resolved Expo web bundling blocker by adding `expo-crypto` and pinning `@expo/metro-runtime` to SDK 54-compatible `~6.1.2`; desktop web now starts and bundles on `http://localhost:8082`.
