@@ -199,3 +199,21 @@
 - What to test next:
   - Manual product acceptance pass in app UI (onboarding, messaging, status workflow, calendar, deletion).
   - Optional: upgrade Functions runtime/dependencies (`firebase-functions` latest, Node runtime plan before deprecation window).
+
+## Step 20 - Mobile Expo SDK 54 Upgrade
+- What changed:
+  - Upgraded mobile Expo stack to SDK 54 compatible versions in `apps/mobile/package.json`.
+  - Added SDK 54 notification handler fields (`shouldShowBanner`, `shouldShowList`) in `apps/mobile/src/lib/notifications.ts`.
+  - Removed deprecated `expo-firebase-recaptcha` package and recaptcha modal usage from auth provider.
+  - Switched auth entry screen to email-link sign-in only to keep Expo Go device testing unblocked on SDK 54.
+- Commands run + result:
+  - `cd apps/mobile && npx expo install expo@^54.0.0` -> PASS
+  - `npm install` -> PASS
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm run typecheck` (root) -> PASS
+  - `cd apps/mobile && npx expo-doctor` -> PASS with 1 monorepo duplicate warning (`react`/`react-native` across workspaces)
+  - `cd apps/mobile && npx expo start --lan --port 8086` -> PASS (Metro started)
+- What to test next:
+  - Open app in Expo Go SDK 54 and validate applicant sign-in via email link.
+  - Run manual acceptance checks for applicant tabs + messaging + status/calendar flows.
+  - Plan follow-up task to re-introduce phone OTP with SDK 54-compatible approach (React Native Firebase or alternate verifier flow).

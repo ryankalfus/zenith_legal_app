@@ -1,16 +1,13 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  PhoneAuthProvider,
   User,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
-  signInWithCredential,
   signInWithEmailLink,
   signOut
 } from "firebase/auth";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import * as Linking from "expo-linking";
 import { auth, db } from "../lib/firebase";
@@ -26,9 +23,6 @@ type CandidateSession = {
 type AuthContextValue = {
   loading: boolean;
   session: CandidateSession | null;
-  recaptchaRef: React.RefObject<FirebaseRecaptchaVerifierModal | null>;
-  sendPhoneOtp: (phoneNumber: string) => Promise<string>;
-  verifyPhoneOtp: (verificationId: string, code: string) => Promise<void>;
   sendEmailLink: (email: string) => Promise<void>;
   completeEmailLinkSignIn: (email: string, incomingUrl: string) => Promise<void>;
   completeProfile: (input: {
@@ -49,7 +43,6 @@ const pendingEmailKey = "zenith.pendingEmailLink";
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<CandidateSession | null>(null);
-  const recaptchaRef = React.useRef<FirebaseRecaptchaVerifierModal>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -114,16 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const sendPhoneOtp = async (phoneNumber: string) => {
-    const phoneProvider = new PhoneAuthProvider(auth);
-    return phoneProvider.verifyPhoneNumber(phoneNumber, recaptchaRef.current as never);
-  };
-
-  const verifyPhoneOtp = async (verificationId: string, code: string) => {
-    const credential = PhoneAuthProvider.credential(verificationId, code);
-    await signInWithCredential(auth, credential);
-  };
-
   const sendEmailLink = async (email: string) => {
     const actionCodeSettings = {
       url: Linking.createURL("auth/email"),
@@ -164,9 +147,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       loading,
       session,
-      recaptchaRef,
-      sendPhoneOtp,
-      verifyPhoneOtp,
       sendEmailLink,
       completeEmailLinkSignIn,
       completeProfile,
@@ -175,12 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [loading, session]
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      <FirebaseRecaptchaVerifierModal ref={recaptchaRef} firebaseConfig={auth.app.options} />
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

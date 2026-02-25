@@ -49,3 +49,8 @@
 - 02.25.2026: Completed Cloud Functions deploy on `zenith-legal-dev`; all functions detected as unchanged and verified in deploy pipeline.
 - 02.25.2026: Completed real project firm seed after ADC setup (`gcloud auth application-default login`); imported 104 firms and skipped `Mc`.
 - 02.25.2026: Re-ran emulator RBAC smoke test after deploy work; suite passed (`10 passed, 0 failed`).
+- 02.25.2026: Upgraded mobile workspace from Expo SDK 52 to Expo SDK 54 package set (`expo`, `react`, `react-native`, Expo native modules, React types).
+- 02.25.2026: Updated notification handler behavior for SDK 54 (`shouldShowBanner`, `shouldShowList`) to satisfy new notification type requirements.
+- 02.25.2026: Removed deprecated `expo-firebase-recaptcha` dependency and refactored auth context to email-link flow only for Expo Go compatibility on SDK 54.
+- 02.25.2026: Simplified auth screen UI to email-link sign-in only while phone OTP recaptcha replacement is pending.
+- 02.25.2026: Verified post-upgrade checks: mobile/root TypeScript checks pass and Expo Metro starts successfully on LAN for device testing.

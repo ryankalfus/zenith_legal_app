@@ -13,36 +13,9 @@ import * as Linking from "expo-linking";
 import { useAuth } from "../state/AuthContext";
 
 export function AuthScreen() {
-  const { sendPhoneOtp, verifyPhoneOtp, sendEmailLink, completeEmailLinkSignIn } = useAuth();
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [verificationId, setVerificationId] = useState("");
-  const [otpCode, setOtpCode] = useState("");
+  const { sendEmailLink, completeEmailLinkSignIn } = useAuth();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-
-  const onSendPhoneOtp = async () => {
-    try {
-      setBusy(true);
-      const nextVerificationId = await sendPhoneOtp(phoneNumber);
-      setVerificationId(nextVerificationId);
-      Alert.alert("Code sent", "Enter the OTP code from your text message.");
-    } catch (error: any) {
-      Alert.alert("Could not send code", error?.message ?? "Try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onVerifyPhoneOtp = async () => {
-    try {
-      setBusy(true);
-      await verifyPhoneOtp(verificationId, otpCode);
-    } catch (error: any) {
-      Alert.alert("Invalid code", error?.message ?? "Please retry.");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const onSendEmailLink = async () => {
     try {
@@ -78,36 +51,7 @@ export function AuthScreen() {
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <Text style={styles.title}>Zenith Legal Candidate Portal</Text>
-      <Text style={styles.subtitle}>Sign in with phone OTP or email link.</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Phone OTP</Text>
-        <TextInput
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-          keyboardType="phone-pad"
-          style={styles.input}
-          placeholder="+1 555 123 4567"
-        />
-        <Pressable style={styles.button} onPress={onSendPhoneOtp} disabled={busy}>
-          <Text style={styles.buttonText}>Send OTP</Text>
-        </Pressable>
-
-        <TextInput
-          value={otpCode}
-          onChangeText={setOtpCode}
-          keyboardType="number-pad"
-          style={styles.input}
-          placeholder="Enter OTP"
-        />
-        <Pressable
-          style={[styles.button, !verificationId && styles.buttonDisabled]}
-          onPress={onVerifyPhoneOtp}
-          disabled={busy || !verificationId}
-        >
-          <Text style={styles.buttonText}>Verify OTP</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.subtitle}>Sign in with an email link.</Text>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Email Link</Text>
