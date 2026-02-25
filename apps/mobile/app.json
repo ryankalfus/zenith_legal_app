@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Zenith Legal Candidate Portal",
+    "slug": "zenith-legal-candidate-portal",
+    "scheme": "zenithlegal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zenithlegal.candidateportal",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "Zenith Legal uses notifications for messages and appointment reminders."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.zenithlegal.candidateportal"
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "firebaseApiKey": "${EXPO_PUBLIC_FIREBASE_API_KEY}",
+      "firebaseAuthDomain": "${EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN}",
+      "firebaseProjectId": "${EXPO_PUBLIC_FIREBASE_PROJECT_ID}",
+      "firebaseStorageBucket": "${EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET}",
+      "firebaseMessagingSenderId": "${EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}",
+      "firebaseAppId": "${EXPO_PUBLIC_FIREBASE_APP_ID}",
+      "masonPhone": "${EXPO_PUBLIC_MASON_PHONE}",
+      "masonEmail": "${EXPO_PUBLIC_MASON_EMAIL}"
+    }
+  }
+}

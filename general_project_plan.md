@@ -225,3 +225,14 @@ This can be either:
 * Every candidate sees only their own record.
 
 ---
+
+---
+
+## 4) Implementation update bullets (02.25.2026)
+
+- Monorepo has been scaffolded with mobile, admin, shared package, and Firebase functions workspaces.
+- Core data models and validation schemas were added for users, firms, statuses, messages, appointments, and deletion requests.
+- Candidate mobile app baseline now includes auth, messaging, statuses, appointments, profile preferences, and delete-account entry point.
+- Admin web console baseline now includes login, candidate management, status controls, authorization request creation, messaging, and appointments.
+- Firebase rules/indexes/storage rules and backend function hooks have been added for RBAC, notifications, and account deletion.
+- Seed script has been added to import canonical firm data from the markdown source list.

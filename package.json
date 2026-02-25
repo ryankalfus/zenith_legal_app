@@ -1,0 +1,18 @@
+{
+  "name": "zenith-legal-portal",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "functions"
+  ],
+  "scripts": {
+    "dev:mobile": "npm run dev --workspace @zenith/mobile",
+    "dev:admin": "npm run dev --workspace @zenith/admin",
+    "dev:functions": "npm run build:watch --workspace @zenith/functions",
+    "build": "npm run build --workspace @zenith/shared && npm run build --workspace @zenith/admin && npm run build --workspace @zenith/functions",
+    "typecheck": "npm run typecheck --workspace @zenith/shared && npm run typecheck --workspace @zenith/mobile && npm run typecheck --workspace @zenith/admin && npm run typecheck --workspace @zenith/functions",
+    "seed:firms": "npm run seed:firms --workspace @zenith/functions"
+  }
+}

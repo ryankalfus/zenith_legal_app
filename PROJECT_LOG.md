@@ -6,3 +6,12 @@
 - 02.25.2026: Reformatted `firm-list-2026.md` to a clean bullet list so every firm is listed as a data item.
 - 02.25.2026: Added `general_project_plan.md` with detailed app analysis, phased plan, and candidate/admin layout requirements.
 - 02.25.2026: Verified and fixed GitHub connection settings (`origin` + `main` tracking) so Codex can push successfully.
+- 02.25.2026: Created `requirements_checklist.md` from four source spec files with `MVP/Later/Out` tags and initial tracking checkboxes.
+- 02.25.2026: Implemented monorepo scaffold with npm workspaces: `apps/mobile`, `apps/admin`, `packages/shared`, and `functions`.
+- 02.25.2026: Added shared domain types/constants/zod schemas in `packages/shared` for users, statuses, messages, appointments, authorization, deletion.
+- 02.25.2026: Implemented candidate mobile app baseline (OTP login paths, tabs, messaging, status, calendar, profile, account deletion trigger).
+- 02.25.2026: Implemented admin Next.js console baseline (Google login allowlist, candidate list/search, detail workflow panels).
+- 02.25.2026: Added Firebase backend config, Firestore indexes, security rules, storage rules, Cloud Functions triggers/callables.
+- 02.25.2026: Added canonical firms import seed script from `firm-list-2026.md` with explicit `Mc` skip logic and logging.
+- 02.25.2026: Added setup/deploy/compliance docs (`README.md`, `.env.example`, Firebase setup, EAS, App Store checklist, QA checklist, implementation step log).
+- 02.25.2026: Ran automated verification (`typecheck` + shared/functions/admin builds) and logged outcomes in `qa/test-run-2026-02-25.md`.

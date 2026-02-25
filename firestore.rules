@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function isOwnerOrAdmin(uid) {
+      return isOwner(uid) || isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isOwnerOrAdmin(uid);
+      allow create: if isOwner(uid);
+      allow update: if (
+        isAdmin() ||
+        (
+          isOwner(uid) &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.pushTokens is list
+        )
+      );
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    match /firms/{firmId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /candidateFirmStatuses/{statusId} {
+      allow read: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+
+      allow create, delete: if isAdmin();
+
+      allow update: if (
+        isAdmin() ||
+        (
+          isAuthenticated() &&
+          request.auth.uid == resource.data.candidateId &&
+          request.resource.data.candidateId == resource.data.candidateId &&
+          request.resource.data.firmId == resource.data.firmId &&
+          request.resource.data.status == resource.data.status
+        )
+      );
+    }
+
+    match /authorizationRequests/{requestId} {
+      allow read: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+
+      allow create: if isAdmin();
+
+      allow update: if (
+        isAdmin() ||
+        (
+          isAuthenticated() &&
+          request.auth.uid == resource.data.candidateId &&
+          resource.data.state == 'pending' &&
+          request.resource.data.state in ['approved', 'declined'] &&
+          request.resource.data.candidateId == resource.data.candidateId &&
+          request.resource.data.firmId == resource.data.firmId
+        )
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /conversations/{candidateId} {
+      allow read: if isOwnerOrAdmin(candidateId);
+      allow create, update: if isOwnerOrAdmin(candidateId);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isOwnerOrAdmin(candidateId);
+        allow create: if (
+          isOwnerOrAdmin(candidateId) &&
+          request.resource.data.candidateId == candidateId
+        );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+      allow create: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == request.resource.data.candidateId
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+      allow delete: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+    }
+
+    match /deletionRequests/{requestId} {
+      allow read: if isAdmin() || (
+        isAuthenticated() && request.auth.uid == resource.data.candidateId
+      );
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.candidateId;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
