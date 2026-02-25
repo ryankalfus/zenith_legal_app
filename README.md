@@ -33,6 +33,10 @@ Monorepo for the Zenith Legal mobile candidate portal + admin web console + Fire
    - `firebase use <your-project-id>`
 5. Run emulators (recommended during development):
    - `firebase emulators:start`
+6. Optional local emulator mode in app clients:
+   - Set `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`
+   - Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
+   - Keep emulator host as `127.0.0.1` (or `10.0.2.2` for Android emulator)
 
 ## Run Apps
 - Mobile:
@@ -47,6 +51,11 @@ Imports from `firm-list-2026.md` and skips `Mc`.
 
 - Command:
   - `npm run seed:firms`
+
+## RBAC Smoke Test
+- Start emulators and run rules smoke test:
+  - `npm run test:rules`
+- This checks key candidate/admin permissions against `firestore.rules`.
 
 ## Deploy
 - Firestore rules/indexes/storage/functions:

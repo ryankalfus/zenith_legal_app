@@ -87,3 +87,13 @@
   - Added acceptance checklist file in `qa/acceptance-checklist.md`.
 - What to test:
   - Execute each checklist line against emulator and device builds.
+
+## Step 14 - Local Emulator + RBAC Harness
+- What changed:
+  - Added emulator toggle wiring in mobile/admin Firebase clients.
+  - Added RBAC smoke test script at `qa/rules/rbac-smoke.mjs`.
+  - Added npm scripts `test:rules`, `test:rules:local`, and `qa:smoke`.
+  - Updated setup docs and env template with emulator variables.
+- What to test:
+  - Install Firebase CLI and run `npm run test:rules`.
+  - Confirm RBAC smoke test passes all candidate/admin rule checks.

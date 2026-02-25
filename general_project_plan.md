@@ -236,3 +236,4 @@ This can be either:
 - Admin web console baseline now includes login, candidate management, status controls, authorization request creation, messaging, and appointments.
 - Firebase rules/indexes/storage rules and backend function hooks have been added for RBAC, notifications, and account deletion.
 - Seed script has been added to import canonical firm data from the markdown source list.
+- Added local emulator toggle support and an RBAC smoke-test harness to improve verification before App Store submission.

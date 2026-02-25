@@ -32,6 +32,7 @@
 - [ ] Candidate cannot read another candidate’s records.
 - [ ] Non-admin cannot access admin data.
 - [ ] Admin can manage all required records.
+- [ ] Automated RBAC smoke test passes (`npm run test:rules`).
 
 ## Deletion
 - [ ] Candidate can trigger delete account/data from Profile.

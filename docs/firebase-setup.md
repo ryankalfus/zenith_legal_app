@@ -19,6 +19,11 @@
 
 ## 4) Environment Variables
 - Copy `.env.example` to `.env` and fill all required values.
+- For local emulator testing set:
+  - `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`
+  - `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
+  - `EXPO_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1` (Android emulator often needs `10.0.2.2`)
+  - `NEXT_PUBLIC_FIREBASE_EMULATOR_HOST=127.0.0.1`
 
 ## 5) Firestore + Storage Rules
 Deploy rules and indexes:
@@ -42,4 +47,10 @@ Expected result:
 ## 8) Seed Firms
 ```bash
 npm run seed:firms
+```
+
+## 9) RBAC Smoke Test
+Run rules validation with emulators:
+```bash
+npm run test:rules
 ```

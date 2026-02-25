@@ -15,3 +15,7 @@
 - 02.25.2026: Added canonical firms import seed script from `firm-list-2026.md` with explicit `Mc` skip logic and logging.
 - 02.25.2026: Added setup/deploy/compliance docs (`README.md`, `.env.example`, Firebase setup, EAS, App Store checklist, QA checklist, implementation step log).
 - 02.25.2026: Ran automated verification (`typecheck` + shared/functions/admin builds) and logged outcomes in `qa/test-run-2026-02-25.md`.
+- 02.25.2026: Added Firebase emulator toggle support to mobile/admin app clients for local end-to-end testing.
+- 02.25.2026: Added RBAC smoke test harness (`qa/rules/rbac-smoke.mjs`) plus `test:rules` scripts for emulator-based security validation.
+- 02.25.2026: Updated local setup docs/env template to include emulator variables and RBAC test command.
+- 02.25.2026: Re-ran full `typecheck` + root `build` successfully after emulator/test harness updates.
