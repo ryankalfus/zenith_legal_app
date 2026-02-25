@@ -17,6 +17,35 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const usingEmulators = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true";
+
+  const formatAuthError = (err: any, fallback: string) => {
+    const code = String(err?.code ?? "");
+    const message = String(err?.message ?? "");
+
+    if (code.includes("auth/email-already-in-use")) {
+      return "This email already has an account. Use Log in instead.";
+    }
+    if (code.includes("auth/invalid-credential") || code.includes("auth/wrong-password")) {
+      return "Email or password is incorrect.";
+    }
+    if (code.includes("auth/user-not-found")) {
+      return "No account found for this email.";
+    }
+    if (code.includes("auth/invalid-email")) {
+      return "Email format is invalid.";
+    }
+    if (code.includes("auth/weak-password")) {
+      return "Password must be at least 6 characters.";
+    }
+    if (code.includes("auth/operation-not-allowed")) {
+      return "Email/password sign-in is not enabled in Firebase Auth.";
+    }
+    if (message) {
+      return message;
+    }
+    return fallback;
+  };
 
   useEffect(() => {
     const unsub = watchAuth(async (user) => {
@@ -49,7 +78,7 @@ export default function AuthPage() {
         await loginWithEmailPassword(email, password);
       }
     } catch (err: any) {
-      setError(err?.message ?? "Authentication failed.");
+      setError(formatAuthError(err, "Authentication failed."));
     } finally {
       setBusy(false);
     }
@@ -61,7 +90,7 @@ export default function AuthPage() {
       setError(null);
       await loginWithGoogle();
     } catch (err: any) {
-      setError(err?.message ?? "Google login failed.");
+      setError(formatAuthError(err, "Google login failed."));
     } finally {
       setBusy(false);
     }
@@ -74,11 +103,16 @@ export default function AuthPage() {
         <p style={{ margin: 0, color: "var(--muted)" }}>
           Sign up or log in to enter the app.
         </p>
+        {usingEmulators ? (
+          <p style={{ margin: 0, color: "#92400e", background: "#fef3c7", padding: 8, borderRadius: 8 }}>
+            Emulator mode is ON for web auth. If sign-in fails, set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false` and restart `npm run dev:admin`.
+          </p>
+        ) : null}
         <div style={{ display: "flex", gap: 8 }}>
-          <button className={mode === "signup" ? "" : "secondary"} onClick={() => setMode("signup")}>
+          <button type="button" className={mode === "signup" ? "" : "secondary"} onClick={() => setMode("signup")}>
             Sign up
           </button>
-          <button className={mode === "login" ? "" : "secondary"} onClick={() => setMode("login")}>
+          <button type="button" className={mode === "login" ? "" : "secondary"} onClick={() => setMode("login")}>
             Log in
           </button>
         </div>
@@ -103,10 +137,10 @@ export default function AuthPage() {
           />
         </label>
 
-        <button onClick={onEmailPassword} disabled={busy}>
+        <button type="button" onClick={onEmailPassword} disabled={busy}>
           {busy ? "Please wait..." : mode === "signup" ? "Sign up with Email" : "Log in with Email"}
         </button>
-        <button className="secondary" onClick={onGoogle} disabled={busy}>
+        <button type="button" className="secondary" onClick={onGoogle} disabled={busy}>
           {busy ? "Please wait..." : mode === "signup" ? "Sign up with Google" : "Log in with Google"}
         </button>
         {error ? <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p> : null}

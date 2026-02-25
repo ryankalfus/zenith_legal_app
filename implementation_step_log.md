@@ -262,3 +262,13 @@
 - What to test next:
   - Open `http://localhost:8082` on desktop and verify auth + dashboard render.
   - Confirm Google auth flow behavior on web after dependency updates.
+
+## Step 23 - Auth Runtime Debug (Localhost Web)
+- What changed:
+  - Investigated web auth click/no-op + Google `invalid_client` failures on localhost.
+  - Verified backend auth endpoint responses returned `CONFIGURATION_NOT_FOUND` for both `accounts:signUp` and `accounts:createAuthUri`.
+  - Updated local runtime env to non-emulator auth mode for app login checks.
+  - Added clearer auth error mapping and emulator-mode warning in web auth UI.
+- What to test:
+  - In Firebase Console, initialize Authentication and enable Email/Password + Google providers.
+  - Confirm localhost auth works for email/password and Google popup after restarting `npm run dev:admin`.
