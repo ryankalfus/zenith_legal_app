@@ -45,3 +45,7 @@
 - 02.25.2026: Re-ran `firebase:doctor`; all checks now pass (project resolution, CLI auth, Java, TLS cert env, emulator jar cache).
 - 02.25.2026: Re-tested deploy smoke blockers; Storage still requires first-time setup in console and Functions still blocked on Blaze plan upgrade.
 - 02.25.2026: Updated `qa/acceptance-checklist.md` to mark automated RBAC smoke test as passed after emulator validation.
+- 02.25.2026: Completed storage rules deploy to `zenith-legal-dev` after Storage bucket setup.
+- 02.25.2026: Completed Cloud Functions deploy on `zenith-legal-dev`; all functions detected as unchanged and verified in deploy pipeline.
+- 02.25.2026: Completed real project firm seed after ADC setup (`gcloud auth application-default login`); imported 104 firms and skipped `Mc`.
+- 02.25.2026: Re-ran emulator RBAC smoke test after deploy work; suite passed (`10 passed, 0 failed`).

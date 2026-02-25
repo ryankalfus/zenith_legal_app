@@ -183,3 +183,19 @@
   - Complete Storage setup and Blaze upgrade in Firebase Console.
   - Retry storage/functions deploy.
   - Install/auth ADC (`gcloud`) and run real-project seed script.
+
+## Step 19 - Final Firebase Deploy + Seed Completion
+- What changed:
+  - Confirmed Firebase auth/project context and reran deployment pipeline on `zenith-legal-dev`.
+  - Deployed Storage rules successfully after bucket initialization.
+  - Deployed Functions successfully (no code changes detected, deployment pipeline completed).
+  - Seeded canonical firms successfully against real Firestore project after ADC auth setup.
+  - Re-validated emulator RBAC test after deploy/seed completion.
+- Commands run + result:
+  - `firebase deploy --only storage --project zenith-legal-dev` -> PASS
+  - `firebase deploy --only functions --project zenith-legal-dev` -> PASS
+  - `GOOGLE_CLOUD_PROJECT=zenith-legal-dev npm run seed:firms` -> PASS (`Imported 104 firms`, `Skipped entries: Mc`)
+  - `npm run test:rules` -> PASS (`10 passed, 0 failed`)
+- What to test next:
+  - Manual product acceptance pass in app UI (onboarding, messaging, status workflow, calendar, deletion).
+  - Optional: upgrade Functions runtime/dependencies (`firebase-functions` latest, Node runtime plan before deprecation window).
