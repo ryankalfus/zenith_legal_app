@@ -1,0 +1,109 @@
+# Firm List 2026
+
+Source: `Firm List 2026.xlsx` (sheet: `Sheet1`)
+
+- Adams & Reese
+- Akerman
+- Akin
+- Allen Matkins
+- Alston & Bird
+- ArentFox Schiff
+- Arnold & Porter
+- Baker & Hostetler
+- Baker Botts
+- Baker Donelson
+- Baker McKenzie
+- Ballard Spahr
+- Barnes & Thornburg
+- Bernstein Litowitz
+- Blank Rome
+- Bracewell
+- Brownstein Hyatt
+- Bryan Cave Leighton Paisner
+- Carlton Fields
+- Cleary Gottlieb
+- Clifford Chance
+- Cooley
+- Covington & Burling
+- Cozen O'Connor
+- Crowell & Moring
+- Davis Polk & Wardwell
+- Davis Wright
+- Debevoise & Plimpton
+- Dechert
+- Dentons
+- DLA Piper
+- Duane Morris
+- Faegre Drinker Biddle & Reath
+- Fenwick & West
+- Foley Hoag
+- Foley & Lardner
+- Freshfields
+- Fried Frank
+- Gibson, Dunn & Crutcher
+- Goodwin Procter
+- Greenberg Traurig
+- Gunderson
+- Haynes and Boone
+- Hogan Lovells
+- Holland & Hart
+- Holland & Knight
+- Hunton Andrews Kurth
+- Husch Blackwell
+- Jenner & Block
+- Jones Day
+- K&L Gates
+- Katten Muchin Rosenman
+- Kilpatrick Townsend
+- King & Spalding
+- Kirkland & Ellis
+- Kobre & Kim
+- Latham & Watkins
+- Linklaters
+- Manatt
+- Mayer Brown
+- McDermott Will & Schulte
+- Mc
+- McGuireWoods
+- Milbank
+- Mintz Levin
+- Morgan Lewis
+- Morrison & Foerster (MoFo)
+- Munger Tolles
+- Nelson Mullins
+- Nixon Peabody
+- Norton Rose Fulbright
+- O'Melveny & Myers
+- Orrick
+- Patterson Bellknap
+- Paul Hastings
+- Paul Weiss
+- Perkins Coie
+- Pillsbury Winthrop Shaw Pittman
+- Polsinelli
+- Porter Wright
+- Proskauer Rose
+- Reed Smith
+- Ropes & Gray
+- Schulte Roth & Zabel
+- Sheppard Mullin
+- Sidley Austin
+- Simpson Thacher & Bartlett
+- Skadden
+- Steptoe
+- Stoel Rives
+- Sullivan & Cromwell
+- Thompson Coburn
+- Troutman Pepper
+- Vedder Price
+- Venable
+- Vinson & Elkins (V&E)
+- Weil, Gotshal & Manges
+- White & Case
+- Wiley
+- Williams & Connolly
+- Willkie Farr & Gallagher
+- Wilmer Cutler
+- Wilson Sonsini
+- Winston & Strawn
+- Womble Bond
