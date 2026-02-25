@@ -1,12 +1,13 @@
 import {
   addDoc,
   collection,
+  getDoc,
   onSnapshot,
+  doc,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
-  doc
+  setDoc
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
@@ -25,6 +26,36 @@ export function watchMessages(
     q,
     (snapshot) => {
       onData(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() })));
+    },
+    (err) => onError(err as Error)
+  );
+}
+
+export function watchAdminConversations(
+  onData: (rows: any[]) => void,
+  onError: (err: Error) => void
+) {
+  const q = query(collection(db, "conversations"), orderBy("lastMessageAt", "desc"));
+
+  return onSnapshot(
+    q,
+    async (snapshot) => {
+      const rows = await Promise.all(
+        snapshot.docs.map(async (entry) => {
+          const data = entry.data();
+          const candidateId = String(data.candidateId ?? entry.id);
+          const candidateDoc = await getDoc(doc(db, "users", candidateId));
+          const candidate = candidateDoc.data();
+          return {
+            id: entry.id,
+            ...data,
+            candidateId,
+            candidateName: String(candidate?.fullName ?? "Candidate"),
+            candidateEmail: String(candidate?.email ?? "")
+          };
+        })
+      );
+      onData(rows);
     },
     (err) => onError(err as Error)
   );

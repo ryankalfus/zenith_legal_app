@@ -13,9 +13,10 @@ Legend:
 
 ## Product & Access
 - [ ] `MVP` Candidate onboarding collects name, email, mobile.
-- [ ] `MVP` Passwordless authentication only (phone OTP or email link flow).
+- [ ] `MVP` Authentication supports email/password and Google sign up/log in.
+- [ ] `Later` Phone + password authentication.
 - [ ] `MVP` Role-based access control (`candidate`, `admin`).
-- [ ] `MVP` Admin login via Google allowlist + admin claim.
+- [ ] `MVP` Only `mason@zenithlegal.com` can hold admin role/claim.
 - [ ] `MVP` Candidate profile stores preferred cities + practice area.
 
 ## Candidate Mobile App
@@ -39,8 +40,10 @@ Legend:
 - [ ] `MVP` One thread per candidate with Zenith team.
 - [ ] `MVP` Real-time message history persistence.
 - [ ] `MVP` Candidate and admin can send messages.
+- [ ] `MVP` Zenith admin can use mobile inbox + chat reply tools.
 - [ ] `MVP` Message attachments support upload (any type, max 25MB).
 - [ ] `MVP` Push notifications to candidates on new messages.
+- [ ] `MVP` Signup/profile-complete summary email sends to `mason@zenithlegal.com`.
 - [ ] `Later` Push alerts for targeted new job opportunities.
 
 ## Admin / Recruiter Web Console
@@ -80,3 +83,4 @@ Legend:
 
 ## Step Log
 - 2026-02-25: Created initial checklist and categorized scope as MVP/Later/Out.
+- 2026-02-25: Updated auth/admin requirements to unified email/password + Google flows with Zenith-only admin and signup summary email trigger.

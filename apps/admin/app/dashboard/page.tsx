@@ -17,9 +17,14 @@ export default function DashboardPage() {
     let unsubUsers: null | (() => void) = null;
 
     const unsubAuth = watchAuth(async (user) => {
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
       const ok = await isAuthorizedAdmin(user);
       if (!ok) {
-        router.push("/auth");
+        router.push("/app");
         return;
       }
 

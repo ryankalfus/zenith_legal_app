@@ -10,10 +10,12 @@ import { CalendarScreen } from "../screens/CalendarScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ProfileSetupScreen } from "../screens/ProfileSetupScreen";
 import { MessagesScreen } from "../screens/MessagesScreen";
-import { MainTabParamList, RootStackParamList } from "./types";
+import { AdminInboxScreen } from "../screens/AdminInboxScreen";
+import { AdminTabParamList, MainTabParamList, RootStackParamList } from "./types";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
+const AdminTabsNavigator = createBottomTabNavigator<AdminTabParamList>();
 
 function MainTabs() {
   return (
@@ -23,6 +25,14 @@ function MainTabs() {
       <Tabs.Screen name="Calendar" component={CalendarScreen} />
       <Tabs.Screen name="Profile" component={ProfileScreen} />
     </Tabs.Navigator>
+  );
+}
+
+function AdminTabs() {
+  return (
+    <AdminTabsNavigator.Navigator>
+      <AdminTabsNavigator.Screen name="AdminInbox" component={AdminInboxScreen} options={{ title: "Inbox" }} />
+    </AdminTabsNavigator.Navigator>
   );
 }
 
@@ -41,6 +51,11 @@ export function RootNavigator() {
     <RootStack.Navigator>
       {!session ? (
         <RootStack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+      ) : session.role === "admin" ? (
+        <>
+          <RootStack.Screen name="AdminTabs" component={AdminTabs} options={{ headerShown: false }} />
+          <RootStack.Screen name="Messages" component={MessagesScreen} />
+        </>
       ) : !session.profileComplete ? (
         <RootStack.Screen
           name="ProfileSetup"

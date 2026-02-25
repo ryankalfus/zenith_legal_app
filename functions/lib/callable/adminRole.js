@@ -24,6 +24,10 @@ exports.setAdminRoleByEmail = (0, https_1.onCall)(async (request) => {
     if (!targetEmail) {
         throw new https_1.HttpsError("invalid-argument", "Target email is required.");
     }
+    const zenithAdminEmail = (0, env_1.getZenithAdminEmail)();
+    if (targetEmail !== zenithAdminEmail) {
+        throw new https_1.HttpsError("permission-denied", `Only ${zenithAdminEmail} can be assigned admin in this environment.`);
+    }
     const user = await auth.getUserByEmail(targetEmail);
     await auth.setCustomUserClaims(user.uid, {
         ...(user.customClaims ?? {}),
@@ -32,6 +36,7 @@ exports.setAdminRoleByEmail = (0, https_1.onCall)(async (request) => {
     await db.collection("users").doc(user.uid).set({
         uid: user.uid,
         role: "admin",
+        fullName: "Zenith Legal",
         email: targetEmail,
         updatedAt: firestore_1.FieldValue.serverTimestamp()
     }, { merge: true });

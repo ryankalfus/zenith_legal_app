@@ -25,6 +25,7 @@ export const userProfileSchema = z.object({
   phoneVerified: z.boolean(),
   preferences: userPreferencesSchema,
   pushTokens: z.array(z.string()).default([]),
+  signupSummarySentAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });

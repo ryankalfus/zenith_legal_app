@@ -12,7 +12,8 @@
     "shell": "firebase functions:shell",
     "deploy": "firebase deploy --only functions",
     "typecheck": "tsc --noEmit",
-    "seed:firms": "tsx src/scripts/seedFirms.ts"
+    "seed:firms": "tsx src/scripts/seedFirms.ts",
+    "enforce:single-admin": "tsx src/scripts/enforceSingleAdmin.ts"
   },
   "dependencies": {
     "expo-server-sdk": "^3.11.0",

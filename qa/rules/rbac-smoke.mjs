@@ -59,15 +59,15 @@ async function assertFails(name, fn) {
   }
 }
 
-async function getSignedInClient(uid, role) {
+async function getSignedInClient(uid, claims, label = uid) {
   const app = initializeClientApp(
     {
       apiKey: "demo-api-key",
       authDomain: "demo.local",
       projectId,
-      appId: `demo-${uid}`
+      appId: `demo-${label}`
     },
-    `client-${uid}`
+    `client-${label}`
   );
 
   const auth = getAuth(app);
@@ -76,7 +76,7 @@ async function getSignedInClient(uid, role) {
   const db = getFirestore(app);
   connectFirestoreEmulator(db, firestoreHostname, firestorePort);
 
-  const token = await admin.auth().createCustomToken(uid, { role });
+  const token = await admin.auth().createCustomToken(uid, claims);
   await signInWithCustomToken(auth, token);
 
   return {
@@ -121,8 +121,8 @@ async function seedData() {
   await adminDb.doc("users/admin1").set({
     uid: "admin1",
     role: "admin",
-    fullName: "Admin User",
-    email: "admin@example.com",
+    fullName: "Zenith Legal",
+    email: "mason@zenithlegal.com",
     mobile: "+15550000003",
     emailVerified: true,
     phoneVerified: true,
@@ -154,9 +154,17 @@ async function seedData() {
 async function run() {
   await seedData();
 
-  const candidateA = await getSignedInClient("candidateA", "candidate");
-  const candidateB = await getSignedInClient("candidateB", "candidate");
-  const adminUser = await getSignedInClient("admin1", "admin");
+  const candidateA = await getSignedInClient("candidateA", { role: "candidate" });
+  const candidateB = await getSignedInClient("candidateB", { role: "candidate" });
+  const adminUser = await getSignedInClient("admin1", {
+    role: "admin",
+    email: "mason@zenithlegal.com"
+  });
+  const nonZenithAdmin = await getSignedInClient(
+    "candidateB",
+    { role: "admin", email: "not-allowed@example.com" },
+    "candidateB-admin-claim"
+  );
 
   const results = [];
 
@@ -240,9 +248,20 @@ async function run() {
     )
   );
 
+  results.push(
+    await assertFails("non-Zenith claimed admin cannot write firm", () =>
+      setDoc(doc(nonZenithAdmin.db, "firms", "firm-2"), {
+        id: "firm-2",
+        name: "Blocked Firm",
+        isActive: true
+      })
+    )
+  );
+
   await candidateA.close();
   await candidateB.close();
   await adminUser.close();
+  await nonZenithAdmin.close();
 
   const passed = results.filter(Boolean).length;
   const failed = results.length - passed;

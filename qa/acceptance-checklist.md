@@ -1,17 +1,25 @@
 # MVP Acceptance Checklist
 
 ## Candidate Onboarding
-- [ ] Candidate signs in by phone OTP.
-- [ ] Candidate signs in by email link flow.
+- [ ] Candidate signs up by email/password.
+- [ ] Candidate logs in by email/password.
+- [ ] Candidate signs up/logs in by Google.
 - [ ] First sign-in creates user profile doc.
 - [ ] Candidate sets preferred cities and practice area.
+
+## Admin Auth + Access
+- [ ] Only `mason@zenithlegal.com` can access admin dashboard/tools.
+- [ ] Non-Zenith users are blocked from admin data even if role claim is spoofed.
+- [ ] Zenith admin can access mobile inbox and reply to candidate chats.
 
 ## Messaging
 - [ ] Candidate sends message to Zenith.
 - [ ] Admin sees message in web console.
 - [ ] Admin replies from web console.
+- [ ] Admin replies from mobile inbox/thread.
 - [ ] Candidate receives push notification for admin reply.
 - [ ] Attachment upload works up to 25MB.
+- [ ] Signup summary email is sent to `mason@zenithlegal.com` once profile completes.
 
 ## Firm Workflow
 - [ ] Admin adds firm from canonical list.

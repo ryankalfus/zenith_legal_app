@@ -2,8 +2,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Zenith Legal Admin",
-  description: "Recruiter/admin console for Zenith Legal Candidate Portal"
+  title: "Zenith Legal",
+  description: "Zenith Legal web app"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

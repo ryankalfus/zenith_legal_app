@@ -1,16 +1,17 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import {
+  GoogleAuthProvider,
   User,
-  isSignInWithEmailLink,
   onAuthStateChanged,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
+  createUserWithEmailAndPassword,
+  signInWithCredential,
+  signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
 import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
-import * as Linking from "expo-linking";
-import { auth, db } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "../lib/firebase";
 import { registerForPushNotificationsAsync } from "../lib/notifications";
 import { PRACTICE_AREAS } from "@zenith/shared";
 
@@ -23,8 +24,9 @@ type CandidateSession = {
 type AuthContextValue = {
   loading: boolean;
   session: CandidateSession | null;
-  sendEmailLink: (email: string) => Promise<void>;
-  completeEmailLinkSignIn: (email: string, incomingUrl: string) => Promise<void>;
+  signupWithEmailPassword: (email: string, password: string) => Promise<void>;
+  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
+  loginWithGoogleIdToken: (idToken: string) => Promise<void>;
   completeProfile: (input: {
     fullName: string;
     email: string;
@@ -38,7 +40,12 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const defaultPracticeArea = PRACTICE_AREAS[0];
-const pendingEmailKey = "zenith.pendingEmailLink";
+const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
+const zenithAdminEmail =
+  (process.env.EXPO_PUBLIC_ZENITH_ADMIN_EMAIL ?? extra.zenithAdminEmail ?? "mason@zenithlegal.com")
+    .trim()
+    .toLowerCase();
+const zenithAdminName = "Zenith Legal";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -54,13 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
+      const userEmail = String(user.email ?? "").trim().toLowerCase();
+      const isZenithAdmin = userEmail === zenithAdminEmail;
 
       if (!userDoc.exists()) {
         await setDoc(userRef, {
           uid: user.uid,
-          role: "candidate",
-          fullName: "",
-          email: user.email ?? "",
+          role: isZenithAdmin ? "admin" : "candidate",
+          fullName: isZenithAdmin ? zenithAdminName : "",
+          email: userEmail,
           mobile: user.phoneNumber ?? "",
           emailVerified: Boolean(user.emailVerified),
           phoneVerified: Boolean(user.phoneNumber),
@@ -74,12 +83,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
+      if (isZenithAdmin) {
+        try {
+          const ensureZenithAdmin = httpsCallable(functions, "ensureZenithAdminClaim");
+          await ensureZenithAdmin();
+          await user.getIdToken(true);
+        } catch {
+          // Keep session available; dashboard guard will still validate claim access.
+        }
+      }
+
       const refreshed = await getDoc(userRef);
       const data = refreshed.data() as { role?: "candidate" | "admin"; fullName?: string } | undefined;
+      const sessionRole: "candidate" | "admin" =
+        isZenithAdmin && data?.role === "admin" ? "admin" : "candidate";
+
+      if (!isZenithAdmin && data?.role === "admin") {
+        await updateDoc(userRef, {
+          role: "candidate",
+          updatedAt: serverTimestamp()
+        }).catch(() => undefined);
+      }
+
       setSession({
         user,
-        role: data?.role ?? "candidate",
-        profileComplete: Boolean(data?.fullName)
+        role: sessionRole,
+        profileComplete: sessionRole === "admin" ? true : Boolean(data?.fullName)
       });
 
       const token = await registerForPushNotificationsAsync();
@@ -93,35 +122,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const subscription = Linking.addEventListener("url", async ({ url }) => {
-      const pendingEmail = await AsyncStorage.getItem(pendingEmailKey);
-      if (pendingEmail && isSignInWithEmailLink(auth, url)) {
-        await signInWithEmailLink(auth, pendingEmail, url);
-        await AsyncStorage.removeItem(pendingEmailKey);
-      }
-    });
-
     return () => {
       unsubscribe();
-      subscription.remove();
     };
   }, []);
 
-  const sendEmailLink = async (email: string) => {
-    const actionCodeSettings = {
-      url: Linking.createURL("auth/email"),
-      handleCodeInApp: true
-    };
-    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    await AsyncStorage.setItem(pendingEmailKey, email);
+  const signupWithEmailPassword: AuthContextValue["signupWithEmailPassword"] = async (
+    email,
+    password
+  ) => {
+    await createUserWithEmailAndPassword(auth, email.trim(), password);
   };
 
-  const completeEmailLinkSignIn = async (email: string, incomingUrl: string) => {
-    if (!isSignInWithEmailLink(auth, incomingUrl)) {
-      throw new Error("The link is not a valid sign-in link");
-    }
-    await signInWithEmailLink(auth, email, incomingUrl);
-    await AsyncStorage.removeItem(pendingEmailKey);
+  const loginWithEmailPassword: AuthContextValue["loginWithEmailPassword"] = async (
+    email,
+    password
+  ) => {
+    await signInWithEmailAndPassword(auth, email.trim(), password);
+  };
+
+  const loginWithGoogleIdToken: AuthContextValue["loginWithGoogleIdToken"] = async (idToken) => {
+    const credential = GoogleAuthProvider.credential(idToken);
+    await signInWithCredential(auth, credential);
   };
 
   const completeProfile: AuthContextValue["completeProfile"] = async (input) => {
@@ -147,8 +169,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       loading,
       session,
-      sendEmailLink,
-      completeEmailLinkSignIn,
+      signupWithEmailPassword,
+      loginWithEmailPassword,
+      loginWithGoogleIdToken,
       completeProfile,
       logout: () => signOut(auth)
     }),

@@ -11,31 +11,36 @@ import {
   View
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { useRoute, RouteProp } from "@react-navigation/native";
 import { useAuth } from "../state/AuthContext";
 import { sendMessage, watchMessages } from "../services/messagingService";
+import { RootStackParamList } from "../navigation/types";
 
 export function MessagesScreen() {
   const { session } = useAuth();
+  const route = useRoute<RouteProp<RootStackParamList, "Messages">>();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<{ uri: string; mimeType: string; fileName: string } | undefined>();
   const listRef = useRef<FlatList<any>>(null);
+  const candidateId =
+    session?.role === "admin" ? route.params?.candidateId ?? "" : (session?.user.uid ?? "");
 
   useEffect(() => {
-    if (!session?.user.uid) {
+    if (!candidateId) {
       return;
     }
 
     return watchMessages(
-      session.user.uid,
+      candidateId,
       (rows) => {
         setMessages(rows);
         setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
       },
       () => undefined
     );
-  }, [session?.user.uid]);
+  }, [candidateId]);
 
   const onPickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
@@ -52,16 +57,16 @@ export function MessagesScreen() {
   };
 
   const onSend = async () => {
-    if (!session?.user.uid || (!text.trim() && !file)) {
+    if (!session?.user.uid || !candidateId || (!text.trim() && !file)) {
       return;
     }
 
     try {
       setBusy(true);
       await sendMessage({
-        candidateId: session.user.uid,
+        candidateId,
         senderId: session.user.uid,
-        senderRole: "candidate",
+        senderRole: session.role === "admin" ? "admin" : "candidate",
         text: text.trim(),
         file
       });
@@ -86,7 +91,7 @@ export function MessagesScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
-          const mine = item.senderRole === "candidate";
+          const mine = item.senderId === session?.user.uid;
           return (
             <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
               <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
@@ -113,6 +118,9 @@ export function MessagesScreen() {
           <Text style={styles.sendText}>Send</Text>
         </Pressable>
       </View>
+      {!candidateId && session?.role === "admin" && (
+        <Text style={styles.fileHint}>Select a candidate conversation from inbox.</Text>
+      )}
       {file && <Text style={styles.fileHint}>Attached: {file.fileName}</Text>}
     </KeyboardAvoidingView>
   );

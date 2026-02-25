@@ -9,10 +9,10 @@ Monorepo for the Zenith Legal mobile candidate portal + admin web console + Fire
 - Backend: Firebase Auth, Firestore, Storage, Cloud Functions (`functions`)
 
 ## Monorepo Structure
-- `apps/mobile` candidate app (OTP auth, status dashboard, messaging, appointments, profile, delete account)
-- `apps/admin` recruiter/admin console (candidate management, firms, statuses, authorizations, messages, appointments)
+- `apps/mobile` unified mobile app (candidate dashboard/chat/calendar/profile plus Zenith admin mobile inbox chat)
+- `apps/admin` unified web app (shared auth entry + Zenith admin management dashboard)
 - `packages/shared` shared types, constants, and validation
-- `functions` Firebase Cloud Functions (push notifications, account deletion, admin role helper, firm seed)
+- `functions` Firebase Cloud Functions (push notifications, account deletion, admin-role enforcement, signup summary email, firm seed)
 - `docs` setup/deploy/compliance docs
 - `qa` acceptance test checklist
 
@@ -84,6 +84,8 @@ Detailed steps:
 - [QA Checklist](./qa/acceptance-checklist.md)
 
 ## Notes
-- Admin access is protected by Google sign-in allowlist and admin custom claims.
+- App auth supports email/password and Google sign up/log in flows.
+- Only `mason@zenithlegal.com` is eligible for admin access; admin claims and role docs are enforced server-side.
+- Candidate signups trigger summary email notifications to Zenith Legal when profile completion occurs.
 - Candidate can respond to authorization requests but cannot edit firm statuses directly.
 - Messaging supports attachments up to 25MB.

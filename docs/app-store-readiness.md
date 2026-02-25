@@ -7,7 +7,7 @@
 - [ ] Terms URL published (recommended).
 
 ## Account + Data
-- [ ] Candidate account creation path documented (OTP based).
+- [ ] Candidate account creation path documented (email/password + Google).
 - [ ] In-app `Delete my account/data` flow available in Profile tab.
 - [ ] Deletion removes candidate Firestore data + auth user + message attachments.
 

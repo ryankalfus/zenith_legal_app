@@ -229,3 +229,22 @@
   - Re-open app in Expo Go and confirm runtime no longer throws `PlatformConstants` TurboModule error.
   - If stale bundle remains on device, close Expo Go app completely and rescan QR.
   - If Metro cannot resolve `expo`, include root workspace `node_modules` in Metro resolver paths while keeping mobile path first.
+
+## Step 22 - Unified Auth + Single Admin + Signup Email + Mobile Admin Inbox
+- What changed:
+  - Replaced mobile email-link auth flow with email/password + Google auth options.
+  - Added web auth options for email/password and Google sign up/log in.
+  - Removed recruiter-only login wording and added shared app entry behavior.
+  - Added callable `ensureZenithAdminClaim` and strict admin identity enforcement for `mason@zenithlegal.com`.
+  - Added one-time admin cleanup script (`enforce:single-admin`) to demote non-Zenith admin claims/docs.
+  - Hardened Firestore rules so admin checks require `role=admin` and Zenith admin email.
+  - Added mobile admin inbox screen for chat-only admin tools (list conversations + reply in thread).
+  - Added signup summary email trigger via Resend with idempotency and one-time send marker.
+  - Updated env template and docs for Google auth client IDs, Zenith admin env values, and Resend settings.
+  - Updated QA/RBAC checklists and smoke test coverage for Zenith-only admin behavior.
+- What to test:
+  - Candidate sign up/log in (email/password + Google) works end-to-end on mobile and web.
+  - Candidate dashboard/status/chat/calendar/profile behavior remains unchanged.
+  - Zenith admin account can access web dashboard and mobile inbox chat tools.
+  - Non-Zenith users cannot perform admin reads/writes even with spoofed role claims.
+  - Signup summary email sends once on profile completion to `mason@zenithlegal.com`.

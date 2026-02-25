@@ -57,3 +57,9 @@
 - 02.25.2026: Fixed Expo Go runtime crash (`PlatformConstants` missing) by adding `apps/mobile/metro.config.js` to force Metro resolution from mobile workspace `node_modules`.
 - 02.25.2026: Rebuilt Metro cache after resolver fix (`expo start --clear`) and verified bundler starts cleanly for device testing.
 - 02.25.2026: Fixed Expo bundle error (`Unable to resolve "expo"`) by updating Metro resolver paths to include both mobile and root `node_modules` (mobile priority maintained).
+- 02.25.2026: Implemented unified auth entry flows (email/password + Google) on mobile and web, replacing mobile email-link-only auth UI.
+- 02.25.2026: Enforced single admin identity for Zenith Legal (`mason@zenithlegal.com`) across callable logic and Firestore admin rule checks.
+- 02.25.2026: Added callable admin bootstrap (`ensureZenithAdminClaim`) and one-time cleanup script to demote non-Zenith admin claims/docs.
+- 02.25.2026: Added mobile admin inbox/chat tools so Zenith admin can log in on mobile and send/receive candidate chats.
+- 02.25.2026: Added Cloud Function trigger to send applicant signup/profile summary emails to `mason@zenithlegal.com` via Resend with idempotency marker.
+- 02.25.2026: Updated env template, Firebase setup docs, acceptance checklist, and RBAC smoke test coverage for unified auth + Zenith-only admin behavior.

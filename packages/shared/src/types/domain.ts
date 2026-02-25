@@ -28,6 +28,7 @@ export interface UserProfile {
   phoneVerified: boolean;
   preferences: UserPreferences;
   pushTokens: string[];
+  signupSummarySentAt?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -48,9 +48,14 @@ export default function CandidateDetailPage() {
     let teardown: (() => void)[] = [];
 
     const unsubAuth = watchAuth(async (user) => {
-      const ok = await isAuthorizedAdmin(user);
-      if (!ok || !user) {
+      if (!user) {
         router.push("/auth");
+        return;
+      }
+
+      const ok = await isAuthorizedAdmin(user);
+      if (!ok) {
+        router.push("/app");
         return;
       }
 

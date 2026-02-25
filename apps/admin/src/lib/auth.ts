@@ -1,15 +1,25 @@
 "use client";
 
-import { onAuthStateChanged, signInWithPopup, signOut, User } from "firebase/auth";
-import { getFirebaseAuth, getFirebaseDb, getGoogleProvider } from "./firebase";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  User
+} from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
+import { getFirebaseAuth, getFirebaseDb, getFirebaseFunctions, getGoogleProvider } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-export function getAllowlist() {
-  const allowlist = process.env.NEXT_PUBLIC_ADMIN_ALLOWLIST ?? "";
-  return allowlist
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
+const defaultZenithAdminEmail = "mason@zenithlegal.com";
+
+export function getZenithAdminEmail() {
+  return (process.env.NEXT_PUBLIC_ZENITH_ADMIN_EMAIL ?? defaultZenithAdminEmail).trim().toLowerCase();
+}
+
+export function isZenithAdminUser(user: User | null) {
+  return String(user?.email ?? "").trim().toLowerCase() === getZenithAdminEmail();
 }
 
 export async function loginWithGoogle() {
@@ -17,20 +27,37 @@ export async function loginWithGoogle() {
   return signInWithPopup(auth, getGoogleProvider());
 }
 
+export async function signupWithEmailPassword(email: string, password: string) {
+  const auth = getFirebaseAuth();
+  return createUserWithEmailAndPassword(auth, email.trim(), password);
+}
+
+export async function loginWithEmailPassword(email: string, password: string) {
+  const auth = getFirebaseAuth();
+  return signInWithEmailAndPassword(auth, email.trim(), password);
+}
+
 export async function logout() {
   const auth = getFirebaseAuth();
   return signOut(auth);
 }
 
+export async function ensureZenithAdminClaimIfNeeded(user: User | null) {
+  if (!user || !isZenithAdminUser(user)) {
+    return;
+  }
+
+  const fn = httpsCallable(getFirebaseFunctions(), "ensureZenithAdminClaim");
+  await fn();
+  await user.getIdToken(true);
+}
+
 export async function isAuthorizedAdmin(user: User | null) {
-  if (!user?.email) {
+  if (!user?.email || !isZenithAdminUser(user)) {
     return false;
   }
 
-  const allowlist = getAllowlist();
-  if (allowlist.length > 0 && !allowlist.includes(user.email.toLowerCase())) {
-    return false;
-  }
+  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
 
   const tokenResult = await user.getIdTokenResult();
   if (tokenResult.claims.role === "admin") {

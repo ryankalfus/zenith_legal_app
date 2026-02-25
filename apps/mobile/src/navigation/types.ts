@@ -2,7 +2,8 @@ export type RootStackParamList = {
   Auth: undefined;
   ProfileSetup: undefined;
   MainTabs: undefined;
-  Messages: undefined;
+  AdminTabs: undefined;
+  Messages: { candidateId?: string } | undefined;
 };
 
 export type MainTabParamList = {
@@ -10,4 +11,8 @@ export type MainTabParamList = {
   Status: undefined;
   Calendar: undefined;
   Profile: undefined;
+};
+
+export type AdminTabParamList = {
+  AdminInbox: undefined;
 };

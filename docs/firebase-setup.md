@@ -39,9 +39,10 @@
   - `~/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.2.jar`
 
 ## 2) Authentication Providers
-- Enable `Phone` provider.
-- Enable `Email link (passwordless sign-in)` under Email/Password provider.
-- Add authorized domains for web admin and Expo deep links.
+- Enable `Email/Password` provider.
+- Enable `Google` provider.
+- Phone + password is deferred in this implementation pass.
+- Add authorized domains for web and Expo deep links.
 
 ## 3) App Registrations
 - Create Web app and copy Firebase config into `NEXT_PUBLIC_*` vars.
@@ -51,6 +52,17 @@
 - Copy `.env.example` to `.env` and fill all required values.
 - Required for CLI scripts:
   - `FIREBASE_PROJECT_ID=zenith-legal-dev`
+- Required auth/admin values:
+  - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+  - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+  - `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+  - `NEXT_PUBLIC_ZENITH_ADMIN_EMAIL=mason@zenithlegal.com`
+  - `EXPO_PUBLIC_ZENITH_ADMIN_EMAIL=mason@zenithlegal.com`
+  - `ZENITH_ADMIN_EMAIL=mason@zenithlegal.com`
+  - `SUPER_ADMIN_EMAILS=mason@zenithlegal.com`
+  - `RESEND_API_KEY=<resend-api-key>`
+  - `SIGNUP_ALERT_TO=mason@zenithlegal.com`
+  - `SIGNUP_ALERT_FROM=onboarding@resend.dev`
 - For local emulator testing set:
   - `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`
   - `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
@@ -69,12 +81,23 @@ npm run build --workspace @zenith/functions
 firebase deploy --only functions
 ```
 
-## 7) Admin Claim Bootstrap
-Use callable `setAdminRoleByEmail` from an account in `SUPER_ADMIN_EMAILS`.
+## 7) Admin Claim Bootstrap + Enforcement
+- Zenith admin identity is locked to `mason@zenithlegal.com`.
+- In Firebase Auth, set temporary credentials for the Zenith admin account:
+  - Email: `mason@zenithlegal.com`
+  - Password: `coal1828`
+  - Display name: `Zenith Legal`
+- Do not store that password in source control, `.env`, or logs.
+- Use callable `ensureZenithAdminClaim` while signed in as Zenith admin account.
+- Optional one-time cleanup:
+```bash
+npm run enforce:single-admin
+```
 
 Expected result:
-- Target user gets custom claim `role=admin`
-- Target user document role is set to `admin`
+- Zenith account gets custom claim `role=admin`
+- Non-Zenith users are not eligible for admin access
+- User document role is aligned with claim
 
 ## 8) Seed Firms
 ```bash

@@ -41,6 +41,10 @@
       "firebaseAppId": "${EXPO_PUBLIC_FIREBASE_APP_ID}",
       "useFirebaseEmulators": "${EXPO_PUBLIC_USE_FIREBASE_EMULATORS}",
       "firebaseEmulatorHost": "${EXPO_PUBLIC_FIREBASE_EMULATOR_HOST}",
+      "googleWebClientId": "${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}",
+      "googleIosClientId": "${EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID}",
+      "googleAndroidClientId": "${EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID}",
+      "zenithAdminEmail": "${EXPO_PUBLIC_ZENITH_ADMIN_EMAIL}",
       "masonPhone": "${EXPO_PUBLIC_MASON_PHONE}",
       "masonEmail": "${EXPO_PUBLIC_MASON_EMAIL}"
     }
