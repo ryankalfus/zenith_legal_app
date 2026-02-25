@@ -32,3 +32,16 @@
 - 02.25.2026: Re-validated static checks (`npm run typecheck`, `npm run build`) after recovery updates; both passed.
 - 02.25.2026: Re-ran emulator retry with new scripts; Java fallback now auto-detected and project resolution now works, but rules run is still blocked pending emulator jar download completion and Firebase CLI login.
 - 02.25.2026: Confirmed TLS certificate error is bypassed when running Firebase CLI with `NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem`; emulator jar download starts successfully but has not completed yet.
+- 02.25.2026: Completed Firebase CLI login via `firebase login --no-localhost` using `ryansamuelkalfus@gmail.com`; project listing now works with cert env configured.
+- 02.25.2026: Created Firebase project resources for `zenith-legal-dev` and connected Firebase console project setup.
+- 02.25.2026: Added Firebase Web app `zenith-legal-web` and populated `.env` Firebase public config values for mobile/admin.
+- 02.25.2026: Fixed Firestore deploy blocker by removing rejected single-field `messages.createdAt` index from `firestore.indexes.json`.
+- 02.25.2026: Deployed Firestore rules + indexes successfully to `zenith-legal-dev`.
+- 02.25.2026: Deploy blockers identified: Storage requires one-time Console setup (`Storage -> Get started`) and Functions deploy requires Blaze plan upgrade.
+- 02.25.2026: Seed script run against real project is blocked by missing Application Default Credentials (`gcloud auth application-default login`) because `gcloud` is not installed yet.
+- 02.25.2026: Manual Firestore emulator jar fallback download is in progress to `~/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.2.jar` and currently partial.
+- 02.25.2026: Completed manual Firestore emulator jar fallback download successfully (`~/.cache/firebase/emulators/cloud-firestore-emulator-v1.20.2.jar`, ~117MB).
+- 02.25.2026: Re-ran `npm run test:rules` against `zenith-legal-dev`; RBAC smoke suite passed (`10 passed, 0 failed`).
+- 02.25.2026: Re-ran `firebase:doctor`; all checks now pass (project resolution, CLI auth, Java, TLS cert env, emulator jar cache).
+- 02.25.2026: Re-tested deploy smoke blockers; Storage still requires first-time setup in console and Functions still blocked on Blaze plan upgrade.
+- 02.25.2026: Updated `qa/acceptance-checklist.md` to mark automated RBAC smoke test as passed after emulator validation.

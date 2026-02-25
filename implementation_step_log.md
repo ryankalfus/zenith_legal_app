@@ -140,3 +140,46 @@
   - Provide `NODE_EXTRA_CA_CERTS` value in shell and rerun `npm run test:rules` until emulator jar fully caches.
   - If download remains too slow, manually download jar into `~/.cache/firebase/emulators/`.
   - Continue with deploy smoke: rules/storage/functions + seed firms on `zenith-legal-dev`.
+
+## Step 17 - Firebase Project Activation + Deploy Retry
+- What changed:
+  - Completed CLI login and confirmed authenticated Firebase account.
+  - Created/activated `zenith-legal-dev` and set it as active project.
+  - Created Firebase Web app (`zenith-legal-web`) and pulled SDK config.
+  - Updated local `.env` Firebase keys for both `EXPO_PUBLIC_*` and `NEXT_PUBLIC_*`.
+  - Removed rejected single-field Firestore index (`messages.createdAt`) from `firestore.indexes.json`.
+  - Re-ran Firestore deploy and confirmed rules/indexes are live on `zenith-legal-dev`.
+  - Verified admin and mobile startup smoke checks still pass locally.
+- Commands run + result:
+  - `firebase login --no-localhost` -> PASS
+  - `firebase projects:list` -> PASS
+  - `firebase use zenith-legal-dev` -> PASS
+  - `firebase apps:create WEB zenith-legal-web --project zenith-legal-dev` -> PASS
+  - `firebase apps:sdkconfig WEB <appId> --project zenith-legal-dev` -> PASS
+  - `firebase deploy --only firestore --project zenith-legal-dev` -> PASS
+  - `firebase deploy --only storage --project zenith-legal-dev` -> BLOCKED (Storage not initialized in Console)
+  - `firebase deploy --only functions --project zenith-legal-dev` -> BLOCKED (Blaze plan required)
+  - `npm run seed:firms` -> BLOCKED (no ADC credentials; `gcloud` not installed)
+  - `npm run dev:admin` -> PASS
+  - `EXPO_OFFLINE=1 npx expo start --offline` -> PASS
+- What to test next:
+  - Finish Storage setup in Firebase Console and rerun `firebase deploy --only storage`.
+  - Upgrade `zenith-legal-dev` to Blaze and rerun `firebase deploy --only functions`.
+  - Install `gcloud` and run `gcloud auth application-default login`, then rerun `npm run seed:firms`.
+  - Complete emulator jar download and rerun `npm run test:rules`.
+
+## Step 18 - Emulator Completion + RBAC Validation
+- What changed:
+  - Finished full manual Firestore emulator jar download into local Firebase cache.
+  - Re-ran RBAC smoke test on emulators with dynamic project config.
+  - Confirmed Firebase doctor is fully green after login + Java + TLS + cached emulator.
+  - Re-checked Storage/Functions deploy status after RBAC completion.
+- Commands run + result:
+  - `npm run test:rules` -> PASS (`10 passed, 0 failed`)
+  - `npm run firebase:doctor` -> PASS (`0 fail`, `0 warn`)
+  - `firebase deploy --only storage --project zenith-legal-dev` -> BLOCKED (Storage not initialized)
+  - `firebase deploy --only functions --project zenith-legal-dev` -> BLOCKED (Blaze required)
+- What to test next:
+  - Complete Storage setup and Blaze upgrade in Firebase Console.
+  - Retry storage/functions deploy.
+  - Install/auth ADC (`gcloud`) and run real-project seed script.
