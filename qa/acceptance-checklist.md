@@ -39,3 +39,10 @@
 - [ ] Deletion removes Firestore user-linked data.
 - [ ] Deletion removes auth user.
 - [ ] Deletion creates audit entry in `deletionRequests`.
+
+## Execution Notes (2026-02-25)
+- Static checks: `typecheck` + `build` passed.
+- Automated RBAC run: blocked by Firestore emulator jar download failure.
+- Admin startup check: passed.
+- Mobile startup check: passed in offline mode.
+- Full flow checks are pending emulator network fix + Firebase login/project setup.

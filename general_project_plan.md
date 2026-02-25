@@ -237,3 +237,4 @@ This can be either:
 - Firebase rules/indexes/storage rules and backend function hooks have been added for RBAC, notifications, and account deletion.
 - Seed script has been added to import canonical firm data from the markdown source list.
 - Added local emulator toggle support and an RBAC smoke-test harness to improve verification before App Store submission.
+- Validation execution update (02.25.2026): toolchain prerequisites installed (Firebase CLI + Java), static checks passed, emulator RBAC run blocked by Firestore jar network download issue, and real-project checks blocked pending `firebase login` + valid project id.

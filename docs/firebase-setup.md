@@ -7,6 +7,15 @@
    - Firestore Database
    - Cloud Storage
    - Cloud Functions
+3. Authenticate CLI:
+   - `firebase login`
+4. Set target project:
+   - `firebase use <your-project-id>`
+
+## Java Requirement (Emulators)
+- Firestore emulator requires Java.
+- Verify locally:
+  - `java -version`
 
 ## 2) Authentication Providers
 - Enable `Phone` provider.

@@ -19,3 +19,10 @@
 - 02.25.2026: Added RBAC smoke test harness (`qa/rules/rbac-smoke.mjs`) plus `test:rules` scripts for emulator-based security validation.
 - 02.25.2026: Updated local setup docs/env template to include emulator variables and RBAC test command.
 - 02.25.2026: Re-ran full `typecheck` + root `build` successfully after emulator/test harness updates.
+- 02.25.2026: Validation run started: verified branch state (`main` ahead by 1) and created `.env` from `.env.example` with emulator toggles set to `true`.
+- 02.25.2026: Installed Firebase CLI via Homebrew fallback (`brew install firebase-cli`) after `npm install -g firebase-tools` stalled.
+- 02.25.2026: Installed Java runtime (`brew install openjdk`) and verified `java -version` for Firestore emulator support.
+- 02.25.2026: Ran static verification successfully: `npm install`, `npm run typecheck`, `npm run build` all passed.
+- 02.25.2026: Emulator RBAC run blocked by network download failure of Firestore emulator jar from `storage.googleapis.com` during `npm run test:rules`.
+- 02.25.2026: Startup checks: admin app booted (`next dev` ready on :3000); mobile app booted successfully using offline mode (`EXPO_OFFLINE=1 npx expo start --offline`).
+- 02.25.2026: Real Firebase verification blocked: no CLI auth (`firebase login` required) and no valid configured project id (`YOUR_FIREBASE_PROJECT_ID` placeholder remains).

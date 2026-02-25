@@ -20,6 +20,7 @@ Monorepo for the Zenith Legal mobile candidate portal + admin web console + Fire
 - Node.js 20+
 - npm 10+
 - Firebase CLI (`npm i -g firebase-tools`)
+- Java runtime (required by Firestore emulator)
 - Expo CLI (`npm i -g expo-cli`) or `npx expo`
 - EAS CLI (`npm i -g eas-cli`) for App Store builds
 
@@ -33,6 +34,8 @@ Monorepo for the Zenith Legal mobile candidate portal + admin web console + Fire
    - `firebase use <your-project-id>`
 5. Run emulators (recommended during development):
    - `firebase emulators:start`
+6. If Expo fails in online mode (`fetch failed`), run mobile in offline mode:
+   - `cd apps/mobile && EXPO_OFFLINE=1 npx expo start --offline`
 6. Optional local emulator mode in app clients:
    - Set `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`
    - Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`

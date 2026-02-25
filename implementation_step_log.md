@@ -97,3 +97,19 @@
 - What to test:
   - Install Firebase CLI and run `npm run test:rules`.
   - Confirm RBAC smoke test passes all candidate/admin rule checks.
+
+## Step 15 - Validation Execution (Emulator + Startup)
+- What changed:
+  - Created `.env` from template and enabled emulator toggles for mobile/admin.
+  - Installed Firebase CLI and Java runtime prerequisites.
+  - Executed static checks and local startup checks for admin/mobile.
+- Commands run + result:
+  - `npm install` -> PASS (engine warning only)
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> BLOCKED (Firestore emulator jar download failed)
+  - `npm run dev:admin` -> PASS (server ready)
+  - `EXPO_OFFLINE=1 npx expo start --offline` -> PASS (Metro started)
+- What to test next:
+  - Restore network access to `storage.googleapis.com/firebase-preview-drop/...` and rerun `npm run test:rules`.
+  - Authenticate Firebase CLI (`firebase login`) and set real project id to execute Phase 3 deploy/seed checks.
