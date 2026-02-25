@@ -27,16 +27,27 @@ Monorepo for the Zenith Legal mobile candidate portal + admin web console + Fire
 ## Local Setup
 1. Copy env template:
    - `cp .env.example .env`
-2. Fill Firebase values for your project in `.env`.
-3. Install dependencies:
+2. Set project + Firebase values in `.env`:
+   - `FIREBASE_PROJECT_ID=zenith-legal-dev`
+   - `EXPO_PUBLIC_*` and `NEXT_PUBLIC_*` Firebase keys
+3. Ensure Java is available before emulator runs:
+   - `export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home`
+   - `export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"`
+4. If Firebase emulator download fails with TLS cert error, set:
+   - `export NODE_EXTRA_CA_CERTS=/absolute/path/to/root-ca.pem`
+5. Run environment checks:
+   - `npm run firebase:doctor`
+6. Install dependencies:
    - `npm install`
-4. Set Firebase default project:
+7. Authenticate CLI:
+   - `firebase login`
+8. Set Firebase default project:
    - `firebase use <your-project-id>`
-5. Run emulators (recommended during development):
+9. Run emulators (recommended during development):
    - `firebase emulators:start`
-6. If Expo fails in online mode (`fetch failed`), run mobile in offline mode:
+10. If Expo fails in online mode (`fetch failed`), run mobile in offline mode:
    - `cd apps/mobile && EXPO_OFFLINE=1 npx expo start --offline`
-6. Optional local emulator mode in app clients:
+11. Optional local emulator mode in app clients:
    - Set `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=true`
    - Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`
    - Keep emulator host as `127.0.0.1` (or `10.0.2.2` for Android emulator)
@@ -58,6 +69,8 @@ Imports from `firm-list-2026.md` and skips `Mc`.
 ## RBAC Smoke Test
 - Start emulators and run rules smoke test:
   - `npm run test:rules`
+- Verify resolved project id:
+  - `npm run firebase:project`
 - This checks key candidate/admin permissions against `firestore.rules`.
 
 ## Deploy

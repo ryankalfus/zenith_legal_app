@@ -113,3 +113,30 @@
 - What to test next:
   - Restore network access to `storage.googleapis.com/firebase-preview-drop/...` and rerun `npm run test:rules`.
   - Authenticate Firebase CLI (`firebase login`) and set real project id to execute Phase 3 deploy/seed checks.
+
+## Step 16 - Firebase Recovery Hardening + Retry
+- What changed:
+  - Set `.firebaserc` default project alias to `zenith-legal-dev`.
+  - Added root scripts:
+    - `npm run firebase:project` (prints resolved project id from env/.env/.firebaserc).
+    - `npm run firebase:doctor` (checks project source, Firebase auth, Java, TLS cert env, emulator jar cache).
+    - `npm run test:rules` now resolves project dynamically instead of hardcoded `demo-zenith-legal`.
+  - Added helper scripts:
+    - `scripts/lib/firebaseProject.mjs`
+    - `scripts/firebase-project-id.mjs`
+    - `scripts/firebase-doctor.mjs`
+    - `scripts/run-rules-test.mjs`
+  - Added CLI helper env keys to `.env.example` (`FIREBASE_PROJECT_ID`, `JAVA_HOME`, `NODE_EXTRA_CA_CERTS`).
+  - Updated `README.md` and `docs/firebase-setup.md` with Java PATH and TLS certificate troubleshooting instructions.
+- Commands run + result:
+  - `npm run firebase:project` -> PASS (`zenith-legal-dev`)
+  - `npm run firebase:doctor` -> FAIL/WARN (no Firebase login, Java not on PATH in shell, no TLS cert env, jar cache missing)
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> BLOCKED (Firestore emulator jar download still not completed)
+  - `NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem firebase setup:emulators:firestore --project zenith-legal-dev --debug` -> PARTIAL PASS (TLS cert error removed; download request returns 200)
+- What to test next:
+  - Run `firebase login` and confirm authenticated account.
+  - Provide `NODE_EXTRA_CA_CERTS` value in shell and rerun `npm run test:rules` until emulator jar fully caches.
+  - If download remains too slow, manually download jar into `~/.cache/firebase/emulators/`.
+  - Continue with deploy smoke: rules/storage/functions + seed firms on `zenith-legal-dev`.

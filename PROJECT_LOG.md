@@ -26,3 +26,9 @@
 - 02.25.2026: Emulator RBAC run blocked by network download failure of Firestore emulator jar from `storage.googleapis.com` during `npm run test:rules`.
 - 02.25.2026: Startup checks: admin app booted (`next dev` ready on :3000); mobile app booted successfully using offline mode (`EXPO_OFFLINE=1 npx expo start --offline`).
 - 02.25.2026: Real Firebase verification blocked: no CLI auth (`firebase login` required) and no valid configured project id (`YOUR_FIREBASE_PROJECT_ID` placeholder remains).
+- 02.25.2026: Implemented Firebase recovery hardening scripts: `firebase:project`, `firebase:doctor`, project-aware `test:rules`, and shared project-id resolver under `scripts/lib/firebaseProject.mjs`.
+- 02.25.2026: Updated Firebase config defaults for dev retry by setting `.firebaserc` default project to `zenith-legal-dev` and adding CLI helper vars (`FIREBASE_PROJECT_ID`, `JAVA_HOME`, `NODE_EXTRA_CA_CERTS`) in `.env.example`.
+- 02.25.2026: Updated Firebase setup docs/README with Java PATH guidance, TLS cert-chain troubleshooting (`NODE_EXTRA_CA_CERTS`), and recovery commands.
+- 02.25.2026: Re-validated static checks (`npm run typecheck`, `npm run build`) after recovery updates; both passed.
+- 02.25.2026: Re-ran emulator retry with new scripts; Java fallback now auto-detected and project resolution now works, but rules run is still blocked pending emulator jar download completion and Firebase CLI login.
+- 02.25.2026: Confirmed TLS certificate error is bypassed when running Firebase CLI with `NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem`; emulator jar download starts successfully but has not completed yet.
