@@ -217,3 +217,14 @@
   - Open app in Expo Go SDK 54 and validate applicant sign-in via email link.
   - Run manual acceptance checks for applicant tabs + messaging + status/calendar flows.
   - Plan follow-up task to re-introduce phone OTP with SDK 54-compatible approach (React Native Firebase or alternate verifier flow).
+
+## Step 21 - Metro Resolver Fix for Expo Go Runtime
+- What changed:
+  - Added `apps/mobile/metro.config.js` to force React Native module resolution from `apps/mobile/node_modules`.
+  - Disabled hierarchical lookup in Metro to avoid pulling incompatible root workspace `react-native` version.
+  - Cleared Metro cache and restarted bundler for a clean runtime bundle.
+- Commands run + result:
+  - `cd apps/mobile && npx expo start --lan --clear --port 8087` -> PASS (Metro starts with cache rebuild)
+- What to test next:
+  - Re-open app in Expo Go and confirm runtime no longer throws `PlatformConstants` TurboModule error.
+  - If stale bundle remains on device, close Expo Go app completely and rescan QR.

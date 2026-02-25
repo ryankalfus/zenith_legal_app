@@ -54,3 +54,5 @@
 - 02.25.2026: Removed deprecated `expo-firebase-recaptcha` dependency and refactored auth context to email-link flow only for Expo Go compatibility on SDK 54.
 - 02.25.2026: Simplified auth screen UI to email-link sign-in only while phone OTP recaptcha replacement is pending.
 - 02.25.2026: Verified post-upgrade checks: mobile/root TypeScript checks pass and Expo Metro starts successfully on LAN for device testing.
+- 02.25.2026: Fixed Expo Go runtime crash (`PlatformConstants` missing) by adding `apps/mobile/metro.config.js` to force Metro resolution from mobile workspace `node_modules`.
+- 02.25.2026: Rebuilt Metro cache after resolver fix (`expo start --clear`) and verified bundler starts cleanly for device testing.
