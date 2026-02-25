@@ -228,3 +228,4 @@
 - What to test next:
   - Re-open app in Expo Go and confirm runtime no longer throws `PlatformConstants` TurboModule error.
   - If stale bundle remains on device, close Expo Go app completely and rescan QR.
+  - If Metro cannot resolve `expo`, include root workspace `node_modules` in Metro resolver paths while keeping mobile path first.

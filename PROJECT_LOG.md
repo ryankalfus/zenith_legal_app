@@ -56,3 +56,4 @@
 - 02.25.2026: Verified post-upgrade checks: mobile/root TypeScript checks pass and Expo Metro starts successfully on LAN for device testing.
 - 02.25.2026: Fixed Expo Go runtime crash (`PlatformConstants` missing) by adding `apps/mobile/metro.config.js` to force Metro resolution from mobile workspace `node_modules`.
 - 02.25.2026: Rebuilt Metro cache after resolver fix (`expo start --clear`) and verified bundler starts cleanly for device testing.
+- 02.25.2026: Fixed Expo bundle error (`Unable to resolve "expo"`) by updating Metro resolver paths to include both mobile and root `node_modules` (mobile priority maintained).
