@@ -5,10 +5,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasTokenClaim(claimKey) {
+      return request.auth.token.keys().hasAny([claimKey]);
+    }
+
+    function isZenithAdminEmailToken() {
+      return hasTokenClaim('email')
+        && request.auth.token.email == 'mason@zenithlegal.com'
+        && (
+          !hasTokenClaim('role') ||
+          request.auth.token.role == 'admin'
+        );
+    }
+
     function isAdmin() {
       return isAuthenticated()
-        && request.auth.token.role == 'admin'
-        && request.auth.token.email == 'mason@zenithlegal.com';
+        && isZenithAdminEmailToken();
     }
 
     function isOwner(uid) {

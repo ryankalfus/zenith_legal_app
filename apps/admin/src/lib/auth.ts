@@ -5,6 +5,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   User
 } from "firebase/auth";
@@ -13,6 +14,7 @@ import { getFirebaseAuth, getFirebaseDb, getFirebaseFunctions, getGoogleProvider
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const defaultZenithAdminEmail = "mason@zenithlegal.com";
+const zenithAdminDisplayName = "Zenith Legal";
 
 export function getZenithAdminEmail() {
   return (process.env.NEXT_PUBLIC_ZENITH_ADMIN_EMAIL ?? defaultZenithAdminEmail).trim().toLowerCase();
@@ -24,7 +26,24 @@ export function isZenithAdminUser(user: User | null) {
 
 export async function loginWithGoogle() {
   const auth = getFirebaseAuth();
-  return signInWithPopup(auth, getGoogleProvider());
+  try {
+    return await signInWithPopup(auth, getGoogleProvider());
+  } catch (error: any) {
+    const code = String(error?.code ?? "");
+    const message = String(error?.message ?? "").toLowerCase();
+    const shouldFallbackToRedirect =
+      code.includes("popup-blocked") ||
+      code.includes("popup-closed-by-user") ||
+      code.includes("cancelled-popup-request") ||
+      message.includes("popup");
+
+    if (shouldFallbackToRedirect) {
+      await signInWithRedirect(auth, getGoogleProvider());
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function signupWithEmailPassword(email: string, password: string) {
@@ -79,33 +98,50 @@ export async function isAuthorizedAdmin(user: User | null) {
 
   await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
 
-  const tokenResult = await user.getIdTokenResult();
-  if (tokenResult.claims.role === "admin") {
-    return true;
-  }
+  const tokenResult = await user.getIdTokenResult(true).catch(() => null);
+  const hasAdminClaim = tokenResult?.claims?.role === "admin";
 
   const db = getFirebaseDb();
   const userRef = doc(db, "users", user.uid);
-  const profileDoc = await getDoc(userRef);
+  const profileDoc = await getDoc(userRef).catch(() => null);
+  const hasAdminProfileRole = Boolean(profileDoc?.exists() && profileDoc.data().role === "admin");
 
-  if (profileDoc.exists() && profileDoc.data().role === "admin") {
+  if (hasAdminClaim || hasAdminProfileRole) {
+    if (hasAdminClaim) {
+      await setDoc(
+        userRef,
+        {
+          uid: user.uid,
+          email: getZenithAdminEmail(),
+          fullName: zenithAdminDisplayName,
+          role: "admin",
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      ).catch(() => undefined);
+    }
     return true;
   }
 
-  // Fallback: keep Zenith account profile role aligned even if claim propagation is delayed.
-  await setDoc(
-    userRef,
-    {
-      uid: user.uid,
-      email: getZenithAdminEmail(),
-      fullName: "Zenith Legal",
-      role: "admin",
-      updatedAt: serverTimestamp()
-    },
-    { merge: true }
-  ).catch(() => undefined);
+  // Last retry in case callable deployment or token propagation was delayed.
+  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
+  const retryTokenResult = await user.getIdTokenResult(true).catch(() => null);
+  if (retryTokenResult?.claims?.role === "admin") {
+    await setDoc(
+      userRef,
+      {
+        uid: user.uid,
+        email: getZenithAdminEmail(),
+        fullName: zenithAdminDisplayName,
+        role: "admin",
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    ).catch(() => undefined);
+    return true;
+  }
 
-  return true;
+  return false;
 }
 
 export function watchAuth(callback: (user: User | null) => void) {

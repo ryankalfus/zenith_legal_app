@@ -302,3 +302,79 @@
 
 - Admin-mode fix: updated `apps/admin/src/lib/auth.ts` so Zenith account (`mason@zenithlegal.com`) forces `users/{uid}.role=admin` fallback and returns admin authorization even when claim propagation lags.
 - Validation: `npm run typecheck --workspace @zenith/admin` and `npm run build --workspace @zenith/admin` passed.
+
+## Step 25 - Auth Reliability + Zenith Admin Enforcement Repair
+- What changed:
+  - Repaired admin authorization logic in `apps/admin/src/lib/auth.ts` to prevent false-positive admin mode when claim bootstrap fails.
+  - Added retry path for Zenith admin claim bootstrap and only authorize admin when claim/doc checks actually pass.
+  - Improved auth screen feedback in `apps/admin/app/auth/page.tsx` with visible status text and clearer mappings for OAuth/config errors (`invalid_client`, `unauthorized-domain`).
+  - Updated `firestore.rules` `isAdmin()` function to allow Zenith admin access when token email is `mason@zenithlegal.com` and role claim is either `admin` or temporarily unset.
+  - Updated `functions/src/scripts/enforceSingleAdmin.ts` to always promote Zenith account to admin claim/doc before demoting others.
+  - Added mobile Google OAuth client-id fallback logic in `apps/mobile/src/screens/AuthScreen.tsx` and wrote `apps/mobile/.env` so Expo runtime has Firebase + Google IDs.
+  - Enforced admin claim/doc immediately in live project for `mason@zenithlegal.com` using Firebase Admin SDK (custom claim + display name + users doc sync).
+- Commands run + result:
+  - Firebase Identity Toolkit config check (`GET /admin/v2/projects/.../config`) -> PASS (email/password enabled, localhost authorized).
+  - Firebase Google IdP config check (`GET /defaultSupportedIdpConfigs/google.com`) -> PASS (enabled with client id/secret).
+  - OAuth client validation (`oauth2.googleapis.com/token` with fake code) -> PASS (`invalid_grant` confirms client exists; not invalid_client).
+  - Admin claim/doc live repair script -> PASS (`admin claim/doc enforced for pYQZ68Td2PcC3c191b11AmTY1Ax2`).
+  - ID token decode validation -> PASS (`role: "admin"` present for `mason@zenithlegal.com`).
+  - `npm run typecheck --workspace @zenith/admin` -> PASS
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm run typecheck --workspace @zenith/functions` -> PASS
+  - `npm run build --workspace @zenith/admin` -> PASS
+  - `npm run build --workspace @zenith/functions` -> PASS
+  - `npm run test:rules` -> PASS (`11 passed, 0 failed`) after RBAC harness switched to emulator email/password sign-in + custom claims.
+  - `NODE_EXTRA_CA_CERTS=/etc/ssl/cert.pem firebase deploy --only firestore:rules --project zenith-legal-dev` -> PASS
+  - `GOOGLE_CLOUD_PROJECT=zenith-legal-dev npm run enforce:single-admin` -> PASS (`Promoted Zenith admin=true`, `Demoted 0`)
+- What to test next:
+  - Restart web app and verify email/password sign-up + login now transitions off `/auth`.
+  - Re-test Google login on web after hard refresh (stale cached OAuth flow can show old invalid_client).
+  - Login as `mason@zenithlegal.com` and verify immediate access to `/dashboard` with candidate list query permissions.
+
+## Step 26 - Mobile Login Crash Guard (React Native Feature Flags)
+- What changed:
+  - Added `apps/mobile/src/lib/reactNativeCompatibility.ts` to safely patch missing React Native feature flags used by virtualized list rendering.
+  - Wired compatibility patch into app startup (`apps/mobile/App.tsx`) so login flow cannot crash before auth actions run.
+  - Updated `apps/mobile/metro.config.js` with explicit `extraNodeModules` aliases for `react`, `react-dom`, `react-native`, and `@react-native/virtualized-lists` to keep mobile runtime package resolution consistent.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Restart Metro with cache clear (`npm run dev --workspace @zenith/mobile -- --clear`) and re-test login on iOS device.
+  - Confirm opening Auth screen no longer shows `enableOptimisedVirtualizedCells` render error.
+
+## Step 27 - Mobile Hotfix for Invalid Dynamic Require
+- What changed:
+  - Replaced dynamic `require(modulePath)` with static literal `require("react-native/Libraries/ReactNative/ReactNativeFeatureFlags")` in `apps/mobile/src/lib/reactNativeCompatibility.ts`.
+  - Updated `apps/mobile/metro.config.js` alias resolution to check filesystem paths first, then safely fall back to root workspace paths.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `node -e "require('./apps/mobile/metro.config.js'); console.log('metro-config-ok')"` -> PASS
+- What to test next:
+  - Restart Metro with cache clear and reload iOS app.
+  - Confirm login screen opens without `Invalid call ... require(modulePath)` fatal.
+
+## Step 28 - Mobile Startup Crash Recovery (`PlatformConstants`)
+- What changed:
+  - Reinstalled mobile-local runtime versions in workspace: `react@19.1.0`, `react-dom@19.1.0`, `react-native@0.81.5`.
+  - Removed React Native internal startup hook from `apps/mobile/App.tsx`.
+  - Deleted `apps/mobile/src/lib/reactNativeCompatibility.ts` because it was introducing unstable early runtime behavior.
+  - Kept Metro resolver hardening in `apps/mobile/metro.config.js` so mobile dependencies resolve consistently.
+- Commands run + result:
+  - `npm install --workspace @zenith/mobile react@19.1.0 react-dom@19.1.0 react-native@0.81.5 --save-exact` -> PASS
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `CI=1 EXPO_OFFLINE=1 npm run dev --workspace @zenith/mobile -- --clear --port 8084` -> PASS (Metro starts)
+- What to test next:
+  - Run `npm run dev --workspace @zenith/mobile -- --clear`.
+  - Re-open app in Expo Go and confirm auth screen loads without `PlatformConstants` crash.
+
+## Step 29 - Admin Inbox Crash Fix (`enableOptimisedVirtualizedCells`)
+- What changed:
+  - Updated `apps/mobile/src/screens/AdminInboxScreen.tsx` to use `ScrollView` + `rows.map(...)` instead of `FlatList`.
+  - This removes dependency on `VirtualizedListCellRenderer` in the admin inbox route, which was triggering `ReactNativeFeatureFlags.enableOptimisedVirtualizedCells is not a function`.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm ls @react-native/virtualized-lists --workspace @zenith/mobile --depth=4` -> shows both versions in workspace tree; admin screen now avoids the crashing `FlatList` path.
+- What to test next:
+  - Start app with cache clear (`npm run dev --workspace @zenith/mobile -- --clear`).
+  - Log in as Zenith admin and open Inbox.
+  - Confirm inbox list renders and opens candidate message threads without red-screen render error.

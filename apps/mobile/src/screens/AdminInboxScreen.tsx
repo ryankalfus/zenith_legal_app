@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../state/AuthContext";
 import { watchAdminConversations } from "../services/messagingService";
@@ -28,12 +28,11 @@ export function AdminInboxScreen() {
         </Pressable>
       </View>
 
-      <FlatList
-        data={rows}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>No candidate conversations yet.</Text>}
-        renderItem={({ item }) => (
+      <ScrollView contentContainerStyle={styles.listContent}>
+        {rows.length === 0 ? <Text style={styles.empty}>No candidate conversations yet.</Text> : null}
+        {rows.map((item) => (
           <Pressable
+            key={item.id}
             style={styles.row}
             onPress={() => navigation.navigate("Messages", { candidateId: item.candidateId })}
           >
@@ -43,8 +42,8 @@ export function AdminInboxScreen() {
               {item.lastMessageText || "No message text"}
             </Text>
           </Pressable>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -63,6 +62,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center"
+  },
+  listContent: {
+    paddingBottom: 12
   },
   title: {
     fontSize: 20,

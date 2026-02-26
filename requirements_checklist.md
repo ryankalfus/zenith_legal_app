@@ -84,3 +84,4 @@ Legend:
 ## Step Log
 - 2026-02-25: Created initial checklist and categorized scope as MVP/Later/Out.
 - 2026-02-25: Updated auth/admin requirements to unified email/password + Google flows with Zenith-only admin and signup summary email trigger.
+- 2026-02-26: Added auth reliability repair notes: Zenith admin custom claim/doc enforcement, Google OAuth config verification, and improved web/mobile auth error handling.

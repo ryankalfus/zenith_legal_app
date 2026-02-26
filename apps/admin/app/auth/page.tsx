@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const usingEmulators = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === "true";
 
@@ -41,6 +42,12 @@ export default function AuthPage() {
     }
     if (code.includes("auth/operation-not-allowed")) {
       return "Email/password sign-in is not enabled in Firebase Auth.";
+    }
+    if (code.includes("auth/unauthorized-domain")) {
+      return "This localhost domain is not allowed in Firebase Auth settings.";
+    }
+    if (message.toLowerCase().includes("invalid_client") || message.toLowerCase().includes("oauth client was not found")) {
+      return "Google OAuth client is misconfigured. Re-enable Google in Firebase Auth and retry.";
     }
     if (message) {
       return message;
@@ -68,8 +75,10 @@ export default function AuthPage() {
     try {
       setBusy(true);
       setError(null);
+      setStatus(mode === "signup" ? "Creating account..." : "Signing in...");
       if (!email.trim() || !password.trim()) {
         setError("Email and password are required.");
+        setStatus(null);
         return;
       }
 
@@ -82,7 +91,9 @@ export default function AuthPage() {
       const isAdmin = await bootstrapAdminSessionIfNeeded();
       router.push(isAdmin ? "/dashboard" : "/app");
     } catch (err: any) {
+      console.error("Email auth failed", err);
       setError(formatAuthError(err, "Authentication failed."));
+      setStatus(null);
     } finally {
       setBusy(false);
     }
@@ -92,11 +103,17 @@ export default function AuthPage() {
     try {
       setBusy(true);
       setError(null);
-      await loginWithGoogle();
+      setStatus("Opening Google sign-in...");
+      const result = await loginWithGoogle();
+      if (result === null) {
+        return;
+      }
       const isAdmin = await bootstrapAdminSessionIfNeeded();
       router.push(isAdmin ? "/dashboard" : "/app");
     } catch (err: any) {
+      console.error("Google auth failed", err);
       setError(formatAuthError(err, "Google login failed."));
+      setStatus(null);
     } finally {
       setBusy(false);
     }
@@ -149,6 +166,7 @@ export default function AuthPage() {
         <button type="button" className="secondary" onClick={onGoogle} disabled={busy}>
           {busy ? "Please wait..." : mode === "signup" ? "Sign up with Google" : "Log in with Google"}
         </button>
+        {status ? <p style={{ color: "var(--muted)", margin: 0 }}>{status}</p> : null}
         {error ? <p style={{ color: "#b91c1c", margin: 0 }}>{error}</p> : null}
       </section>
     </main>

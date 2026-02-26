@@ -95,8 +95,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const refreshed = await getDoc(userRef);
       const data = refreshed.data() as { role?: "candidate" | "admin"; fullName?: string } | undefined;
+      const tokenResult = await user.getIdTokenResult(true).catch(() => null);
+      const hasAdminClaim = tokenResult?.claims?.role === "admin";
+      const hasAdminDocRole = data?.role === "admin";
+      const shouldBeAdmin = isZenithAdmin && (hasAdminClaim || hasAdminDocRole);
+
+      if (isZenithAdmin && shouldBeAdmin && data?.role !== "admin") {
+        await setDoc(
+          userRef,
+          {
+            uid: user.uid,
+            email: zenithAdminEmail,
+            fullName: zenithAdminName,
+            role: "admin",
+            updatedAt: serverTimestamp()
+          },
+          { merge: true }
+        ).catch(() => undefined);
+      }
+
       const sessionRole: "candidate" | "admin" =
-        isZenithAdmin && data?.role === "admin" ? "admin" : "candidate";
+        shouldBeAdmin ? "admin" : "candidate";
 
       if (!isZenithAdmin && data?.role === "admin") {
         await updateDoc(userRef, {

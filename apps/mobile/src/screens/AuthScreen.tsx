@@ -17,6 +17,10 @@ import { useAuth } from "../state/AuthContext";
 WebBrowser.maybeCompleteAuthSession();
 
 const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? extra.googleWebClientId;
+const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? extra.googleIosClientId ?? googleWebClientId;
+const googleAndroidClientId =
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? extra.googleAndroidClientId ?? googleWebClientId;
 
 export function AuthScreen() {
   const { signupWithEmailPassword, loginWithEmailPassword, loginWithGoogleIdToken } = useAuth();
@@ -27,9 +31,9 @@ export function AuthScreen() {
   const [googleBusy, setGoogleBusy] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? extra.googleWebClientId,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? extra.googleIosClientId,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? extra.googleAndroidClientId
+    webClientId: googleWebClientId,
+    iosClientId: googleIosClientId,
+    androidClientId: googleAndroidClientId
   });
 
   useEffect(() => {
@@ -78,6 +82,11 @@ export function AuthScreen() {
   };
 
   const onGoogle = async () => {
+    if (!googleWebClientId) {
+      Alert.alert("Google sign-in not configured", "Missing Google OAuth client id for this app.");
+      return;
+    }
+
     try {
       setGoogleBusy(true);
       await promptAsync();

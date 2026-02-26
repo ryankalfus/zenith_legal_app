@@ -13,6 +13,26 @@ async function run() {
     const zenithAdminEmail = (0, env_1.getZenithAdminEmail)();
     let pageToken;
     let demoted = 0;
+    let promoted = false;
+    try {
+        const zenithUser = await auth.getUserByEmail(zenithAdminEmail);
+        await auth.setCustomUserClaims(zenithUser.uid, {
+            ...(zenithUser.customClaims ?? {}),
+            role: "admin"
+        });
+        await auth.updateUser(zenithUser.uid, { displayName: "Zenith Legal" }).catch(() => undefined);
+        await db.collection("users").doc(zenithUser.uid).set({
+            uid: zenithUser.uid,
+            email: zenithAdminEmail,
+            fullName: "Zenith Legal",
+            role: "admin",
+            updatedAt: firestore_1.FieldValue.serverTimestamp()
+        }, { merge: true });
+        promoted = true;
+    }
+    catch (error) {
+        console.error(`Could not promote ${zenithAdminEmail} to admin.`, error);
+    }
     do {
         const page = await auth.listUsers(1000, pageToken);
         for (const user of page.users) {
@@ -35,7 +55,7 @@ async function run() {
         }
         pageToken = page.pageToken;
     } while (pageToken);
-    console.log(`Single-admin cleanup complete. Demoted ${demoted} non-Zenith admin account(s).`);
+    console.log(`Single-admin cleanup complete. Promoted Zenith admin=${promoted}. Demoted ${demoted} non-Zenith admin account(s).`);
 }
 run().catch((error) => {
     console.error(error);

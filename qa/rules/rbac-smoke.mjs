@@ -1,6 +1,6 @@
 import admin from "firebase-admin";
 import { initializeApp as initializeClientApp, deleteApp } from "firebase/app";
-import { connectAuthEmulator, getAuth, signInWithCustomToken } from "firebase/auth";
+import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import {
   connectFirestoreEmulator,
   doc,
@@ -59,7 +59,7 @@ async function assertFails(name, fn) {
   }
 }
 
-async function getSignedInClient(uid, claims, label = uid) {
+async function getSignedInClient({ uid, email, password, claims, label = uid }) {
   const app = initializeClientApp(
     {
       apiKey: "demo-api-key",
@@ -76,8 +76,14 @@ async function getSignedInClient(uid, claims, label = uid) {
   const db = getFirestore(app);
   connectFirestoreEmulator(db, firestoreHostname, firestorePort);
 
-  const token = await admin.auth().createCustomToken(uid, claims);
-  await signInWithCustomToken(auth, token);
+  await admin.auth().createUser({
+    uid,
+    email,
+    password
+  }).catch(() => undefined);
+
+  await admin.auth().setCustomUserClaims(uid, claims ?? {});
+  await signInWithEmailAndPassword(auth, email, password);
 
   return {
     db,
@@ -154,17 +160,33 @@ async function seedData() {
 async function run() {
   await seedData();
 
-  const candidateA = await getSignedInClient("candidateA", { role: "candidate" });
-  const candidateB = await getSignedInClient("candidateB", { role: "candidate" });
-  const adminUser = await getSignedInClient("admin1", {
-    role: "admin",
-    email: "mason@zenithlegal.com"
+  const defaultPassword = "Passw0rd!123";
+
+  const candidateA = await getSignedInClient({
+    uid: "candidateA",
+    email: "candidateA@example.com",
+    password: defaultPassword,
+    claims: { role: "candidate" }
   });
-  const nonZenithAdmin = await getSignedInClient(
-    "candidateB",
-    { role: "admin", email: "not-allowed@example.com" },
-    "candidateB-admin-claim"
-  );
+  const candidateB = await getSignedInClient({
+    uid: "candidateB",
+    email: "candidateB@example.com",
+    password: defaultPassword,
+    claims: { role: "candidate" }
+  });
+  const adminUser = await getSignedInClient({
+    uid: "admin1",
+    email: "mason@zenithlegal.com",
+    password: defaultPassword,
+    claims: { role: "admin" }
+  });
+  const nonZenithAdmin = await getSignedInClient({
+    uid: "candidateB",
+    email: "candidateB@example.com",
+    password: defaultPassword,
+    claims: { role: "admin" },
+    label: "candidateB-admin-claim"
+  });
 
   const results = [];
 
