@@ -26,13 +26,15 @@ function ensureClient() {
 }
 
 function assertFirebaseConfig() {
-  const required = [
-    "NEXT_PUBLIC_FIREBASE_API_KEY",
-    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-    "NEXT_PUBLIC_FIREBASE_APP_ID"
-  ] as const;
-  const missing = required.filter((key) => !process.env[key]?.trim());
+  const required: Array<[string, string | undefined]> = [
+    ["NEXT_PUBLIC_FIREBASE_API_KEY", config.apiKey],
+    ["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", config.authDomain],
+    ["NEXT_PUBLIC_FIREBASE_PROJECT_ID", config.projectId],
+    ["NEXT_PUBLIC_FIREBASE_APP_ID", config.appId]
+  ];
+  const missing = required
+    .filter(([, value]) => !value?.trim())
+    .map(([key]) => key);
   if (missing.length > 0) {
     throw new Error(`Missing Firebase web env vars: ${missing.join(", ")}`);
   }

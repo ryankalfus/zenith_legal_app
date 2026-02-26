@@ -263,6 +263,16 @@
   - Open `http://localhost:8082` on desktop and verify auth + dashboard render.
   - Confirm Google auth flow behavior on web after dependency updates.
 
+## Step 24 - Admin Web Firebase Env Check Fix
+- What changed:
+  - Updated `apps/admin/src/lib/firebase.ts` to validate required Firebase env vars from direct config values rather than dynamic `process.env[key]` lookup.
+  - Removed false-positive runtime error where Next.js client bundle reported missing `NEXT_PUBLIC_*` vars even when `.env.local` was set.
+- Commands run + result:
+  - `npm run dev --workspace @zenith/admin` -> verify app boot after config check fix.
+- What to test next:
+  - Open admin web URL and confirm auth page renders without missing-env runtime error.
+  - Sign in with allowed admin account and verify dashboard loads.
+
 ## Step 23 - Auth Runtime Debug (Localhost Web)
 - What changed:
   - Investigated web auth click/no-op + Google `invalid_client` failures on localhost.
@@ -274,3 +284,5 @@
   - Confirm localhost auth works for email/password and Google popup after restarting `npm run dev:admin`.
 
 - Additional auth UX hardening: web email/password auth now pushes to `/app` immediately after successful sign-in/sign-up instead of waiting solely on observer redirect.
+
+- Hotfix: created `apps/admin/.env.local` with `NEXT_PUBLIC_*` Firebase keys because Next.js workspace dev server was not reading root `.env`, causing missing Firebase env runtime error on `/auth`.

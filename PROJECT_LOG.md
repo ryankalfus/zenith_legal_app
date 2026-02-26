@@ -65,9 +65,12 @@
 - 02.25.2026: Updated env template, Firebase setup docs, acceptance checklist, and RBAC smoke test coverage for unified auth + Zenith-only admin behavior.
 - 02.25.2026: Added Expo web runtime dependencies for desktop testing in mobile workspace (`react-native-web`, `react-dom`, `@expo/metro-runtime`) after `expo start --web` dependency error.
 - 02.25.2026: Resolved Expo web bundling blocker by adding `expo-crypto` and pinning `@expo/metro-runtime` to SDK 54-compatible `~6.1.2`; desktop web now starts and bundles on `http://localhost:8082`.
+- 02.25.2026: Fixed admin web runtime Firebase config check to avoid dynamic `process.env[key]` lookup in client code (`apps/admin/src/lib/firebase.ts`), which caused false missing-env errors despite valid `NEXT_PUBLIC_*` variables.
 
 - 02.25.2026: Debugged localhost auth failures and identified Firebase Auth backend config missing (`CONFIGURATION_NOT_FOUND`) for project `zenith-legal-dev`; this caused email/password no-op behavior and Google `invalid_client` error.
 - 02.25.2026: Updated local `.env` runtime to disable app emulator auth mode for web/mobile (`NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false`, `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=false`) and aligned Zenith admin env keys.
 - 02.25.2026: Improved web auth UX error surfacing with explicit Firebase auth code mapping and emulator-mode warning banner for easier setup debugging.
 
 - 02.25.2026: Added immediate post-success redirect on web email/password auth (`/auth` -> `/app`) to eliminate perceived no-op after valid credential submission.
+
+- 02.25.2026: Fixed admin web runtime env loading by adding workspace-local `apps/admin/.env.local` sourced from root `NEXT_PUBLIC_*` values so Next.js can initialize Firebase config at runtime.
