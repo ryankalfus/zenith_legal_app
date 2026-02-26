@@ -378,3 +378,19 @@
   - Start app with cache clear (`npm run dev --workspace @zenith/mobile -- --clear`).
   - Log in as Zenith admin and open Inbox.
   - Confirm inbox list renders and opens candidate message threads without red-screen render error.
+
+## Step 30 - Global Mobile List Crash Fix (Admin Navigation Paths)
+- What changed:
+  - Replaced `FlatList` with `ScrollView` in:
+    - `apps/mobile/src/screens/MessagesScreen.tsx`
+    - `apps/mobile/src/screens/StatusScreen.tsx`
+    - `apps/mobile/src/screens/CalendarScreen.tsx`
+  - This removes direct app usage of `VirtualizedListCellRenderer`, which was the crashing source in the red screen.
+- Commands run + result:
+  - `rg -n "\\bFlatList\\b|\\bSectionList\\b|\\bVirtualizedList\\b" apps/mobile/src --glob '*.tsx' --glob '*.ts'` -> no matches
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Start Metro with cache clear (`npm run dev --workspace @zenith/mobile -- --clear`).
+  - Login as Zenith admin.
+  - Open Inbox, then open Messages, Status, and Calendar tabs/screens.
+  - Confirm no `enableOptimisedVirtualizedCells` red-screen appears.

@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,7 +23,7 @@ export function MessagesScreen() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<{ uri: string; mimeType: string; fileName: string } | undefined>();
-  const listRef = useRef<FlatList<any>>(null);
+  const listRef = useRef<ScrollView>(null);
   const candidateId =
     session?.role === "admin" ? route.params?.candidateId ?? "" : (session?.user.uid ?? "");
 
@@ -85,23 +85,22 @@ export function MessagesScreen() {
       behavior={Platform.select({ ios: "padding", android: undefined })}
       keyboardVerticalOffset={96}
     >
-      <FlatList
+      <ScrollView
         ref={listRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
+      >
+        {messages.map((item) => {
           const mine = item.senderId === session?.user.uid;
           return (
-            <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+            <View key={item.id} style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
               <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
               {Array.isArray(item.attachments) && item.attachments.length > 0 && (
                 <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
               )}
             </View>
           );
-        }}
-      />
+        })}
+      </ScrollView>
 
       <View style={styles.composer}>
         <Pressable style={styles.attachButton} onPress={onPickFile}>

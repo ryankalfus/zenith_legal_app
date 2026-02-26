@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CANDIDATE_STATUS_LABELS, CandidateFirmStatus } from "@zenith/shared";
 import { useAuth } from "../state/AuthContext";
 import { watchCandidateStatuses } from "../services/statusService";
@@ -106,19 +106,17 @@ export function StatusScreen() {
         </View>
       )}
 
-      <FlatList
-        data={statusRows}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>No firm statuses yet.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.statusRow}>
+      <ScrollView contentContainerStyle={styles.listContent}>
+        {statusRows.length === 0 ? <Text style={styles.empty}>No firm statuses yet.</Text> : null}
+        {statusRows.map((item) => (
+          <View key={item.id} style={styles.statusRow}>
             <Text style={styles.firmName}>{firmMap[item.firmId] ?? item.firmId}</Text>
             <Text style={styles.statusLabel}>
               {CANDIDATE_STATUS_LABELS[item.status as CandidateFirmStatus] ?? item.status}
             </Text>
           </View>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -157,6 +155,9 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 12,
     gap: 10
+  },
+  listContent: {
+    paddingBottom: 12
   },
   sectionTitle: {
     fontWeight: "700"

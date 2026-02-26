@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -103,12 +103,10 @@ export function CalendarScreen() {
         </Pressable>
       </View>
 
-      <FlatList
-        data={appointments}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>No appointments yet.</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.appointmentRow}>
+      <ScrollView contentContainerStyle={styles.listContent}>
+        {appointments.length === 0 ? <Text style={styles.empty}>No appointments yet.</Text> : null}
+        {appointments.map((item) => (
+          <View key={item.id} style={styles.appointmentRow}>
             <Text style={styles.itemTitle}>{item.title}</Text>
             <Text style={styles.itemMeta}>{item.startsAt}</Text>
             <Text style={styles.itemMeta}>Status: {item.status}</Text>
@@ -118,8 +116,8 @@ export function CalendarScreen() {
               </Pressable>
             )}
           </View>
-        )}
-      />
+        ))}
+      </ScrollView>
     </View>
   );
 }
@@ -141,6 +139,9 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     padding: 12,
     gap: 8
+  },
+  listContent: {
+    paddingBottom: 12
   },
   sectionTitle: {
     fontWeight: "700"
