@@ -77,6 +77,8 @@ export default function AuthPage() {
       } else {
         await loginWithEmailPassword(email, password);
       }
+
+      router.push("/app");
     } catch (err: any) {
       setError(formatAuthError(err, "Authentication failed."));
     } finally {

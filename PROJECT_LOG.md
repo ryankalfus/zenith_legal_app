@@ -69,3 +69,5 @@
 - 02.25.2026: Debugged localhost auth failures and identified Firebase Auth backend config missing (`CONFIGURATION_NOT_FOUND`) for project `zenith-legal-dev`; this caused email/password no-op behavior and Google `invalid_client` error.
 - 02.25.2026: Updated local `.env` runtime to disable app emulator auth mode for web/mobile (`NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false`, `EXPO_PUBLIC_USE_FIREBASE_EMULATORS=false`) and aligned Zenith admin env keys.
 - 02.25.2026: Improved web auth UX error surfacing with explicit Firebase auth code mapping and emulator-mode warning banner for easier setup debugging.
+
+- 02.25.2026: Added immediate post-success redirect on web email/password auth (`/auth` -> `/app`) to eliminate perceived no-op after valid credential submission.

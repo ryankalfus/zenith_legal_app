@@ -272,3 +272,5 @@
 - What to test:
   - In Firebase Console, initialize Authentication and enable Email/Password + Google providers.
   - Confirm localhost auth works for email/password and Google popup after restarting `npm run dev:admin`.
+
+- Additional auth UX hardening: web email/password auth now pushes to `/app` immediately after successful sign-in/sign-up instead of waiting solely on observer redirect.
