@@ -77,3 +77,5 @@
 
 - 02.26.2026: Fixed Zenith admin mode bootstrap on web by adding callable fallback (`ensureZenithAdminClaim` -> `setAdminRoleByEmail`) and immediate role-based post-login routing.
 - 02.26.2026: Replaced web candidate placeholder route with functional desktop candidate experience (`/app`) including Home, Status/authorizations, Messages, Calendar, and Profile updates.
+
+- 02.26.2026: Hardened web admin authorization fallback so `mason@zenithlegal.com` is always treated as admin in app routing and user profile role is auto-aligned to `admin` when claim sync is delayed.

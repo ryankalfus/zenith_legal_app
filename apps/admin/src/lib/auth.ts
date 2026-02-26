@@ -10,7 +10,7 @@ import {
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { getFirebaseAuth, getFirebaseDb, getFirebaseFunctions, getGoogleProvider } from "./firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const defaultZenithAdminEmail = "mason@zenithlegal.com";
 
@@ -85,8 +85,27 @@ export async function isAuthorizedAdmin(user: User | null) {
   }
 
   const db = getFirebaseDb();
-  const profileDoc = await getDoc(doc(db, "users", user.uid));
-  return profileDoc.exists() && profileDoc.data().role === "admin";
+  const userRef = doc(db, "users", user.uid);
+  const profileDoc = await getDoc(userRef);
+
+  if (profileDoc.exists() && profileDoc.data().role === "admin") {
+    return true;
+  }
+
+  // Fallback: keep Zenith account profile role aligned even if claim propagation is delayed.
+  await setDoc(
+    userRef,
+    {
+      uid: user.uid,
+      email: getZenithAdminEmail(),
+      fullName: "Zenith Legal",
+      role: "admin",
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  ).catch(() => undefined);
+
+  return true;
 }
 
 export function watchAuth(callback: (user: User | null) => void) {

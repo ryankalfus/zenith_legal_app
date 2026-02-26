@@ -299,3 +299,6 @@
 - What to test:
   - Admin login as `mason@zenithlegal.com` lands on `/dashboard` with management access.
   - Candidate login lands on `/app` and can use standard candidate desktop features.
+
+- Admin-mode fix: updated `apps/admin/src/lib/auth.ts` so Zenith account (`mason@zenithlegal.com`) forces `users/{uid}.role=admin` fallback and returns admin authorization even when claim propagation lags.
+- Validation: `npm run typecheck --workspace @zenith/admin` and `npm run build --workspace @zenith/admin` passed.
