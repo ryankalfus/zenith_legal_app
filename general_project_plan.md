@@ -247,3 +247,6 @@ This can be either:
 - Zenith admin mobile experience now uses three tabs: Candidates, Chat, Appointment Requests.
 - Candidate waiting-status actions are implemented through `candidateStatusRequests` with backend DM/email automation.
 - Appointment requests are now first-class records with status lifecycle (`requested`, `scheduled`, `completed`, `canceled`) and required phone number capture.
+- 02.26.2026 Plan Update: Mobile appointment workflow now includes admin-side candidate dropdown appointment creation, request accept/decline mapping (`scheduled`/`canceled`), and synchronized detail modification.
+- 02.26.2026 Plan Update: Mobile firm assignment UX updated to explicit 2-step flow (`Assign Firm` then `Firm Assigned` status selection) while preserving one-record-per-candidate+firm data model.
+- 02.26.2026 Plan Update: Mobile message composer visual language refined toward cleaner rounded iOS-style controls without changing core messaging backend behavior.

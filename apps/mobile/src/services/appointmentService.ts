@@ -17,6 +17,8 @@ export type AppointmentRow = {
   candidateId: string;
   createdBy: string;
   createdByRole: "candidate" | "admin";
+  updatedBy?: string;
+  updatedByRole?: "candidate" | "admin";
   status: AppointmentStatus;
   title: string;
   startsAt: string;
@@ -24,6 +26,11 @@ export type AppointmentRow = {
   phoneNumber: string;
   notes?: string;
 };
+
+function buildEndsAt(startsAt: string) {
+  const startsDate = new Date(startsAt);
+  return new Date(startsDate.getTime() + 30 * 60 * 1000).toISOString();
+}
 
 export function watchCandidateAppointments(
   candidateId: string,
@@ -72,16 +79,15 @@ export async function createAppointmentRequest(payload: {
   phoneNumber: string;
   notes?: string;
 }) {
-  const startsDate = new Date(payload.startsAt);
-  const endsAt = new Date(startsDate.getTime() + 30 * 60 * 1000).toISOString();
-
   await addDoc(collection(db, "appointments"), {
     candidateId: payload.candidateId,
     createdBy: payload.createdBy,
     createdByRole: payload.createdByRole,
+    updatedBy: payload.createdBy,
+    updatedByRole: payload.createdByRole,
     title: "Call appointment",
     startsAt: payload.startsAt,
-    endsAt,
+    endsAt: buildEndsAt(payload.startsAt),
     phoneNumber: payload.phoneNumber,
     notes: payload.notes ?? "",
     status: "requested",
@@ -91,7 +97,65 @@ export async function createAppointmentRequest(payload: {
   });
 }
 
-export async function updateAppointmentStatus(appointmentId: string, status: AppointmentStatus) {
+export async function updateAppointmentStatus(input: {
+  appointmentId: string;
+  status: AppointmentStatus;
+  updatedBy: string;
+  updatedByRole: "candidate" | "admin";
+}) {
+  await updateDoc(doc(db, "appointments", input.appointmentId), {
+    status: input.status,
+    updatedBy: input.updatedBy,
+    updatedByRole: input.updatedByRole,
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function updateAppointmentDetails(input: {
+  appointmentId: string;
+  startsAt: string;
+  phoneNumber: string;
+  notes?: string;
+  updatedBy: string;
+  updatedByRole: "candidate" | "admin";
+}) {
+  await updateDoc(doc(db, "appointments", input.appointmentId), {
+    startsAt: input.startsAt,
+    endsAt: buildEndsAt(input.startsAt),
+    phoneNumber: input.phoneNumber,
+    notes: input.notes ?? "",
+    updatedBy: input.updatedBy,
+    updatedByRole: input.updatedByRole,
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function createAdminAppointment(payload: {
+  candidateId: string;
+  createdBy: string;
+  startsAt: string;
+  phoneNumber: string;
+  notes?: string;
+}) {
+  await addDoc(collection(db, "appointments"), {
+    candidateId: payload.candidateId,
+    createdBy: payload.createdBy,
+    createdByRole: "admin",
+    updatedBy: payload.createdBy,
+    updatedByRole: "admin",
+    title: "Call appointment",
+    startsAt: payload.startsAt,
+    endsAt: buildEndsAt(payload.startsAt),
+    phoneNumber: payload.phoneNumber,
+    notes: payload.notes ?? "",
+    status: "scheduled",
+    reminderMinutesBefore: 30,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function updateAppointmentStatusLegacy(appointmentId: string, status: AppointmentStatus) {
   await updateDoc(doc(db, "appointments", appointmentId), {
     status,
     updatedAt: serverTimestamp()
@@ -113,6 +177,8 @@ export async function createAppointment(payload: {
 }) {
   await addDoc(collection(db, "appointments"), {
     ...payload,
+    updatedBy: payload.createdBy,
+    updatedByRole: payload.createdByRole,
     phoneNumber: payload.phoneNumber ?? "",
     status: "scheduled",
     reminderMinutesBefore: 30,

@@ -102,3 +102,11 @@
 - 02.26.2026: Added appointment request lifecycle updates (`requested` status + required phone number) and trigger `syncAppointmentRequestMessage` to auto-create required chat message text.
 - 02.26.2026: Updated shared domain types/schemas, Firestore rules/indexes, and mobile services for new status-request and appointment-request data model.
 - 02.26.2026: Re-ran verification after redesign changes: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
+- 02.26.2026: Updated mobile candidate appointment request UI with cleaner dropdown-style date/time selectors and preserved required phone + optional note flow.
+- 02.26.2026: Rebuilt admin appointment workflow so Zenith can create appointments from candidate dropdown selection, accept/decline requests (`scheduled`/`canceled`), complete appointments, and modify date/time/phone/note with live sync.
+- 02.26.2026: Updated appointment service layer with explicit admin create/edit APIs (`createAdminAppointment`, `updateAppointmentDetails`) and actor-aware status updates for sync/push behavior.
+- 02.26.2026: Updated mobile firm assignment UX to a 2-step flow (`Assign Firm` -> `Firm Assigned` status screen) while keeping one candidate+firm record per firm and status history updates.
+- 02.26.2026: Refined mobile chat composer to a cleaner iOS-style layout with rounded/oval input surface, compact attachment control, and circular send button.
+- 02.26.2026: Tightened Firestore appointment update rules so candidates can only cancel their own `requested/scheduled` appointments without changing appointment details.
+- 02.26.2026: Extended appointment push trigger behavior to notify candidate when admin accepts/declines or modifies appointment details.
+- 02.26.2026: Re-ran validation after appointment/firm/chat updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).

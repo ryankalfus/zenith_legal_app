@@ -127,6 +127,16 @@ service cloud.firestore {
           isAuthenticated() &&
           request.auth.uid == resource.data.candidateId &&
           request.resource.data.candidateId == resource.data.candidateId &&
+          request.resource.data.createdBy == resource.data.createdBy &&
+          request.resource.data.createdByRole == resource.data.createdByRole &&
+          request.resource.data.title == resource.data.title &&
+          request.resource.data.startsAt == resource.data.startsAt &&
+          request.resource.data.endsAt == resource.data.endsAt &&
+          request.resource.data.phoneNumber == resource.data.phoneNumber &&
+          request.resource.data.notes == resource.data.notes &&
+          request.resource.data.reminderMinutesBefore == resource.data.reminderMinutesBefore &&
+          request.resource.data.updatedByRole == 'candidate' &&
+          resource.data.status in ['requested', 'scheduled'] &&
           request.resource.data.status == 'canceled'
         )
       );

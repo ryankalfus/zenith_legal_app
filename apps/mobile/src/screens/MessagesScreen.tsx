@@ -124,7 +124,7 @@ export function MessagesScreen() {
 
         <View style={styles.composer}>
           <Pressable style={styles.attachButton} onPress={onPickFile}>
-            <Text style={styles.attachText}>+ File</Text>
+            <Text style={styles.attachText}>+</Text>
           </Pressable>
           <TextInput
             style={styles.input}
@@ -197,48 +197,60 @@ const styles = StyleSheet.create({
   attachmentText: {
     marginTop: 6,
     fontSize: 12,
-    color: "#dbe9ff"
+    color: "#61708a"
   },
   composer: {
+    margin: 10,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
     backgroundColor: "#fff",
-    padding: 10
-  },
-  attachButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: "#fff"
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    shadowColor: "#0b1220",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  attachButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#f1f4fb",
+    alignItems: "center",
+    justifyContent: "center"
   },
   attachText: {
-    color: theme.colors.textSecondary,
-    fontWeight: "700"
+    color: theme.colors.primary,
+    fontWeight: "800",
+    fontSize: 18,
+    lineHeight: 20
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    maxHeight: 100,
-    backgroundColor: "#fff"
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxHeight: 120,
+    backgroundColor: "#f3f5fa",
+    color: theme.colors.textPrimary
   },
   sendButton: {
-    borderRadius: 10,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    alignItems: "center",
+    justifyContent: "center"
   },
   sendText: {
     color: "#fff",
-    fontWeight: "700"
+    fontWeight: "700",
+    fontSize: 11
   },
   disabled: {
     opacity: 0.5

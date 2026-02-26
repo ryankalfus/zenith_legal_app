@@ -427,3 +427,32 @@
     - `npm run typecheck` passes.
     - `npm run build` passes.
     - `npm run test:rules` passes (`11 passed, 0 failed`).
+
+## Step 27 - Appointment + Firm Assignment + Chat UI Sync Improvements (Mobile)
+- What changed:
+  - Candidate appointment request UI kept date/time picker controls but refined to cleaner dropdown-style selectors.
+  - Admin appointment tab now includes top create flow with candidate dropdown selection, date/time, phone, and note.
+  - Admin appointment request cards now support explicit Accept (`scheduled`) and Decline (`canceled`) actions, plus Complete and Modify actions.
+  - Added appointment detail editing support (date/time/phone/note) with immediate sync to candidate view.
+  - Updated appointment service APIs:
+    - `createAdminAppointment(...)`
+    - `updateAppointmentDetails(...)`
+    - actor-aware `updateAppointmentStatus(...)` payload
+  - Updated firm assignment flow in candidate detail to dedicated 2-step path:
+    - Step 1: `Assign Firm` (pick firm)
+    - Step 2: `Firm Assigned` (pick status and confirm)
+  - Preserved one-document-per-candidate+firm model (`candidateId_firmId`) with history updates for repeated same-firm assignments.
+  - Refined chat composer styling in mobile messages screen to cleaner modern rounded/oval controls with circular send affordance.
+  - Tightened Firestore appointment update rules to restrict candidate update path to cancel-only on `requested/scheduled` records while preserving admin full edit rights.
+  - Extended appointment push trigger logic to notify candidates on admin status/detail changes (accept/decline/modify).
+- What to test:
+  - Candidate can submit appointment request and see live status updates after admin accept/decline/modify.
+  - Admin can create appointment directly from appointment tab using candidate dropdown and values sync on candidate end.
+  - Admin can modify appointment details and candidate receives updated appointment state/details.
+  - Candidate can cancel only pending/scheduled appointments; candidate cannot edit appointment details.
+  - Assign Firm flow follows 2-step UX and updates candidate dashboard statuses correctly.
+  - Chat composer renders rounded/oval controls and still sends text/attachments successfully.
+  - Validation commands pass:
+    - `npm run typecheck`
+    - `npm run build`
+    - `npm run test:rules`

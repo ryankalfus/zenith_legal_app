@@ -66,8 +66,17 @@ export function CalendarScreen() {
   };
 
   const onCancel = async (appointmentId: string) => {
+    if (!session?.user.uid) {
+      return;
+    }
+
     try {
-      await updateAppointmentStatus(appointmentId, "canceled");
+      await updateAppointmentStatus({
+        appointmentId,
+        status: "canceled",
+        updatedBy: session.user.uid,
+        updatedByRole: session.role === "admin" ? "admin" : "candidate"
+      });
     } catch (error: any) {
       Alert.alert("Could not cancel", error?.message ?? "Try again.");
     }

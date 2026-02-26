@@ -100,3 +100,13 @@ Legend:
 
 ## Step Log
 - 2026-02-26: Added full mobile redesign requirement tracking notes for candidate/admin tab changes, status request automation, and appointment request lifecycle updates.
+- [x] `MVP` Candidate appointment request form uses clean dropdown-style date/time selectors and sends request to Zenith admin appointment queue.
+- [x] `MVP` Zenith admin appointment tab supports create-from-candidate-dropdown flow and end-to-end sync to candidate records.
+- [x] `MVP` Zenith admin can accept/decline appointment requests via status mapping (`scheduled` / `canceled`) and complete/modify appointments.
+- [x] `MVP` Appointment detail edits (date/time/phone/note) sync end-to-end between admin and candidate views.
+- [x] `MVP` Candidate detail `Assign Firm` flow uses 2-step UX (`Assign Firm` -> `Firm Assigned` status selection).
+- [x] `MVP` Candidate+firm assignment model remains one record per firm with status/history updates (no duplicate same-firm records).
+- [x] `MVP` Mobile chat composer UI updated to cleaner rounded/oval controls while preserving send + attachment functionality.
+
+## Step Log
+- 2026-02-26: Added checklist coverage for synced admin/candidate appointment lifecycle updates, 2-step firm assignment flow, and modernized mobile chat composer UI.

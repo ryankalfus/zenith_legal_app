@@ -12,13 +12,26 @@ const db = getFirestore();
 export const sendPushOnAppointmentChange = onDocumentWritten(
   "appointments/{appointmentId}",
   async (event) => {
+    const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!after) {
       return;
     }
 
-    // Candidate-created request events are handled separately for admin inbox sync.
-    if (after.status === "requested" || after.createdByRole !== "admin") {
+    const statusChanged = before?.status !== after.status;
+    const detailsChanged =
+      before?.startsAt !== after.startsAt ||
+      before?.endsAt !== after.endsAt ||
+      before?.phoneNumber !== after.phoneNumber ||
+      before?.notes !== after.notes;
+
+    // Candidate-created request events are handled by appointmentRequestMessage trigger.
+    if (after.status === "requested") {
+      return;
+    }
+
+    // Push only when admin is the actor and either status/details changed.
+    if (after.updatedByRole !== "admin" || (!statusChanged && !detailsChanged)) {
       return;
     }
 

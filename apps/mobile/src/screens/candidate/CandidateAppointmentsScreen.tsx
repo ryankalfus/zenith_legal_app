@@ -115,8 +115,16 @@ export function CandidateAppointmentsScreen() {
   };
 
   const cancelRequest = async (appointmentId: string) => {
+    if (!session?.user.uid) {
+      return;
+    }
     try {
-      await updateAppointmentStatus(appointmentId, "canceled");
+      await updateAppointmentStatus({
+        appointmentId,
+        status: "canceled",
+        updatedBy: session.user.uid,
+        updatedByRole: "candidate"
+      });
     } catch (error: any) {
       Alert.alert("Could not cancel", error?.message ?? "Please try again.");
     }
@@ -135,11 +143,17 @@ export function CandidateAppointmentsScreen() {
         <View style={styles.rowButtons}>
           <Pressable style={styles.pickButton} onPress={() => setShowDatePicker(true)}>
             <Text style={styles.pickLabel}>Date</Text>
-            <Text style={styles.pickValue}>{formatDate(requestDate)}</Text>
+            <View style={styles.pickValueRow}>
+              <Text style={styles.pickValue}>{formatDate(requestDate)}</Text>
+              <Text style={styles.pickChevron}>▼</Text>
+            </View>
           </Pressable>
           <Pressable style={styles.pickButton} onPress={() => setShowTimePicker(true)}>
             <Text style={styles.pickLabel}>Time</Text>
-            <Text style={styles.pickValue}>{formatTime(requestTime)}</Text>
+            <View style={styles.pickValueRow}>
+              <Text style={styles.pickValue}>{formatTime(requestTime)}</Text>
+              <Text style={styles.pickChevron}>▼</Text>
+            </View>
           </Pressable>
         </View>
 
@@ -237,6 +251,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: "700",
     marginTop: 2
+  },
+  pickValueRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  pickChevron: {
+    color: theme.colors.textSecondary,
+    fontSize: 12
   },
   input: {
     borderWidth: 1,
