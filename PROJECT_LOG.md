@@ -74,3 +74,6 @@
 - 02.25.2026: Added immediate post-success redirect on web email/password auth (`/auth` -> `/app`) to eliminate perceived no-op after valid credential submission.
 
 - 02.25.2026: Fixed admin web runtime env loading by adding workspace-local `apps/admin/.env.local` sourced from root `NEXT_PUBLIC_*` values so Next.js can initialize Firebase config at runtime.
+
+- 02.26.2026: Fixed Zenith admin mode bootstrap on web by adding callable fallback (`ensureZenithAdminClaim` -> `setAdminRoleByEmail`) and immediate role-based post-login routing.
+- 02.26.2026: Replaced web candidate placeholder route with functional desktop candidate experience (`/app`) including Home, Status/authorizations, Messages, Calendar, and Profile updates.

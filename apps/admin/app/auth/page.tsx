@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  bootstrapAdminSessionIfNeeded,
   isAuthorizedAdmin,
   loginWithEmailPassword,
   loginWithGoogle,
@@ -78,7 +79,8 @@ export default function AuthPage() {
         await loginWithEmailPassword(email, password);
       }
 
-      router.push("/app");
+      const isAdmin = await bootstrapAdminSessionIfNeeded();
+      router.push(isAdmin ? "/dashboard" : "/app");
     } catch (err: any) {
       setError(formatAuthError(err, "Authentication failed."));
     } finally {
@@ -91,6 +93,8 @@ export default function AuthPage() {
       setBusy(true);
       setError(null);
       await loginWithGoogle();
+      const isAdmin = await bootstrapAdminSessionIfNeeded();
+      router.push(isAdmin ? "/dashboard" : "/app");
     } catch (err: any) {
       setError(formatAuthError(err, "Google login failed."));
     } finally {

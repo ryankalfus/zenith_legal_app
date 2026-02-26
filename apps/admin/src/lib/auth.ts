@@ -47,9 +47,29 @@ export async function ensureZenithAdminClaimIfNeeded(user: User | null) {
     return;
   }
 
-  const fn = httpsCallable(getFirebaseFunctions(), "ensureZenithAdminClaim");
-  await fn();
+  const functions = getFirebaseFunctions();
+
+  // Prefer the strict callable, then fall back to legacy bootstrap callable.
+  try {
+    const strictFn = httpsCallable(functions, "ensureZenithAdminClaim");
+    await strictFn();
+  } catch {
+    const legacyFn = httpsCallable(functions, "setAdminRoleByEmail");
+    await legacyFn({ email: getZenithAdminEmail() });
+  }
+
   await user.getIdToken(true);
+}
+
+export async function bootstrapAdminSessionIfNeeded() {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!isZenithAdminUser(user)) {
+    return false;
+  }
+
+  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
+  return isAuthorizedAdmin(user);
 }
 
 export async function isAuthorizedAdmin(user: User | null) {

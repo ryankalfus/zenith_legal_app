@@ -286,3 +286,16 @@
 - Additional auth UX hardening: web email/password auth now pushes to `/app` immediately after successful sign-in/sign-up instead of waiting solely on observer redirect.
 
 - Hotfix: created `apps/admin/.env.local` with `NEXT_PUBLIC_*` Firebase keys because Next.js workspace dev server was not reading root `.env`, causing missing Firebase env runtime error on `/auth`.
+
+## Step 24 - Web Candidate Access + Admin Mode Reliability
+- What changed:
+  - Improved web admin bootstrap so `mason@zenithlegal.com` reliably enters admin mode after sign-in.
+  - Added fallback callable path for admin claim assignment when strict callable is unavailable.
+  - Updated auth page to route immediately to dashboard for admin and to candidate desktop for non-admin users.
+  - Implemented candidate desktop app route (`/app`) with standard features: Home contact, status/authorization actions, messaging, appointments, profile editing, logout/delete account.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/admin` -> PASS
+  - `npm run build --workspace @zenith/admin` -> PASS
+- What to test:
+  - Admin login as `mason@zenithlegal.com` lands on `/dashboard` with management access.
+  - Candidate login lands on `/app` and can use standard candidate desktop features.
