@@ -10,6 +10,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { CandidateContactBar } from "../components/AppShell";
 import { useAuth } from "../state/AuthContext";
 import { theme } from "../ui/theme";
 
@@ -43,63 +44,69 @@ export function AuthScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-    >
-      <View style={styles.heroWrap}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Zenith Legal</Text>
-        <Text style={styles.subtitle}>A HIGHER LEVEL OF LEGAL SEARCH</Text>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.modeRow}>
-          <Pressable
-            style={[styles.modeButton, mode === "signup" && styles.modeButtonActive]}
-            onPress={() => setMode("signup")}
-          >
-            <Text style={[styles.modeText, mode === "signup" && styles.modeTextActive]}>Sign Up</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.modeButton, mode === "login" && styles.modeButtonActive]}
-            onPress={() => setMode("login")}
-          >
-            <Text style={[styles.modeText, mode === "login" && styles.modeTextActive]}>Log In</Text>
-          </Pressable>
+    <View style={styles.root}>
+      <CandidateContactBar />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+      >
+        <View style={styles.heroWrap}>
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.title}>Zenith Legal</Text>
+          <Text style={styles.subtitle}>A HIGHER LEVEL OF LEGAL SEARCH</Text>
         </View>
 
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={styles.input}
-          placeholder="you@example.com"
-          placeholderTextColor="#7f8b9d"
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#7f8b9d"
-        />
-        <Pressable style={styles.button} onPress={onEmailPassword} disabled={busy}>
-          <Text style={styles.buttonText}>
-            {busy ? "Please wait..." : mode === "signup" ? "Create account" : "Log in"}
-          </Text>
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+        <View style={styles.card}>
+          <View style={styles.modeRow}>
+            <Pressable
+              style={[styles.modeButton, mode === "signup" && styles.modeButtonActive]}
+              onPress={() => setMode("signup")}
+            >
+              <Text style={[styles.modeText, mode === "signup" && styles.modeTextActive]}>Sign Up</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modeButton, mode === "login" && styles.modeButtonActive]}
+              onPress={() => setMode("login")}
+            >
+              <Text style={[styles.modeText, mode === "login" && styles.modeTextActive]}>Log In</Text>
+            </Pressable>
+          </View>
+
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.input}
+            placeholder="you@example.com"
+            placeholderTextColor="#7f8b9d"
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#7f8b9d"
+          />
+          <Pressable style={styles.button} onPress={onEmailPassword} disabled={busy}>
+            <Text style={styles.buttonText}>
+              {busy ? "Please wait..." : mode === "signup" ? "Create account" : "Log in"}
+            </Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
     paddingHorizontal: 18,
     justifyContent: "center",
     gap: 16

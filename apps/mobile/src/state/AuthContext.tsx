@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             preferredCities: [],
             practiceArea: defaultPracticeArea
           },
+          hasAppointmentUpdates: false,
           pushTokens: [],
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()

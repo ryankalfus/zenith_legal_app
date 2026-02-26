@@ -11,20 +11,33 @@ import {
   View
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useRoute } from "@react-navigation/native";
+import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../state/AuthContext";
-import { sendMessage, watchMessages } from "../services/messagingService";
-import { RootStackParamList } from "../navigation/types";
+import { markConversationRead, sendMessage, watchMessages } from "../services/messagingService";
+import { AdminChatStackParamList } from "../navigation/types";
 import { CandidateContactBar } from "../components/AppShell";
+import { Avatar } from "../components/Avatar";
 import { theme } from "../ui/theme";
+import { db } from "../lib/firebase";
+import { watchUser } from "../services/userService";
 
 export function MessagesScreen() {
   const { session } = useAuth();
-  const route = useRoute<RouteProp<RootStackParamList, "Messages">>();
+  const route = useRoute<RouteProp<AdminChatStackParamList, "Messages">>();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<{ uri: string; mimeType: string; fileName: string } | undefined>();
+  const [candidateProfile, setCandidateProfile] = useState<{ name: string; avatarUrl: string }>({
+    name: "Candidate",
+    avatarUrl: ""
+  });
+  const [selfProfile, setSelfProfile] = useState<{ name: string; avatarUrl: string }>({
+    name: "You",
+    avatarUrl: ""
+  });
   const listRef = useRef<ScrollView>(null);
 
   const candidateId =
@@ -45,6 +58,60 @@ export function MessagesScreen() {
       () => undefined
     );
   }, [candidateId]);
+
+  useEffect(() => {
+    if (!candidateId || !session?.role) {
+      return;
+    }
+
+    markConversationRead(candidateId, session.role).catch(() => undefined);
+  }, [candidateId, session?.role]);
+
+  useEffect(() => {
+    if (!candidateId || !session?.role || messages.length === 0) {
+      return;
+    }
+    markConversationRead(candidateId, session.role).catch(() => undefined);
+  }, [candidateId, messages.length, session?.role]);
+
+  useEffect(() => {
+    if (!candidateId) {
+      return;
+    }
+
+    if (session?.role === "admin") {
+      getDoc(doc(db, "users", candidateId))
+        .then((snapshot) => {
+          const data = snapshot.data();
+          setCandidateProfile({
+            name: String(data?.fullName ?? route.params?.title ?? "Candidate"),
+            avatarUrl: String(data?.avatarUrl ?? "")
+          });
+        })
+        .catch(() => undefined);
+    } else {
+      setCandidateProfile({
+        name: "Zenith Legal",
+        avatarUrl: ""
+      });
+    }
+  }, [candidateId, route.params?.title, session?.role]);
+
+  useEffect(() => {
+    if (!session?.user.uid) {
+      return;
+    }
+
+    return watchUser(
+      session.user.uid,
+      (data) =>
+        setSelfProfile({
+          name: String(data?.fullName ?? (session.role === "admin" ? "Zenith Legal" : "You")),
+          avatarUrl: String(data?.avatarUrl ?? "")
+        }),
+      () => undefined
+    );
+  }, [session?.role, session?.user.uid]);
 
   const onPickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
@@ -94,7 +161,7 @@ export function MessagesScreen() {
 
   return (
     <View style={styles.screen}>
-      {session?.role === "candidate" ? <CandidateContactBar /> : null}
+      <CandidateContactBar />
 
       <KeyboardAvoidingView
         style={styles.container}
@@ -112,11 +179,17 @@ export function MessagesScreen() {
           {messages.map((item) => {
             const mine = item.senderId === session?.user.uid;
             return (
-              <View key={item.id} style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-                <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
-                {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
-                  <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
-                ) : null}
+              <View key={item.id} style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}>
+                {!mine ? <Avatar uri={candidateProfile.avatarUrl} name={candidateProfile.name} size={30} /> : null}
+
+                <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                  <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
+                  {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
+                    <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
+                  ) : null}
+                </View>
+
+                {mine ? <Avatar uri={selfProfile.avatarUrl} name={selfProfile.name} size={30} /> : null}
               </View>
             );
           })}
@@ -135,7 +208,7 @@ export function MessagesScreen() {
             multiline
           />
           <Pressable style={[styles.sendButton, busy && styles.disabled]} onPress={onSend} disabled={busy}>
-            <Text style={styles.sendText}>Send</Text>
+            <Ionicons name="arrow-up" size={20} color="#fff" />
           </Pressable>
         </View>
         {file ? <Text style={styles.fileHint}>Attached: {file.fileName}</Text> : null}
@@ -172,8 +245,19 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 10
   },
+  messageRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 7
+  },
+  mineRow: {
+    justifyContent: "flex-end"
+  },
+  theirRow: {
+    justifyContent: "flex-start"
+  },
   bubble: {
-    maxWidth: "82%",
+    maxWidth: "76%",
     padding: 11,
     borderRadius: 16,
     borderWidth: 1
@@ -246,11 +330,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center"
-  },
-  sendText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 11
   },
   disabled: {
     opacity: 0.5

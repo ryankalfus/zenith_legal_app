@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import { PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
+import { Avatar } from "../components/Avatar";
+import { CandidateContactBar } from "../components/AppShell";
+import { uploadCandidateProfilePhoto } from "../services/userService";
 import { useAuth } from "../state/AuthContext";
 
 export function ProfileSetupScreen() {
@@ -10,6 +14,7 @@ export function ProfileSetupScreen() {
   const [mobile, setMobile] = useState(session?.user.phoneNumber ?? "");
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
+  const [photoFile, setPhotoFile] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const isValid = useMemo(() => fullName.trim().length > 0 && email.trim().length > 0, [fullName, email]);
@@ -21,6 +26,10 @@ export function ProfileSetupScreen() {
   };
 
   const onSave = async () => {
+    if (!session?.user.uid) {
+      return;
+    }
+
     try {
       setSaving(true);
       await completeProfile({
@@ -30,6 +39,9 @@ export function ProfileSetupScreen() {
         preferredCities,
         practiceArea
       });
+      if (photoFile) {
+        await uploadCandidateProfilePhoto(session.user.uid, photoFile);
+      }
     } catch (error: any) {
       Alert.alert("Could not save profile", error?.message ?? "Try again.");
     } finally {
@@ -37,10 +49,37 @@ export function ProfileSetupScreen() {
     }
   };
 
+  const onPickPhoto = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: "image/*"
+    });
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+    const asset = result.assets[0];
+    setPhotoFile({
+      uri: asset.uri,
+      mimeType: asset.mimeType ?? "image/jpeg",
+      fileName: asset.name ?? "profile-photo.jpg"
+    });
+  };
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Finish your profile</Text>
-      <Text style={styles.subtitle}>This lets Zenith match you with the right opportunities.</Text>
+    <View style={styles.container}>
+      <CandidateContactBar />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Finish your profile</Text>
+        <Text style={styles.subtitle}>This lets Zenith match you with the right opportunities.</Text>
+
+      <Text style={styles.label}>Profile photo (optional)</Text>
+      <View style={styles.photoRow}>
+        <Avatar uri={photoFile?.uri} name={fullName} size={62} />
+        <Pressable style={styles.photoButton} onPress={onPickPhoto}>
+          <Text style={styles.photoButtonText}>{photoFile ? "Replace photo" : "Add photo"}</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.label}>Name</Text>
       <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
@@ -89,10 +128,11 @@ export function ProfileSetupScreen() {
         })}
       </View>
 
-      <Pressable style={[styles.button, !isValid && styles.buttonDisabled]} disabled={!isValid || saving} onPress={onSave}>
-        <Text style={styles.buttonText}>{saving ? "Saving..." : "Save profile"}</Text>
-      </Pressable>
-    </ScrollView>
+        <Pressable style={[styles.button, !isValid && styles.buttonDisabled]} disabled={!isValid || saving} onPress={onSave}>
+          <Text style={styles.buttonText}>{saving ? "Saving..." : "Save profile"}</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -101,6 +141,23 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   title: { fontSize: 24, fontWeight: "700" },
   subtitle: { color: "#4b5563", marginBottom: 8 },
+  photoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12
+  },
+  photoButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "white"
+  },
+  photoButtonText: {
+    color: "#1f2a3c",
+    fontWeight: "700"
+  },
   label: { fontWeight: "600", marginTop: 4 },
   input: {
     borderWidth: 1,

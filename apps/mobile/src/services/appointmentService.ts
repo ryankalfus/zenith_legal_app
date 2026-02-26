@@ -18,7 +18,7 @@ export type AppointmentRow = {
   createdBy: string;
   createdByRole: "candidate" | "admin";
   updatedBy?: string;
-  updatedByRole?: "candidate" | "admin";
+  updatedByRole?: "candidate" | "admin" | "system";
   status: AppointmentStatus;
   title: string;
   startsAt: string;
@@ -66,6 +66,26 @@ export function watchAdminAppointmentRequests(
     q,
     (snapshot) => {
       onData(snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AppointmentRow, "id">) })));
+    },
+    (err) => onError(err as Error)
+  );
+}
+
+export function watchAdminUnattendedRequestCount(
+  onData: (count: number) => void,
+  onError: (err: Error) => void
+) {
+  const q = query(collection(db, "appointments"), where("status", "==", "requested"));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const now = Date.now();
+      const count = snapshot.docs.filter((entry) => {
+        const startsAt = String(entry.data().startsAt ?? "");
+        const value = Date.parse(startsAt);
+        return Number.isFinite(value) && value >= now;
+      }).length;
+      onData(count);
     },
     (err) => onError(err as Error)
   );

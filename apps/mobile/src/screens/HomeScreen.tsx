@@ -35,7 +35,7 @@ export function HomeScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Messages")}>
+      <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Chat")}>
         <Text style={styles.primaryButtonText}>Message Zenith</Text>
       </Pressable>
     </View>

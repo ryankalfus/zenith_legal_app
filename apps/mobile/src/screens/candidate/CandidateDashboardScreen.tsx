@@ -138,14 +138,17 @@ export function CandidateDashboardScreen() {
 
       {error ? (
         <SurfaceCard>
-          <Text style={styles.errorText}>Could not load dashboard: {error}</Text>
+          <Text style={styles.errorText}>
+            {String(error).toLowerCase().includes("insufficient permissions")
+              ? "Dashboard is syncing. Assigned firms will appear here shortly."
+              : `Could not load dashboard: ${error}`}
+          </Text>
         </SurfaceCard>
       ) : null}
 
-      {!loading && !error && rows.length === 0 ? <EmptyState message="No firms assigned yet." /> : null}
+      {!loading && rows.length === 0 ? <EmptyState message="No firms assigned yet." /> : null}
 
       {!loading &&
-        !error &&
         rows.map((row) => {
           const isWaiting = row.status === "authorization_pending";
           const hasPending = Boolean(pendingByFirm[row.firmId]);

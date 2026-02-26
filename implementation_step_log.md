@@ -456,3 +456,74 @@
     - `npm run typecheck`
     - `npm run build`
     - `npm run test:rules`
+
+## Step 31 - Persistent Icon-Only Mobile Tab Shell
+- What changed:
+  - Reworked `apps/mobile/src/navigation/RootNavigator.tsx` so root stack now only handles `Auth`, `ProfileSetup`, and role app entry screens (`AdminApp`, `CandidateApp`).
+  - Added nested per-tab stacks to keep bottom tabs visible across authenticated navigation:
+    - Candidate: Dashboard stack, Chat stack, Appointments stack, Profile stack.
+    - Admin: Candidates stack (includes candidate detail), Chat stack (includes inbox + thread), Appointment Requests stack.
+  - Moved admin candidate detail and admin message thread routes inside their tab stacks so tab bar persists on those screens.
+  - Switched both tab navigators to icon-only mode (`tabBarShowLabel: false`) with unique icons and accessibility-friendly sizing.
+  - Updated navigation types in `apps/mobile/src/navigation/types.ts` and updated dependent screens to new route names/types:
+    - `apps/mobile/src/screens/admin/AdminCandidatesScreen.tsx`
+    - `apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx`
+    - `apps/mobile/src/screens/MessagesScreen.tsx`
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`11 passed, 0 failed`)
+- What to test next:
+  - Admin: Candidates -> Candidate Detail keeps tab bar visible.
+  - Admin: Chat inbox -> message thread keeps tab bar visible.
+  - Candidate: all tabs show icons only (no text labels) and navigation remains stable.
+- Follow-up: Updated legacy `HomeScreen` quick action route to `Chat` to align with new nested tab navigation naming and avoid stale `Messages` root navigation usage.
+
+## Step 32 - Profile Photos + iMessage Chat + Appointment Reliability (Mobile)
+- What changed:
+  - Added optional candidate profile photo support in setup/profile screens using Firebase Storage path `profilePhotos/{uid}/avatar/*`.
+  - Added reusable `Avatar` component and applied avatars to:
+    - Admin candidate list/detail
+    - Admin chat preview list
+    - Admin appointment create candidate picker + appointment rows
+    - Candidate/admin message thread rows
+  - Rebuilt admin chat preview UX to iMessage-like seamless rows (search, time stamp, unread bold + red dot) and kept thread open behavior.
+  - Added conversation read/unread service wiring and tab badge support:
+    - Admin chat badge = unread chat threads (`9+` max)
+    - Candidate chat badge = unread messages from Zenith (`9+` max)
+    - Candidate appointments tab = red dot update signal
+    - Admin appointments tab = unattended request count (`9+` max)
+  - Updated message thread UI with side avatars and up-arrow send action (attachment support preserved).
+  - Reworked candidate appointments with:
+    - red `Overdue Appointments` section (scheduled only)
+    - chronological `Upcoming appointments`
+    - cancel confirmation flow
+    - schedule-change chat hyperlink
+    - pending request section filtered to active/future requests
+  - Reworked admin appointments with:
+    - top create flow (candidate avatar/name picker + date/time + phone + note)
+    - overdue + upcoming sections (chronological)
+    - note expand/collapse when note exists
+    - floating black bell for unattended requests + action modal (`Accept`, `Decline`, `Modify`)
+  - Improved candidate dashboard reliability by removing fragile status indexed filter and preserving color-coded status chips.
+  - Added assignment persistence read-back check in firm status save path.
+  - Made Zenith contact bar persistent on active mobile screens (auth, profile setup, app-shell screens, and chat thread).
+  - Updated candidate profile label text from `What you work in` to `Practice`.
+- Backend updates:
+  - Added `syncConversationMetaOnMessageCreate` trigger to sync conversation snapshot fields + unread counters.
+  - Added `notifyOnCandidateAppointmentCancel` trigger to auto-create cancellation chat message and send Resend email alert.
+  - Added `flagCandidateAppointmentUpdates` trigger to set candidate appointment update-dot state.
+  - Added `autoCancelExpiredAppointmentRequests` scheduled trigger (`every 15 minutes`) to auto-cancel stale requested appointments.
+- Rules updates:
+  - Added Storage rules path for profile photos (`/profilePhotos/{uid}/...`) with authenticated read and owner/admin write.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`11 passed, 0 failed`)
+- What to test next:
+  - Candidate signup/profile photo optional flow + avatar rendering across admin views.
+  - Admin chat preview search/unread/bold/red-dot behavior and per-thread read clearing.
+  - Candidate/admin tab badges (`chat`, `appointments`) with `9+` cap behavior.
+  - Candidate appointment cancel confirmation auto-chat + email behavior.
+  - Admin unattended requests bell workflow and modify->scheduled transition.
+  - Auto-expiry of stale requested appointments via scheduler.

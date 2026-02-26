@@ -110,3 +110,19 @@
 - 02.26.2026: Tightened Firestore appointment update rules so candidates can only cancel their own `requested/scheduled` appointments without changing appointment details.
 - 02.26.2026: Extended appointment push trigger behavior to notify candidate when admin accepts/declines or modifies appointment details.
 - 02.26.2026: Re-ran validation after appointment/firm/chat updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
+- 02.26.2026: Refactored mobile navigation so authenticated admin/candidate flows run inside persistent bottom tabs with nested per-tab stacks; tab bar now stays visible on chat threads and admin candidate detail screens.
+- 02.26.2026: Replaced mobile tab labels with icon-only controls (`tabBarShowLabel=false`) and added unique per-tab icons for candidate/admin app shells.
+- 02.26.2026: Updated mobile route typing for nested stacks (`AdminCandidatesStack`, `AdminChatStack`, candidate tab stacks) and aligned screen navigation calls (`AdminCandidatesScreen`, `AdminCandidateDetailScreen`, `MessagesScreen`).
+- 02.26.2026: Re-ran validation after tab-shell refactor: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
+- 02.26.2026: Fixed legacy mobile route call in `HomeScreen` (`navigate("Messages")` -> `navigate("Chat")`) to match new tab-shell route names.
+- 02.26.2026: Added candidate profile photo flow (optional upload/replace/remove) with Firebase Storage path `profilePhotos/{uid}/avatar/*` and reused avatars across admin candidate list/detail, admin chat previews, appointment candidate picker/rows, and message threads.
+- 02.26.2026: Rebuilt mobile chat experience with iMessage-style admin inbox rows (search, avatar, time stamp, unread styling + red dot), per-thread read clearing, and new conversation unread metadata sync.
+- 02.26.2026: Added mobile tab badges: admin chat unread-thread count (`9+` cap), admin unattended-requests count (`9+` cap), candidate chat unread-message count (`9+` cap), and candidate appointments update red-dot flag.
+- 02.26.2026: Added Cloud Function `syncConversationMetaOnMessageCreate` to maintain conversation snapshots (`candidateNameSnapshot`, `candidateAvatarUrlSnapshot`, `lastMessage*`) and unread counters (`unreadByAdminCount`, `unreadByCandidateCount`).
+- 02.26.2026: Updated message thread UI to include side avatars for sent/received messages and replaced chat composer `Send` text with up-arrow action button while preserving attachments.
+- 02.26.2026: Reworked candidate appointments UI with red `Overdue Appointments` section (scheduled only), chronological upcoming section, cancel confirmation, and `Questions about schedule changes? Chat here.` link shortcut.
+- 02.26.2026: Reworked admin appointments UI with candidate-avatar create flow, overdue/upcoming sections, note expand/collapse behavior, floating black notification bell, and unattended request action queue (`Accept`, `Decline`, `Modify`).
+- 02.26.2026: Added Cloud Functions for appointment lifecycle reliability: `autoCancelExpiredAppointmentRequests` (scheduled cleanup of stale requested items), `notifyOnCandidateAppointmentCancel` (auto chat + Resend email), and `flagCandidateAppointmentUpdates` (candidate appointment-update dot signal).
+- 02.26.2026: Made Zenith contact bar (email + phone) persist across all active mobile flows (auth, profile setup, app shell screens, and chat thread) and updated candidate profile label text from `What you work in` to `Practice`.
+- 02.26.2026: Improved firm-status reliability by simplifying candidate status watchers to avoid fragile indexed query paths and adding assignment read-back verification after admin save.
+- 02.26.2026: Added Storage rule path for profile photos and re-validated repo after redesign changes: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).

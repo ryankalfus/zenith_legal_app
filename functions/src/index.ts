@@ -1,6 +1,10 @@
 export { sendPushOnMessageCreate } from "./triggers/messagePush";
+export { syncConversationMetaOnMessageCreate } from "./triggers/conversationMeta";
 export { sendPushOnAppointmentChange } from "./triggers/appointmentPush";
 export { syncAppointmentRequestMessage } from "./triggers/appointmentRequestMessage";
+export { notifyOnCandidateAppointmentCancel } from "./triggers/appointmentCancelNotify";
+export { flagCandidateAppointmentUpdates } from "./triggers/appointmentUpdateFlag";
+export { autoCancelExpiredAppointmentRequests } from "./triggers/appointmentRequestExpiry";
 export { sendSignupSummaryEmail } from "./triggers/signupSummaryEmail";
 export { notifyOnCandidateStatusRequestCreate } from "./triggers/candidateStatusRequestNotify";
 export { deleteCandidateAccountData } from "./callable/deleteAccount";

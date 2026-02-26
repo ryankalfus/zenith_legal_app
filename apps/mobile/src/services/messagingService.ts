@@ -2,12 +2,14 @@ import {
   addDoc,
   collection,
   getDoc,
+  increment,
   onSnapshot,
   doc,
   orderBy,
   query,
   serverTimestamp,
-  setDoc
+  setDoc,
+  where
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
@@ -50,14 +52,72 @@ export function watchAdminConversations(
             id: entry.id,
             ...data,
             candidateId,
-            candidateName: String(candidate?.fullName ?? "Candidate"),
-            candidateEmail: String(candidate?.email ?? "")
+            candidateName: String(data.candidateNameSnapshot ?? candidate?.fullName ?? "Candidate"),
+            candidateEmail: String(candidate?.email ?? ""),
+            candidateAvatarUrl: String(data.candidateAvatarUrlSnapshot ?? candidate?.avatarUrl ?? ""),
+            unreadByAdminCount: Number(data.unreadByAdminCount ?? 0),
+            unreadByCandidateCount: Number(data.unreadByCandidateCount ?? 0)
           };
         })
       );
       onData(rows);
     },
     (err) => onError(err as Error)
+  );
+}
+
+export function watchAdminUnreadChatsCount(
+  onData: (count: number) => void,
+  onError: (err: Error) => void
+) {
+  const q = query(collection(db, "conversations"), where("unreadByAdminCount", ">", 0));
+  return onSnapshot(
+    q,
+    (snapshot) => onData(snapshot.size),
+    (err) => onError(err as Error)
+  );
+}
+
+export function watchCandidateUnreadMessageCount(
+  candidateId: string,
+  onData: (count: number) => void,
+  onError: (err: Error) => void
+) {
+  return onSnapshot(
+    doc(db, "conversations", candidateId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onData(0);
+        return;
+      }
+      onData(Number(snapshot.data()?.unreadByCandidateCount ?? 0));
+    },
+    (err) => onError(err as Error)
+  );
+}
+
+export async function markConversationRead(
+  candidateId: string,
+  role: "candidate" | "admin"
+) {
+  const conversationRef = doc(db, "conversations", candidateId);
+  await setDoc(
+    conversationRef,
+    {
+      candidateId,
+      participantIds: [candidateId, "zenith-team"],
+      updatedAt: serverTimestamp(),
+      ...(role === "admin"
+        ? {
+            unreadByAdminCount: 0,
+            adminLastReadAt: serverTimestamp()
+          }
+        : {
+            unreadByCandidateCount: 0,
+            candidateLastReadAt: serverTimestamp()
+          })
+    },
+    { merge: true }
   );
 }
 
@@ -78,8 +138,8 @@ export async function sendMessage(input: {
     {
       candidateId: input.candidateId,
       participantIds: [input.candidateId, "zenith-team"],
-      lastMessageText: input.text,
-      lastMessageAt: serverTimestamp(),
+      unreadByAdminCount: increment(0),
+      unreadByCandidateCount: increment(0),
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     },

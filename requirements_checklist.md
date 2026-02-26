@@ -110,3 +110,22 @@ Legend:
 
 ## Step Log
 - 2026-02-26: Added checklist coverage for synced admin/candidate appointment lifecycle updates, 2-step firm assignment flow, and modernized mobile chat composer UI.
+- [x] `MVP` Mobile authenticated app now uses persistent bottom tab shell for both candidate and Zenith admin roles (tab bar remains visible on nested screens).
+- [x] `MVP` Admin `Candidate Detail` and admin message thread routes moved inside tab-owned stacks to avoid tab bar disappearance.
+- [x] `MVP` Bottom tab UI switched to icon-only controls with unique icons per tab and no text labels.
+
+## Step Log
+- 2026-02-26: Added requirement coverage for persistent tab shell + icon-only tab bar redesign across candidate/admin mobile navigation.
+- [x] `MVP` Candidate profile setup/profile now supports optional profile photo upload, replacement, and removal with reusable avatar fallback UI.
+- [x] `MVP` Admin chat preview list now uses iMessage-like seamless rows (avatar/name/preview/time), includes search by candidate name, and highlights unread chats with bold + red dot.
+- [x] `MVP` Conversation unread metadata + read-state behavior now powers tab badges for admin/candidate chat (`9+` max) and per-thread clearing rules.
+- [x] `MVP` Message thread UI now shows side avatars for sent/received rows and uses up-arrow send control.
+- [x] `MVP` Candidate/admin appointment tabs now support overdue (scheduled-only) + chronological upcoming sections and avatar-rich previews.
+- [x] `MVP` Admin appointments now include floating unattended-requests bell queue with `Accept`/`Decline`/`Modify` quick actions and count badge (`9+` max).
+- [x] `MVP` Candidate appointments now require cancel confirmation, include schedule-change chat hyperlink, and rely on backend auto chat/email on cancellation.
+- [x] `MVP` Backend scheduler now auto-cancels stale `requested` appointments after their requested time passes.
+- [x] `MVP` Candidate appointments tab now supports update-notification red-dot state (dot clears on tab open).
+- [x] `MVP` Zenith contact bar (email + phone) is now persistent on active mobile flows and candidate profile label now uses `Practice` wording.
+
+## Step Log
+- 2026-02-26: Added requirement coverage for profile photos, iMessage-like chat previews, unread badge systems, overdue appointment sections, unattended request bell workflow, cancellation notifications, requested-expiry scheduler, and persistent Zenith contact bar behavior.

@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import { PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
 import { AppShell, SurfaceCard } from "../../components/AppShell";
+import { Avatar } from "../../components/Avatar";
 import { deleteMyAccount } from "../../services/accountService";
-import { updateCandidateProfile, watchUser } from "../../services/userService";
+import {
+  removeCandidateProfilePhoto,
+  updateCandidateProfile,
+  uploadCandidateProfilePhoto,
+  watchUser
+} from "../../services/userService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
 
@@ -13,7 +20,10 @@ export function CandidateProfileScreen() {
   const [mobile, setMobile] = useState("");
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarPath, setAvatarPath] = useState("");
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => {
     if (!session?.user.uid) {
@@ -25,6 +35,8 @@ export function CandidateProfileScreen() {
       (data) => {
         setFullName(String(data?.fullName ?? ""));
         setMobile(String(data?.mobile ?? ""));
+        setAvatarUrl(String(data?.avatarUrl ?? ""));
+        setAvatarPath(String(data?.avatarPath ?? ""));
         setPracticeArea(String(data?.preferences?.practiceArea ?? PRACTICE_AREAS[0]));
         setPreferredCities(Array.isArray(data?.preferences?.preferredCities) ? data.preferences.preferredCities : []);
       },
@@ -62,6 +74,54 @@ export function CandidateProfileScreen() {
     }
   };
 
+  const pickPhoto = async () => {
+    if (!session?.user.uid) {
+      return;
+    }
+
+    const result = await DocumentPicker.getDocumentAsync({
+      copyToCacheDirectory: true,
+      multiple: false,
+      type: "image/*"
+    });
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    try {
+      setPhotoBusy(true);
+      const uploaded = await uploadCandidateProfilePhoto(session.user.uid, {
+        uri: asset.uri,
+        fileName: asset.name ?? "profile-photo.jpg",
+        mimeType: asset.mimeType ?? "image/jpeg"
+      });
+      setAvatarUrl(uploaded.avatarUrl);
+      setAvatarPath(uploaded.avatarPath);
+    } catch (error: any) {
+      Alert.alert("Could not upload photo", error?.message ?? "Please try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!session?.user.uid) {
+      return;
+    }
+
+    try {
+      setPhotoBusy(true);
+      await removeCandidateProfilePhoto(session.user.uid, avatarPath);
+      setAvatarUrl("");
+      setAvatarPath("");
+    } catch (error: any) {
+      Alert.alert("Could not remove photo", error?.message ?? "Please try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const onDelete = () => {
     Alert.alert("Delete account/data", "This will permanently remove your account and data.", [
       { text: "Cancel", style: "cancel" },
@@ -83,6 +143,21 @@ export function CandidateProfileScreen() {
   return (
     <AppShell title="Profile" subtitle="Manage your candidate details." showCandidateContactBar scroll>
       <SurfaceCard>
+        <Text style={styles.label}>Profile photo</Text>
+        <View style={styles.photoRow}>
+          <Avatar uri={avatarUrl} name={fullName || "Candidate"} size={64} />
+          <View style={styles.photoButtons}>
+            <Pressable style={styles.secondaryButton} onPress={pickPhoto} disabled={photoBusy}>
+              <Text style={styles.secondaryButtonText}>{photoBusy ? "Uploading..." : "Upload photo"}</Text>
+            </Pressable>
+            {avatarUrl ? (
+              <Pressable style={styles.deleteButton} onPress={removePhoto} disabled={photoBusy}>
+                <Text style={styles.deleteButtonText}>Remove photo</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
         <Text style={styles.label}>Display name</Text>
         <TextInput
           style={styles.input}
@@ -92,7 +167,7 @@ export function CandidateProfileScreen() {
           placeholderTextColor="#7f8b9d"
         />
 
-        <Text style={styles.label}>What you work in</Text>
+        <Text style={styles.label}>Practice</Text>
         <View style={styles.wrap}>
           {PRACTICE_AREAS.map((area) => {
             const selected = area === practiceArea;
@@ -157,6 +232,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  photoRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center"
+  },
+  photoButtons: {
+    flex: 1,
+    gap: 8
   },
   input: {
     borderWidth: 1,

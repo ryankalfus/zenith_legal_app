@@ -10,6 +10,7 @@ export type CandidateFirmStatus =
 export type AuthorizationState = "pending" | "approved" | "declined";
 
 export type AppointmentStatus = "requested" | "scheduled" | "canceled" | "completed";
+export type AppointmentActorRole = "candidate" | "admin" | "system";
 
 export type MessageSenderRole = "candidate" | "admin" | "system";
 export type CandidateStatusRequestType = "authorization" | "cancellation";
@@ -26,10 +27,13 @@ export interface UserProfile {
   fullName: string;
   email: string;
   mobile: string;
+  avatarUrl?: string;
+  avatarPath?: string;
   emailVerified: boolean;
   phoneVerified: boolean;
   preferences: UserPreferences;
   pushTokens: string[];
+  hasAppointmentUpdates?: boolean;
   signupSummarySentAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -61,8 +65,15 @@ export interface CandidateFirmStatusRecord {
 export interface Conversation {
   candidateId: string;
   participantIds: string[];
+  candidateNameSnapshot?: string;
+  candidateAvatarUrlSnapshot?: string;
   lastMessageText?: string;
   lastMessageAt?: string;
+  lastMessageSenderRole?: MessageSenderRole;
+  unreadByAdminCount?: number;
+  unreadByCandidateCount?: number;
+  adminLastReadAt?: string;
+  candidateLastReadAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +101,8 @@ export interface Appointment {
   candidateId: string;
   createdBy: string;
   createdByRole: UserRole;
+  updatedBy?: string;
+  updatedByRole?: AppointmentActorRole;
   status: AppointmentStatus;
   title: string;
   startsAt: string;

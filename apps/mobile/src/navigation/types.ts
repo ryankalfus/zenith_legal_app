@@ -1,10 +1,8 @@
 export type RootStackParamList = {
   Auth: undefined;
   ProfileSetup: undefined;
-  CandidateTabs: undefined;
-  AdminTabs: undefined;
-  Messages: { candidateId?: string; title?: string } | undefined;
-  AdminCandidateDetail: { candidateId: string };
+  CandidateApp: undefined;
+  AdminApp: undefined;
 };
 
 export type CandidateTabParamList = {
@@ -18,4 +16,36 @@ export type AdminTabParamList = {
   Candidates: undefined;
   Chat: undefined;
   AppointmentRequests: undefined;
+};
+
+export type MessageThreadParams = { candidateId?: string; title?: string } | undefined;
+
+export type CandidateDashboardStackParamList = {
+  DashboardHome: undefined;
+};
+
+export type CandidateChatStackParamList = {
+  Messages: MessageThreadParams;
+};
+
+export type CandidateAppointmentsStackParamList = {
+  AppointmentsHome: undefined;
+};
+
+export type CandidateProfileStackParamList = {
+  ProfileHome: undefined;
+};
+
+export type AdminCandidatesStackParamList = {
+  CandidatesList: undefined;
+  CandidateDetail: { candidateId: string };
+};
+
+export type AdminChatStackParamList = {
+  Inbox: undefined;
+  Messages: MessageThreadParams;
+};
+
+export type AdminAppointmentsStackParamList = {
+  AppointmentRequestsHome: undefined;
 };

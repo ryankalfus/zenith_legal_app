@@ -14,8 +14,9 @@ import {
   CANDIDATE_VISIBLE_STATUSES,
   CandidateFirmStatus
 } from "@zenith/shared";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
+import { Avatar } from "../../components/Avatar";
 import { StatusChip } from "../../components/StatusChip";
 import { watchCandidateById, watchFirms, FirmRow } from "../../services/adminService";
 import {
@@ -30,14 +31,14 @@ import {
   CandidateFirmStatusRow
 } from "../../services/statusService";
 import { useAuth } from "../../state/AuthContext";
-import { RootStackParamList } from "../../navigation/types";
+import { AdminCandidatesStackParamList } from "../../navigation/types";
 import { theme } from "../../ui/theme";
 
 export function AdminCandidateDetailScreen() {
   const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const route = useRoute<RouteProp<AdminCandidatesStackParamList, "CandidateDetail">>();
   const { session } = useAuth();
-  const candidateId = (route.params as RootStackParamList["AdminCandidateDetail"]).candidateId;
+  const candidateId = route.params.candidateId;
 
   const [candidate, setCandidate] = useState<any | null>(null);
   const [firms, setFirms] = useState<FirmRow[]>([]);
@@ -145,13 +146,18 @@ export function AdminCandidateDetailScreen() {
           <Pressable onPress={() => navigation.goBack()}>
             <Text style={styles.backLink}>Back to candidates</Text>
           </Pressable>
-          <Text style={styles.candidateName}>{candidate?.fullName || "Candidate"}</Text>
-          <Text style={styles.meta}>{candidate?.email || "No email"}</Text>
-          <Text style={styles.meta}>{candidate?.mobile || "No phone"}</Text>
-          <Text style={styles.meta}>Work: {candidate?.preferences?.practiceArea || "Not set"}</Text>
-          <Text style={styles.meta}>
-            Cities: {(candidate?.preferences?.preferredCities ?? []).join(", ") || "None"}
-          </Text>
+          <View style={styles.profileHeader}>
+            <Avatar uri={String(candidate?.avatarUrl ?? "")} name={candidate?.fullName || "Candidate"} size={56} />
+            <View style={styles.profileBody}>
+              <Text style={styles.candidateName}>{candidate?.fullName || "Candidate"}</Text>
+              <Text style={styles.meta}>{candidate?.email || "No email"}</Text>
+              <Text style={styles.meta}>{candidate?.mobile || "No phone"}</Text>
+              <Text style={styles.meta}>Work: {candidate?.preferences?.practiceArea || "Not set"}</Text>
+              <Text style={styles.meta}>
+                Cities: {(candidate?.preferences?.preferredCities ?? []).join(", ") || "None"}
+              </Text>
+            </View>
+          </View>
 
           <Pressable style={styles.assignButton} onPress={openAssignFlow}>
             <Text style={styles.assignButtonText}>Assign Firm</Text>
@@ -310,6 +316,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  profileHeader: {
+    flexDirection: "row",
+    gap: 12
+  },
+  profileBody: {
+    flex: 1
   },
   meta: {
     marginTop: 3,

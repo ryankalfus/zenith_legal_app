@@ -6,6 +6,9 @@ export type CandidateRow = {
   fullName?: string;
   email?: string;
   mobile?: string;
+  avatarUrl?: string;
+  avatarPath?: string;
+  hasAppointmentUpdates?: boolean;
   preferences?: {
     preferredCities?: string[];
     practiceArea?: string;

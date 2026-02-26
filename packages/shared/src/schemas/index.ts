@@ -23,10 +23,13 @@ export const userProfileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   mobile: z.string().min(7),
+  avatarUrl: z.string().url().optional(),
+  avatarPath: z.string().min(1).optional(),
   emailVerified: z.boolean(),
   phoneVerified: z.boolean(),
   preferences: userPreferencesSchema,
   pushTokens: z.array(z.string()).default([]),
+  hasAppointmentUpdates: z.boolean().optional(),
   signupSummarySentAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
@@ -88,8 +91,15 @@ export const messageSchema = z.object({
 export const conversationSchema = z.object({
   candidateId: z.string().min(1),
   participantIds: z.array(z.string().min(1)),
+  candidateNameSnapshot: z.string().optional(),
+  candidateAvatarUrlSnapshot: z.string().optional(),
   lastMessageText: z.string().optional(),
   lastMessageAt: z.string().optional(),
+  lastMessageSenderRole: z.enum(["candidate", "admin", "system"]).optional(),
+  unreadByAdminCount: z.number().int().nonnegative().optional(),
+  unreadByCandidateCount: z.number().int().nonnegative().optional(),
+  adminLastReadAt: z.string().optional(),
+  candidateLastReadAt: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });
@@ -99,6 +109,8 @@ export const appointmentSchema = z.object({
   candidateId: z.string().min(1),
   createdBy: z.string().min(1),
   createdByRole: userRoleSchema,
+  updatedBy: z.string().min(1).optional(),
+  updatedByRole: z.enum(["candidate", "admin", "system"]).optional(),
   status: appointmentStatusSchema,
   title: z.string().min(1),
   startsAt: z.string(),

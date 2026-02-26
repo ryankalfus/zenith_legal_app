@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
+import { Avatar } from "../../components/Avatar";
 import { watchCandidates, CandidateRow } from "../../services/adminService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
@@ -55,17 +56,22 @@ export function AdminCandidatesScreen() {
 
       {filtered.map((candidate) => (
         <SurfaceCard key={candidate.id}>
-          <Pressable onPress={() => navigation.navigate("AdminCandidateDetail", { candidateId: candidate.id })}>
-            <Text style={styles.name}>{candidate.fullName || "(No display name)"}</Text>
-            <Text style={styles.meta}>{candidate.email || "No email"}</Text>
-            <Text style={styles.meta}>{candidate.mobile || "No phone"}</Text>
-            <Text style={styles.meta}>
-              Work: {candidate.preferences?.practiceArea || "Not set"}
-            </Text>
-            <Text style={styles.meta}>
-              Cities: {(candidate.preferences?.preferredCities ?? []).join(", ") || "None"}
-            </Text>
-            <Text style={styles.link}>Open candidate profile</Text>
+          <Pressable onPress={() => navigation.navigate("CandidateDetail", { candidateId: candidate.id })}>
+            <View style={styles.row}>
+              <Avatar uri={candidate.avatarUrl} name={candidate.fullName || "Candidate"} size={44} />
+              <View style={styles.rowBody}>
+                <Text style={styles.name}>{candidate.fullName || "(No display name)"}</Text>
+                <Text style={styles.meta}>{candidate.email || "No email"}</Text>
+                <Text style={styles.meta}>{candidate.mobile || "No phone"}</Text>
+                <Text style={styles.meta}>
+                  Work: {candidate.preferences?.practiceArea || "Not set"}
+                </Text>
+                <Text style={styles.meta}>
+                  Cities: {(candidate.preferences?.preferredCities ?? []).join(", ") || "None"}
+                </Text>
+                <Text style={styles.link}>Open candidate profile</Text>
+              </View>
+            </View>
           </Pressable>
         </SurfaceCard>
       ))}
@@ -99,6 +105,13 @@ const styles = StyleSheet.create({
   logoutText: {
     color: theme.colors.textSecondary,
     fontWeight: "700"
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10
+  },
+  rowBody: {
+    flex: 1
   },
   name: {
     fontSize: 16,

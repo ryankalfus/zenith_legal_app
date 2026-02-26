@@ -9,6 +9,7 @@ type AppShellProps = {
   title?: string;
   subtitle?: string;
   showCandidateContactBar?: boolean;
+  showZenithContactBar?: boolean;
   scroll?: boolean;
 };
 
@@ -17,8 +18,10 @@ export function AppShell({
   title,
   subtitle,
   showCandidateContactBar,
+  showZenithContactBar,
   scroll = false
 }: AppShellProps) {
+  const shouldShowContactBar = showZenithContactBar ?? showCandidateContactBar ?? true;
   const content = (
     <View style={styles.contentArea}>
       {title ? (
@@ -33,7 +36,7 @@ export function AppShell({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {showCandidateContactBar ? <CandidateContactBar /> : null}
+      {shouldShowContactBar ? <CandidateContactBar /> : null}
       {scroll ? <ScrollView contentContainerStyle={styles.scrollContent}>{content}</ScrollView> : content}
     </SafeAreaView>
   );
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: "#f8f9fd"
+    backgroundColor: "#fff"
   },
   contactText: {
     color: theme.colors.primary,
