@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import Constants from "expo-constants";
 import {
-  GoogleAuthProvider,
   User,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
-  signInWithCredential,
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
@@ -26,7 +24,6 @@ type AuthContextValue = {
   session: CandidateSession | null;
   signupWithEmailPassword: (email: string, password: string) => Promise<void>;
   loginWithEmailPassword: (email: string, password: string) => Promise<void>;
-  loginWithGoogleIdToken: (idToken: string) => Promise<void>;
   completeProfile: (input: {
     fullName: string;
     email: string;
@@ -160,11 +157,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithEmailAndPassword(auth, email.trim(), password);
   };
 
-  const loginWithGoogleIdToken: AuthContextValue["loginWithGoogleIdToken"] = async (idToken) => {
-    const credential = GoogleAuthProvider.credential(idToken);
-    await signInWithCredential(auth, credential);
-  };
-
   const completeProfile: AuthContextValue["completeProfile"] = async (input) => {
     if (!auth.currentUser) {
       throw new Error("No authenticated user");
@@ -190,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       signupWithEmailPassword,
       loginWithEmailPassword,
-      loginWithGoogleIdToken,
       completeProfile,
       logout: () => signOut(auth)
     }),

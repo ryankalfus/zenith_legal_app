@@ -85,3 +85,18 @@ Legend:
 - 2026-02-25: Created initial checklist and categorized scope as MVP/Later/Out.
 - 2026-02-25: Updated auth/admin requirements to unified email/password + Google flows with Zenith-only admin and signup summary email trigger.
 - 2026-02-26: Added auth reliability repair notes: Zenith admin custom claim/doc enforcement, Google OAuth config verification, and improved web/mobile auth error handling.
+
+## Redesign Update (2026-02-26)
+- [x] `MVP` Mobile auth screen now uses email/password-only entry and shows motto `A HIGHER LEVEL OF LEGAL SEARCH`.
+- [x] `MVP` Candidate mobile tabs updated to `Dashboard`, `Chat`, `Appointments`, `Profile`.
+- [x] `MVP` Zenith admin mobile tabs updated to `Candidates`, `Chat`, `Appointment Requests`.
+- [x] `MVP` Candidate dashboard waiting-status popup supports `Request authorization` and `Request cancellation` with pending badge state.
+- [x] `MVP` New `candidateStatusRequests` data flow added for candidate request logging and admin resolution.
+- [x] `MVP` Candidate status request trigger sends DM + email notification to Zenith Legal.
+- [x] `MVP` Candidate appointment request flow updated with required phone number and optional note.
+- [x] `MVP` Appointment lifecycle supports `requested`, `scheduled`, `completed`, `canceled` and both sides can cancel.
+- [x] `MVP` Appointment request trigger auto-sends required chat message format (`APPOINTMENT REQUESTED...`).
+- [x] `MVP` Firestore rules/indexes updated for new status-request and appointment-request query/security paths.
+
+## Step Log
+- 2026-02-26: Added full mobile redesign requirement tracking notes for candidate/admin tab changes, status request automation, and appointment request lifecycle updates.

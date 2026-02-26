@@ -17,7 +17,8 @@ export const sendPushOnAppointmentChange = onDocumentWritten(
       return;
     }
 
-    if (after.createdByRole !== "admin") {
+    // Candidate-created request events are handled separately for admin inbox sync.
+    if (after.status === "requested" || after.createdByRole !== "admin") {
       return;
     }
 
@@ -30,7 +31,7 @@ export const sendPushOnAppointmentChange = onDocumentWritten(
 
     await sendExpoPush(pushTokens, {
       title: "Appointment update",
-      body: `${after.title} (${after.status})`,
+      body: `${String(after.title ?? "Appointment")} (${after.status})`,
       data: { candidateId: after.candidateId, type: "appointment" }
     });
   }

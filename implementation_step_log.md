@@ -394,3 +394,36 @@
   - Login as Zenith admin.
   - Open Inbox, then open Messages, Status, and Calendar tabs/screens.
   - Confirm no `enableOptimisedVirtualizedCells` red-screen appears.
+
+## Step 26 - Full Mobile App Redesign (Candidate + Zenith Admin)
+- What changed:
+  - Added new mobile design system layers (`theme`, reusable shell/cards/status chip) and integrated `zenith-legal-logo.png` into the redesigned auth/dashboard UI.
+  - Replaced mobile auth UI with email/password-only sign up + log in and updated motto text to `A HIGHER LEVEL OF LEGAL SEARCH`.
+  - Replaced role-based mobile navigation:
+    - Candidate tabs: `Dashboard`, `Chat`, `Appointments`, `Profile`
+    - Admin tabs: `Candidates`, `Chat`, `Appointment Requests`
+    - Added admin candidate detail screen for firm assignment/status management.
+  - Implemented candidate dashboard status-request workflow using new Firestore collection `candidateStatusRequests` with pending badges and action modal (`authorization` or `cancellation`).
+  - Implemented admin candidate management flow for viewing candidate profile data, assigning firms, updating statuses, and resolving candidate status requests.
+  - Implemented candidate appointment-request form with date/time picker, required phone, optional note, and status lifecycle support.
+  - Implemented admin appointment requests tab with preview rows, expandable notes, and status action buttons (`scheduled`, `completed`, `canceled`).
+  - Updated shared schema/types for appointment `requested` status and required `phoneNumber`; added candidate status request model.
+  - Added function triggers:
+    - `notifyOnCandidateStatusRequestCreate` (DM + email alert)
+    - `syncAppointmentRequestMessage` (auto-chat message: `APPOINTMENT REQUESTED... mm/dd/yyyy... xx:xx am/pm... xxx-xxx-xxxx`)
+  - Updated Firestore rules and indexes to cover candidate status request access/update paths and appointment request query patterns.
+- What to test:
+  - Candidate:
+    - Email signup/login works and auth screen displays new motto + logo.
+    - Top bar contact links show `mason@zenithlegal.com` and `+1 202-486-3535` on all candidate tabs.
+    - Dashboard `Waiting on your authorization...` flow creates pending status request and shows pending badge.
+    - Appointment request creates appointment record and auto-creates required DM message format.
+    - Candidate can cancel requested/scheduled appointments.
+  - Zenith admin:
+    - Candidate list/detail screens load and allow firm assignment/status edits.
+    - Chat inbox opens candidate DM threads.
+    - Appointment Requests tab supports note expansion and status changes.
+  - System validation:
+    - `npm run typecheck` passes.
+    - `npm run build` passes.
+    - `npm run test:rules` passes (`11 passed, 0 failed`).

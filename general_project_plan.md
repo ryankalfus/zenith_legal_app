@@ -238,3 +238,12 @@ This can be either:
 - Seed script has been added to import canonical firm data from the markdown source list.
 - Added local emulator toggle support and an RBAC smoke-test harness to improve verification before App Store submission.
 - Validation execution update (02.25.2026): toolchain prerequisites installed (Firebase CLI + Java), static checks passed, emulator RBAC run blocked by Firestore jar network download issue, and real-project checks blocked pending `firebase login` + valid project id.
+
+---
+
+## Mobile Redesign Plan Update (2026-02-26)
+- Focus remains mobile-first only for this phase.
+- Candidate mobile experience is now standardized around four tabs: Dashboard, Chat, Appointments, Profile.
+- Zenith admin mobile experience now uses three tabs: Candidates, Chat, Appointment Requests.
+- Candidate waiting-status actions are implemented through `candidateStatusRequests` with backend DM/email automation.
+- Appointment requests are now first-class records with status lifecycle (`requested`, `scheduled`, `completed`, `canceled`) and required phone number capture.

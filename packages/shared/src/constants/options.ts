@@ -41,3 +41,10 @@ export const CANDIDATE_STATUS_LABELS: Record<(typeof CANDIDATE_VISIBLE_STATUSES)
   rejected: "Rejected by firm",
   offer: "Offer received!"
 };
+
+export const APPOINTMENT_STATUS_LABELS = {
+  requested: "Requested",
+  scheduled: "Scheduled",
+  canceled: "Canceled",
+  completed: "Completed"
+} as const;

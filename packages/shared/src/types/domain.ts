@@ -9,9 +9,11 @@ export type CandidateFirmStatus =
 
 export type AuthorizationState = "pending" | "approved" | "declined";
 
-export type AppointmentStatus = "scheduled" | "canceled" | "completed";
+export type AppointmentStatus = "requested" | "scheduled" | "canceled" | "completed";
 
 export type MessageSenderRole = "candidate" | "admin" | "system";
+export type CandidateStatusRequestType = "authorization" | "cancellation";
+export type CandidateStatusRequestState = "pending" | "resolved";
 
 export interface UserPreferences {
   preferredCities: string[];
@@ -92,12 +94,24 @@ export interface Appointment {
   title: string;
   startsAt: string;
   endsAt: string;
+  phoneNumber: string;
   location?: string;
   meetingLink?: string;
   notes?: string;
   reminderMinutesBefore: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CandidateStatusRequest {
+  id: string;
+  candidateId: string;
+  firmId: string;
+  requestType: CandidateStatusRequestType;
+  state: CandidateStatusRequestState;
+  requestedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 export interface AuthorizationRequest {

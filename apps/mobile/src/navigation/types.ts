@@ -1,18 +1,21 @@
 export type RootStackParamList = {
   Auth: undefined;
   ProfileSetup: undefined;
-  MainTabs: undefined;
+  CandidateTabs: undefined;
   AdminTabs: undefined;
-  Messages: { candidateId?: string } | undefined;
+  Messages: { candidateId?: string; title?: string } | undefined;
+  AdminCandidateDetail: { candidateId: string };
 };
 
-export type MainTabParamList = {
-  Home: undefined;
-  Status: undefined;
-  Calendar: undefined;
+export type CandidateTabParamList = {
+  Dashboard: undefined;
+  Chat: undefined;
+  Appointments: undefined;
   Profile: undefined;
 };
 
 export type AdminTabParamList = {
-  AdminInbox: undefined;
+  Candidates: undefined;
+  Chat: undefined;
+  AppointmentRequests: undefined;
 };

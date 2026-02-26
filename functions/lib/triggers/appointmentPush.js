@@ -14,7 +14,8 @@ exports.sendPushOnAppointmentChange = (0, firestore_1.onDocumentWritten)("appoin
     if (!after) {
         return;
     }
-    if (after.createdByRole !== "admin") {
+    // Candidate-created request events are handled separately for admin inbox sync.
+    if (after.status === "requested" || after.createdByRole !== "admin") {
         return;
     }
     const userDoc = await db.collection("users").doc(after.candidateId).get();
@@ -24,7 +25,7 @@ exports.sendPushOnAppointmentChange = (0, firestore_1.onDocumentWritten)("appoin
     const pushTokens = (userDoc.data()?.pushTokens ?? []);
     await (0, push_1.sendExpoPush)(pushTokens, {
         title: "Appointment update",
-        body: `${after.title} (${after.status})`,
+        body: `${String(after.title ?? "Appointment")} (${after.status})`,
         data: { candidateId: after.candidateId, type: "appointment" }
     });
 });

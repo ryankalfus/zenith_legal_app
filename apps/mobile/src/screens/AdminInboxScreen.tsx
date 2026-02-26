@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth } from "../state/AuthContext";
+import { AppShell, EmptyState, SurfaceCard } from "../components/AppShell";
 import { watchAdminConversations } from "../services/messagingService";
+import { theme } from "../ui/theme";
 
 export function AdminInboxScreen() {
   const navigation = useNavigation<any>();
-  const { logout } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
@@ -17,24 +17,17 @@ export function AdminInboxScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Zenith Inbox</Text>
-          <Text style={styles.subtitle}>Mobile admin chat tools</Text>
-        </View>
-        <Pressable style={styles.logoutButton} onPress={() => logout()}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.listContent}>
-        {rows.length === 0 ? <Text style={styles.empty}>No candidate conversations yet.</Text> : null}
-        {rows.map((item) => (
+    <AppShell title="Chat" subtitle="Candidate direct messages" scroll>
+      {rows.length === 0 ? <EmptyState message="No candidate conversations yet." /> : null}
+      {rows.map((item) => (
+        <SurfaceCard key={item.id}>
           <Pressable
-            key={item.id}
-            style={styles.row}
-            onPress={() => navigation.navigate("Messages", { candidateId: item.candidateId })}
+            onPress={() =>
+              navigation.navigate("Messages", {
+                candidateId: item.candidateId,
+                title: item.candidateName || "Candidate"
+              })
+            }
           >
             <Text style={styles.name}>{item.candidateName || "Candidate"}</Text>
             <Text style={styles.meta}>{item.candidateEmail || item.candidateId}</Text>
@@ -42,68 +35,24 @@ export function AdminInboxScreen() {
               {item.lastMessageText || "No message text"}
             </Text>
           </Pressable>
-        ))}
-      </ScrollView>
-    </View>
+        </SurfaceCard>
+      ))}
+    </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    padding: 16,
-    gap: 12
-  },
-  header: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-  listContent: {
-    paddingBottom: 12
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700"
-  },
-  subtitle: {
-    color: "#6b7280",
-    marginTop: 2
-  },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12
-  },
-  logoutText: {
-    color: "#374151",
-    fontWeight: "600"
-  },
-  row: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    gap: 4
-  },
   name: {
-    fontWeight: "700"
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary
   },
   meta: {
-    color: "#4b5563"
+    color: theme.colors.textSecondary,
+    marginTop: 3
   },
   preview: {
-    color: "#111827"
-  },
-  empty: {
-    textAlign: "center",
-    color: "#6b7280",
-    marginTop: 24
+    marginTop: 6,
+    color: theme.colors.textPrimary
   }
 });

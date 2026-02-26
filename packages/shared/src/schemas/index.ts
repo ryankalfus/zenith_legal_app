@@ -8,7 +8,9 @@ import {
 export const userRoleSchema = z.enum(["candidate", "admin"]);
 export const candidateFirmStatusSchema = z.enum(CANDIDATE_VISIBLE_STATUSES);
 export const authorizationStateSchema = z.enum(["pending", "approved", "declined"]);
-export const appointmentStatusSchema = z.enum(["scheduled", "canceled", "completed"]);
+export const appointmentStatusSchema = z.enum(["requested", "scheduled", "canceled", "completed"]);
+export const candidateStatusRequestTypeSchema = z.enum(["authorization", "cancellation"]);
+export const candidateStatusRequestStateSchema = z.enum(["pending", "resolved"]);
 
 export const userPreferencesSchema = z.object({
   preferredCities: z.array(z.enum(PREFERRED_CITIES)).default([]),
@@ -101,12 +103,24 @@ export const appointmentSchema = z.object({
   title: z.string().min(1),
   startsAt: z.string(),
   endsAt: z.string(),
+  phoneNumber: z.string().min(7),
   location: z.string().optional(),
   meetingLink: z.string().optional(),
   notes: z.string().optional(),
   reminderMinutesBefore: z.number().int().nonnegative(),
   createdAt: z.string(),
   updatedAt: z.string()
+});
+
+export const candidateStatusRequestSchema = z.object({
+  id: z.string().min(1),
+  candidateId: z.string().min(1),
+  firmId: z.string().min(1),
+  requestType: candidateStatusRequestTypeSchema,
+  state: candidateStatusRequestStateSchema,
+  requestedAt: z.string(),
+  resolvedAt: z.string().optional(),
+  resolvedBy: z.string().optional()
 });
 
 export const deletionRequestSchema = z.object({

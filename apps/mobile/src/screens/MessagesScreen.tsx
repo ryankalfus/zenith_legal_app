@@ -11,10 +11,12 @@ import {
   View
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { RouteProp, useRoute } from "@react-navigation/native";
 import { useAuth } from "../state/AuthContext";
 import { sendMessage, watchMessages } from "../services/messagingService";
 import { RootStackParamList } from "../navigation/types";
+import { CandidateContactBar } from "../components/AppShell";
+import { theme } from "../ui/theme";
 
 export function MessagesScreen() {
   const { session } = useAuth();
@@ -24,11 +26,13 @@ export function MessagesScreen() {
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<{ uri: string; mimeType: string; fileName: string } | undefined>();
   const listRef = useRef<ScrollView>(null);
+
   const candidateId =
     session?.role === "admin" ? route.params?.candidateId ?? "" : (session?.user.uid ?? "");
 
   useEffect(() => {
     if (!candidateId) {
+      setMessages([]);
       return;
     }
 
@@ -36,7 +40,7 @@ export function MessagesScreen() {
       candidateId,
       (rows) => {
         setMessages(rows);
-        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
       },
       () => undefined
     );
@@ -79,124 +83,185 @@ export function MessagesScreen() {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.select({ ios: "padding", android: undefined })}
-      keyboardVerticalOffset={96}
-    >
-      <ScrollView
-        ref={listRef}
-        contentContainerStyle={styles.list}
-      >
-        {messages.map((item) => {
-          const mine = item.senderId === session?.user.uid;
-          return (
-            <View key={item.id} style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-              <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
-              {Array.isArray(item.attachments) && item.attachments.length > 0 && (
-                <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      <View style={styles.composer}>
-        <Pressable style={styles.attachButton} onPress={onPickFile}>
-          <Text style={styles.attachText}>+ File</Text>
-        </Pressable>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          placeholder="Type a message"
-          multiline
-        />
-        <Pressable style={[styles.sendButton, busy && styles.disabled]} onPress={onSend} disabled={busy}>
-          <Text style={styles.sendText}>Send</Text>
-        </Pressable>
+  if (session?.role === "admin" && !candidateId) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyTitle}>Open a candidate chat</Text>
+        <Text style={styles.emptyBody}>Choose a candidate from the chat inbox.</Text>
       </View>
-      {!candidateId && session?.role === "admin" && (
-        <Text style={styles.fileHint}>Select a candidate conversation from inbox.</Text>
-      )}
-      {file && <Text style={styles.fileHint}>Attached: {file.fileName}</Text>}
-    </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      {session?.role === "candidate" ? <CandidateContactBar /> : null}
+
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.select({ ios: "padding", android: undefined })}
+        keyboardVerticalOffset={96}
+      >
+        <View style={styles.headerWrap}>
+          <Text style={styles.title}>{session?.role === "admin" ? route.params?.title ?? "Candidate" : "Chat"}</Text>
+          <Text style={styles.subtitle}>
+            {session?.role === "admin" ? "Direct message thread" : "Direct message with Zenith Legal"}
+          </Text>
+        </View>
+
+        <ScrollView ref={listRef} contentContainerStyle={styles.list}>
+          {messages.map((item) => {
+            const mine = item.senderId === session?.user.uid;
+            return (
+              <View key={item.id} style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
+                {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
+                  <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.composer}>
+          <Pressable style={styles.attachButton} onPress={onPickFile}>
+            <Text style={styles.attachText}>+ File</Text>
+          </Pressable>
+          <TextInput
+            style={styles.input}
+            value={text}
+            onChangeText={setText}
+            placeholder="Type a message"
+            placeholderTextColor="#7f8b9d"
+            multiline
+          />
+          <Pressable style={[styles.sendButton, busy && styles.disabled]} onPress={onSend} disabled={busy}>
+            <Text style={styles.sendText}>Send</Text>
+          </Pressable>
+        </View>
+        {file ? <Text style={styles.fileHint}>Attached: {file.fileName}</Text> : null}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  list: { padding: 12, gap: 10 },
+  screen: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  },
+  headerWrap: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: theme.colors.textPrimary
+  },
+  subtitle: {
+    marginTop: 3,
+    color: theme.colors.textSecondary
+  },
+  list: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 10
+  },
   bubble: {
-    maxWidth: "80%",
-    padding: 10,
-    borderRadius: 12
+    maxWidth: "82%",
+    padding: 11,
+    borderRadius: 16,
+    borderWidth: 1
   },
   mine: {
     alignSelf: "flex-end",
-    backgroundColor: "#1d4ed8"
+    backgroundColor: theme.colors.primary,
+    borderColor: "#4387ff"
   },
   theirs: {
     alignSelf: "flex-start",
-    backgroundColor: "white"
+    backgroundColor: "#fff",
+    borderColor: theme.colors.border
   },
   mineText: {
-    color: "white"
+    color: "#fff"
   },
   theirText: {
-    color: "#111827"
+    color: theme.colors.textPrimary
   },
   attachmentText: {
     marginTop: 6,
     fontSize: 12,
-    color: "#4b5563"
+    color: "#dbe9ff"
   },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    backgroundColor: "white",
+    borderTopColor: theme.colors.border,
+    backgroundColor: "#fff",
     padding: 10
   },
   attachButton: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
     paddingHorizontal: 10,
-    paddingVertical: 8
+    paddingVertical: 8,
+    backgroundColor: "#fff"
   },
   attachText: {
-    color: "#1f2937",
-    fontWeight: "600"
+    color: theme.colors.textSecondary,
+    fontWeight: "700"
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    maxHeight: 96
+    maxHeight: 100,
+    backgroundColor: "#fff"
   },
   sendButton: {
-    borderRadius: 8,
-    backgroundColor: "#1d4ed8",
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 10
   },
   sendText: {
-    color: "white",
-    fontWeight: "600"
+    color: "#fff",
+    fontWeight: "700"
   },
   disabled: {
     opacity: 0.5
   },
   fileHint: {
     paddingHorizontal: 12,
-    paddingBottom: 8,
-    color: "#4b5563"
+    paddingBottom: 10,
+    color: theme.colors.textSecondary
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.background,
+    gap: 6,
+    paddingHorizontal: 18
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: theme.colors.textPrimary
+  },
+  emptyBody: {
+    color: theme.colors.textSecondary
   }
 });
