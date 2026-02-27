@@ -1005,12 +1005,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     backgroundColor: "#111",
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4
+    justifyContent: "center"
   },
   fabBadge: {
     position: "absolute",

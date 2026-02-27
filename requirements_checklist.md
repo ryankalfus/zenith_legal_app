@@ -566,3 +566,16 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for current-email source-of-truth alignment and canonical sync reliability.
+
+## Flat UI (No Drop Shadows) (2026-02-27)
+- [x] `MVP` Removed all mobile drop shadows from shared card styling and key UI elements (chat composer + admin appointments FAB).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for global mobile drop-shadow removal.
+
+## Legacy Candidate Removal (`ryan kLfus`) (2026-02-27)
+- [x] `MVP` Added one-time targeted removal for stale candidate record `ryan kLfus` tied to `ryansamuelkalfus@gmail.com`.
+- [x] `MVP` Added immediate UI exclusion guard for that exact legacy record while keeping `Ryan Kalfus` visible.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for targeted stale-candidate purge and safe UI fallback filtering.

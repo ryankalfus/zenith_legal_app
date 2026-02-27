@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -51,6 +52,9 @@ export type FirmRow = {
   id: string;
   name: string;
 };
+
+const LEGACY_REMOVED_CANDIDATE_NAME = "ryan klfus";
+const LEGACY_REMOVED_CANDIDATE_EMAIL = "ryansamuelkalfus@gmail.com";
 
 function normalizeName(value: unknown) {
   return String(value ?? "")
@@ -162,6 +166,12 @@ function dedupeCandidates(rows: CandidateRow[]) {
   return sortByName(deduped);
 }
 
+function isLegacyRemovedCandidate(row: CandidateRow) {
+  const name = normalizeName(row.fullName);
+  const email = String(row.email ?? "").trim().toLowerCase();
+  return name === LEGACY_REMOVED_CANDIDATE_NAME && email === LEGACY_REMOVED_CANDIDATE_EMAIL;
+}
+
 export function watchCandidates(onData: (rows: CandidateRow[]) => void, onError: (error: Error) => void) {
   const q = query(collection(db, "users"), where("role", "==", "candidate"), orderBy("fullName", "asc"));
 
@@ -169,7 +179,7 @@ export function watchCandidates(onData: (rows: CandidateRow[]) => void, onError:
     q,
     (snapshot) => {
       const rows = snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<CandidateRow, "id">) }));
-      onData(dedupeCandidates(rows));
+      onData(dedupeCandidates(rows).filter((row) => !isLegacyRemovedCandidate(row)));
     },
     (error) => onError(error as Error)
   );
@@ -328,6 +338,20 @@ export async function updateCandidateAssignedHeader(
         )
       )
   );
+}
+
+export async function purgeLegacyRyanKlfusCandidate() {
+  const q = query(collection(db, "users"), where("role", "==", "candidate"));
+  const snapshot = await getDocs(q);
+  const matches = snapshot.docs.filter((entry) => {
+    const data = entry.data() as Record<string, unknown>;
+    const name = normalizeName(data.fullName);
+    const email = String(data.email ?? "").trim().toLowerCase();
+    return name === LEGACY_REMOVED_CANDIDATE_NAME && email === LEGACY_REMOVED_CANDIDATE_EMAIL;
+  });
+
+  await Promise.all(matches.map((entry) => deleteDoc(entry.ref)));
+  return matches.length;
 }
 
 export async function updateCandidateAssignedRecruiter(

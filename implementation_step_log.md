@@ -1403,3 +1403,39 @@
 - What to test next:
   - Log in as account whose email was verified-changed and confirm `Current email` instantly matches login email.
   - Confirm old email no longer appears in candidate/admin profile change-email section.
+
+## Step 88 - Remove All Drop Shadows (Mobile)
+- What changed:
+  - Removed global card drop shadow by setting `theme.shadowCard` shadow/elevation to zero.
+  - Removed explicit shadow styling from chat composer (`MessagesScreen`).
+  - Removed explicit shadow styling from admin appointment requests floating bell button (`AdminAppointmentRequestsScreen`).
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Verify cards, composer, and floating action button render flat with no visible shadows on iOS/Android.
+
+## Step 89 - One-Time Removal of Legacy `ryan kLfus` Candidate
+- What changed:
+  - Added targeted purge utility `purgeLegacyRyanKlfusCandidate()` in admin service.
+  - Purge matches only:
+    - normalized full name = `ryan klfus`
+    - email = `ryansamuelkalfus@gmail.com`
+  - Wired purge to run on admin Candidates screen load.
+  - Added list-level guard in candidate watcher to hide that exact legacy record immediately.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - Open admin Candidates tab and confirm `ryan kLfus` no longer appears while `Ryan Kalfus` remains.
+
+## Step 90 - Un-nest Profile Actions + Admin Detail Views
+- What changed:
+  - Candidate Profile: moved `Log out` + `Delete my account/data` actions out of nested `SurfaceCard` into flat screen-level actions.
+  - Admin Profile: moved `Log out` + `Delete account` actions out of nested `SurfaceCard` into flat screen-level actions.
+  - Admin Candidate Detail: removed top-level `SurfaceCard` wrappers and flattened nested detail grouping so fields/actions render directly in the view.
+  - Admin Recruiter Detail: removed top-level `SurfaceCard` wrapper and flattened nested detail grouping into direct detail rows.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - As Candidate and Admin, confirm logout/delete buttons still work and now render outside a card wrapper.
+  - In Admin Candidates tab, open Candidate Detail + Recruiter Detail and confirm flat layout spacing/readability on both iOS and Android.

@@ -16,7 +16,7 @@ import {
   CandidateFirmStatus
 } from "@zenith/shared";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
+import { AppShell, EmptyState } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import { StatusChip } from "../../components/StatusChip";
 import {
@@ -311,118 +311,113 @@ export function AdminCandidateDetailScreen() {
   return (
     <AppShell title="Candidate Detail" subtitle="Full profile + firm management.">
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <SurfaceCard>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Text style={styles.backLink}>Back to candidates</Text>
-          </Pressable>
-          <View style={styles.profileHeader}>
-            <Avatar uri={String(candidate?.avatarUrl ?? "")} name={candidate?.fullName || "Candidate"} size={56} />
-            <View style={styles.profileBody}>
-              <Text style={styles.candidateName}>{candidate?.fullName || "Candidate"}</Text>
-              <Text style={styles.meta}>{candidate?.email || "No email"}</Text>
-              <Text style={styles.meta}>{candidate?.mobile || "No phone"}</Text>
-            </View>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text style={styles.backLink}>Back to candidates</Text>
+        </Pressable>
+        <View style={styles.profileHeader}>
+          <Avatar uri={String(candidate?.avatarUrl ?? "")} name={candidate?.fullName || "Candidate"} size={56} />
+          <View style={styles.profileBody}>
+            <Text style={styles.candidateName}>{candidate?.fullName || "Candidate"}</Text>
+            <Text style={styles.meta}>{candidate?.email || "No email"}</Text>
+            <Text style={styles.meta}>{candidate?.mobile || "No phone"}</Text>
           </View>
+        </View>
 
-          <View style={styles.profileDetails}>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Assigned recruiter</Text>
-              <Pressable
-                style={[styles.roleFieldButton, savingAssignedRecruiter && styles.disabled]}
-                onPress={() => setRecruiterModalOpen(true)}
-                disabled={savingAssignedRecruiter}
-              >
-                <Text style={styles.roleFieldText}>{selectedRecruiterLabel}</Text>
-                <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
-              </Pressable>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Practice</Text>
-              <Text style={styles.detailValue}>{candidate?.preferences?.practiceArea || "Not set"}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Preferred cities</Text>
-              <Text style={styles.detailValue}>{preferredCities || "None"}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Date of birth</Text>
-              <Text style={styles.detailValue}>{formatShortDate(String(candidate?.dateOfBirth ?? ""))}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Age</Text>
-              <Text style={styles.detailValue}>{getAge(String(candidate?.dateOfBirth ?? ""))}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>JD degree received</Text>
-              <Text style={styles.detailValue}>{formatShortDate(String(candidate?.jdDegreeDate ?? ""))}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Role</Text>
-              <Pressable
-                style={[styles.roleFieldButton, savingRole && styles.disabled]}
-                onPress={() => setRoleModalOpen(true)}
-                disabled={savingRole}
-              >
-                <Text style={styles.roleFieldText}>Candidate</Text>
-                <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.assignedHeaderSection}>
-            <Text style={styles.assignedHeaderTitle}>Assigned Header</Text>
-            <Text style={styles.assignedHeaderSubtitle}>
-              Candidate app header links shown at the top of their screens.
-            </Text>
-            <Text style={styles.inputLabel}>Email hyperlink</Text>
-            <TextInput
-              style={styles.input}
-              value={assignedHeaderEmail}
-              onChangeText={setAssignedHeaderEmail}
-              placeholder={ZENITH_EMAIL}
-              placeholderTextColor="#7f8b9d"
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            <Text style={styles.inputLabel}>Phone hyperlink</Text>
-            <TextInput
-              style={styles.input}
-              value={assignedHeaderPhone}
-              onChangeText={setAssignedHeaderPhone}
-              placeholder={ZENITH_PHONE}
-              placeholderTextColor="#7f8b9d"
-              keyboardType="phone-pad"
-            />
-            <Pressable style={styles.saveHeaderButton} onPress={saveAssignedHeader} disabled={savingHeader}>
-              <Text style={styles.saveHeaderButtonText}>{savingHeader ? "Saving..." : "Save Assigned Header"}</Text>
+        <View style={styles.profileDetails}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Assigned recruiter</Text>
+            <Pressable
+              style={[styles.roleFieldButton, savingAssignedRecruiter && styles.disabled]}
+              onPress={() => setRecruiterModalOpen(true)}
+              disabled={savingAssignedRecruiter}
+            >
+              <Text style={styles.roleFieldText}>{selectedRecruiterLabel}</Text>
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Practice</Text>
+            <Text style={styles.detailValue}>{candidate?.preferences?.practiceArea || "Not set"}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Preferred cities</Text>
+            <Text style={styles.detailValue}>{preferredCities || "None"}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Date of birth</Text>
+            <Text style={styles.detailValue}>{formatShortDate(String(candidate?.dateOfBirth ?? ""))}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Age</Text>
+            <Text style={styles.detailValue}>{getAge(String(candidate?.dateOfBirth ?? ""))}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>JD degree received</Text>
+            <Text style={styles.detailValue}>{formatShortDate(String(candidate?.jdDegreeDate ?? ""))}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Role</Text>
+            <Pressable
+              style={[styles.roleFieldButton, savingRole && styles.disabled]}
+              onPress={() => setRoleModalOpen(true)}
+              disabled={savingRole}
+            >
+              <Text style={styles.roleFieldText}>Candidate</Text>
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
+            </Pressable>
+          </View>
+        </View>
 
-          <Pressable style={styles.assignButton} onPress={openAssignFlow}>
-            <Text style={styles.assignButtonText}>Assign Firm</Text>
+        <View style={styles.assignedHeaderSection}>
+          <Text style={styles.assignedHeaderTitle}>Assigned Header</Text>
+          <Text style={styles.assignedHeaderSubtitle}>
+            Candidate app header links shown at the top of their screens.
+          </Text>
+          <Text style={styles.inputLabel}>Email hyperlink</Text>
+          <TextInput
+            style={styles.input}
+            value={assignedHeaderEmail}
+            onChangeText={setAssignedHeaderEmail}
+            placeholder={ZENITH_EMAIL}
+            placeholderTextColor="#7f8b9d"
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <Text style={styles.inputLabel}>Phone hyperlink</Text>
+          <TextInput
+            style={styles.input}
+            value={assignedHeaderPhone}
+            onChangeText={setAssignedHeaderPhone}
+            placeholder={ZENITH_PHONE}
+            placeholderTextColor="#7f8b9d"
+            keyboardType="phone-pad"
+          />
+          <Pressable style={styles.saveHeaderButton} onPress={saveAssignedHeader} disabled={savingHeader}>
+            <Text style={styles.saveHeaderButtonText}>{savingHeader ? "Saving..." : "Save Assigned Header"}</Text>
           </Pressable>
-        </SurfaceCard>
+        </View>
 
-        <SurfaceCard>
-          <Text style={styles.sectionTitle}>Assigned firms</Text>
-          {statuses.length === 0 ? <EmptyState message="No firms assigned yet." /> : null}
-          {statuses.map((statusRow) => (
-            <View key={statusRow.id} style={styles.statusRow}>
-              <Text style={styles.firmName}>{firmMap[statusRow.firmId] ?? statusRow.firmId}</Text>
-              <StatusChip status={statusRow.status} />
-              <Text style={styles.statusDate}>Status updated: {formatStatusUpdatedDate(statusRow.updatedAt)}</Text>
-              <View style={styles.statusActionsRow}>
-                <Pressable style={styles.changeButton} onPress={() => setEditingStatusRow(statusRow)}>
-                  <Text style={styles.changeButtonText}>Change status</Text>
-                </Pressable>
-                <Pressable style={styles.removeButton} onPress={() => confirmRemoveFirm(statusRow)}>
-                  <Text style={styles.removeButtonText}>Remove firm</Text>
-                </Pressable>
-              </View>
+        <Pressable style={styles.assignButton} onPress={openAssignFlow}>
+          <Text style={styles.assignButtonText}>Assign Firm</Text>
+        </Pressable>
+
+        <Text style={styles.sectionTitle}>Assigned firms</Text>
+        {statuses.length === 0 ? <EmptyState message="No firms assigned yet." /> : null}
+        {statuses.map((statusRow) => (
+          <View key={statusRow.id} style={styles.statusRow}>
+            <Text style={styles.firmName}>{firmMap[statusRow.firmId] ?? statusRow.firmId}</Text>
+            <StatusChip status={statusRow.status} />
+            <Text style={styles.statusDate}>Status updated: {formatStatusUpdatedDate(statusRow.updatedAt)}</Text>
+            <View style={styles.statusActionsRow}>
+              <Pressable style={styles.changeButton} onPress={() => setEditingStatusRow(statusRow)}>
+                <Text style={styles.changeButtonText}>Change status</Text>
+              </Pressable>
+              <Pressable style={styles.removeButton} onPress={() => confirmRemoveFirm(statusRow)}>
+                <Text style={styles.removeButtonText}>Remove firm</Text>
+              </Pressable>
             </View>
-          ))}
-        </SurfaceCard>
-
+          </View>
+        ))}
       </ScrollView>
 
       <Modal
@@ -623,17 +618,15 @@ const styles = StyleSheet.create({
   },
   profileDetails: {
     marginTop: 12,
+    gap: 8
+  },
+  detailRow: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 12,
     backgroundColor: "#fff",
-    overflow: "hidden"
-  },
-  detailRow: {
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border
+    paddingVertical: 10
   },
   detailLabel: {
     fontSize: 12,
@@ -681,7 +674,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
     color: theme.colors.textPrimary,
-    marginBottom: 8
+    marginTop: 4,
+    marginBottom: 2
   },
   statusRow: {
     borderWidth: 1,

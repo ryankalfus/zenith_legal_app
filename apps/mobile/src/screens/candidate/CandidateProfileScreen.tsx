@@ -530,14 +530,14 @@ export function CandidateProfileScreen() {
         </Pressable>
       </SurfaceCard>
 
-      <SurfaceCard>
+      <View style={styles.accountActions}>
         <Pressable style={styles.secondaryButton} onPress={() => logout()}>
           <Text style={styles.secondaryButtonText}>Log out</Text>
         </Pressable>
         <Pressable style={styles.deleteButton} onPress={onDelete}>
           <Text style={styles.deleteButtonText}>Delete my account/data</Text>
         </Pressable>
-      </SurfaceCard>
+      </View>
     </AppShell>
   );
 }
@@ -677,6 +677,9 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#fff",
     fontWeight: "700"
+  },
+  accountActions: {
+    marginTop: 2
   },
   secondaryButton: {
     borderRadius: 12,

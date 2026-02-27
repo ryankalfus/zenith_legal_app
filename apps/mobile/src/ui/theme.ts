@@ -21,11 +21,11 @@ export const theme = {
     pill: 999
   },
   shadowCard: {
-    shadowColor: "#0b1220",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0
   }
 } as const;
 

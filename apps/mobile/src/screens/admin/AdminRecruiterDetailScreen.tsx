@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
-import { AppShell, SurfaceCard } from "../../components/AppShell";
+import { AppShell } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import { changeUserRoleByAdmin, watchRecruiterById } from "../../services/adminService";
 import { useAuth } from "../../state/AuthContext";
@@ -68,41 +68,46 @@ export function AdminRecruiterDetailScreen() {
 
   return (
     <AppShell title="Recruiter Detail" subtitle="Review recruiter account details.">
-      <SurfaceCard>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>Back to candidates</Text>
+      <Pressable onPress={() => navigation.goBack()}>
+        <Text style={styles.backLink}>Back to candidates</Text>
+      </Pressable>
+
+      <View style={styles.profileRow}>
+        <Avatar uri={String(recruiter?.avatarUrl ?? "")} name={recruiter?.fullName || "Recruiter"} size={56} />
+        <View style={styles.profileBody}>
+          <Text style={styles.name}>{recruiter?.fullName || "Recruiter"}</Text>
+          <Text style={styles.meta}>{recruiter?.email || "No email"}</Text>
+          <Text style={styles.meta}>{recruiter?.mobile || "No phone"}</Text>
+        </View>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Text style={styles.detailLabel}>Name</Text>
+        <Text style={styles.detailValue}>{recruiter?.fullName || "Not set"}</Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Text style={styles.detailLabel}>Email</Text>
+        <Text style={styles.detailValue}>{recruiter?.email || "Not set"}</Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Text style={styles.detailLabel}>Phone</Text>
+        <Text style={styles.detailValue}>{recruiter?.mobile || "Not set"}</Text>
+      </View>
+
+      <View style={styles.detailRow}>
+        <Text style={styles.detailLabel}>Role</Text>
+        <Pressable
+          style={[styles.roleButton, (savingRole || isSelf) && styles.disabledButton]}
+          onPress={() => setRoleModalOpen(true)}
+          disabled={savingRole || isSelf}
+        >
+          <Text style={styles.roleButtonText}>Recruiter</Text>
+          <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
         </Pressable>
-
-        <View style={styles.profileRow}>
-          <Avatar uri={String(recruiter?.avatarUrl ?? "")} name={recruiter?.fullName || "Recruiter"} size={56} />
-          <View style={styles.profileBody}>
-            <Text style={styles.name}>{recruiter?.fullName || "Recruiter"}</Text>
-            <Text style={styles.meta}>{recruiter?.email || "No email"}</Text>
-            <Text style={styles.meta}>{recruiter?.mobile || "No phone"}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailGroup}>
-          <Text style={styles.detailLabel}>Name</Text>
-          <Text style={styles.detailValue}>{recruiter?.fullName || "Not set"}</Text>
-
-          <Text style={styles.detailLabel}>Email</Text>
-          <Text style={styles.detailValue}>{recruiter?.email || "Not set"}</Text>
-
-          <Text style={styles.detailLabel}>Phone</Text>
-          <Text style={styles.detailValue}>{recruiter?.mobile || "Not set"}</Text>
-
-          <Pressable
-            style={[styles.roleButton, (savingRole || isSelf) && styles.disabledButton]}
-            onPress={() => setRoleModalOpen(true)}
-            disabled={savingRole || isSelf}
-          >
-            <Text style={styles.roleButtonText}>Role: Recruiter</Text>
-            <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
-          </Pressable>
-          {isSelf ? <Text style={styles.selfHint}>You cannot change your own role.</Text> : null}
-        </View>
-      </SurfaceCard>
+      </View>
+      {isSelf ? <Text style={styles.selfHint}>You cannot change your own role.</Text> : null}
 
       <Modal visible={roleModalOpen} transparent animationType="fade" onRequestClose={() => setRoleModalOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -161,12 +166,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: theme.colors.textSecondary
   },
-  detailGroup: {
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: 10,
-    gap: 8
+  detailRow: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 10
   },
   detailLabel: {
     color: theme.colors.textSecondary,
@@ -180,7 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
   roleButton: {
-    marginTop: 8,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 999,
@@ -197,6 +204,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   selfHint: {
+    marginTop: 2,
     color: theme.colors.textSecondary,
     fontSize: 12,
     fontWeight: "600"

@@ -515,12 +515,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 999,
-    shadowColor: "#0b1220",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2
+    borderRadius: 999
   },
   attachButton: {
     width: 34,

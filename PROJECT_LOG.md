@@ -253,3 +253,7 @@
 - 02.27.2026: Added login-time email reconciliation in mobile `AuthContext` so when verified Firebase email changes take effect, all matching user docs for that account are updated to the new current email (`uid`, `email`, `emailVerified`) and stale old-email copies are synced.
 - 02.27.2026: Fixed profile email display source-of-truth: candidate/admin `Current email` now always prioritizes Firebase Auth account email over stale profile-doc email values.
 - 02.27.2026: Simplified post-verify email sync writes to canonical user doc (`users/{uid}`) in both login reconciliation and email-change service to avoid permission failures on legacy duplicate docs and keep current-email field accurate.
+- 02.27.2026: Removed drop shadows from mobile UI components by zeroing shared card shadow tokens and stripping explicit composer/FAB shadow styles for a fully flat look.
+- 02.27.2026: Added one-time targeted stale-candidate cleanup for legacy `ryan kLfus` record (`ryansamuelkalfus@gmail.com`) and wired it to run from admin Candidates screen; preserved `Ryan Kalfus` by exact normalized-name/email match guard.
+- 02.27.2026: Added candidate-list fallback guard to hide that exact legacy record immediately in UI even before deletion completes.
+- 02.27.2026: Flattened admin/candidate account action areas by un-nesting `Log out` + `Delete account` buttons from profile cards, and flattened Admin `Candidate Detail` + `Recruiter Detail` layouts by removing top-level `SurfaceCard` wrappers and grouped nested detail containers.

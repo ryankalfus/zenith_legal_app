@@ -5,6 +5,7 @@ import { CANDIDATE_STATUS_LABELS, CANDIDATE_VISIBLE_STATUSES, PRACTICE_AREAS, PR
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import {
+  purgeLegacyRyanKlfusCandidate,
   watchCandidates,
   watchRecruiters,
   watchFirms,
@@ -69,6 +70,8 @@ export function AdminCandidatesScreen() {
   const [filters, setFilters] = useState<CandidateFilterState>(route.params?.filters ?? createDefaultFilters());
 
   useEffect(() => {
+    purgeLegacyRyanKlfusCandidate().catch(() => undefined);
+
     const unsubCandidates = watchCandidates(
       (next) => setCandidateRows(next),
       () => setCandidateRows([])
