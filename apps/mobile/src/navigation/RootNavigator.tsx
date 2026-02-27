@@ -15,10 +15,13 @@ import { AdminCandidatesScreen } from "../screens/admin/AdminCandidatesScreen";
 import { AdminCandidateDetailScreen } from "../screens/admin/AdminCandidateDetailScreen";
 import { AdminAppointmentRequestsScreen } from "../screens/admin/AdminAppointmentRequestsScreen";
 import { AdminNewConversationScreen } from "../screens/admin/AdminNewConversationScreen";
+import { AdminRecruiterDetailScreen } from "../screens/admin/AdminRecruiterDetailScreen";
+import { AdminProfileScreen } from "../screens/admin/AdminProfileScreen";
 import {
   AdminAppointmentsStackParamList,
   AdminCandidatesStackParamList,
   AdminChatStackParamList,
+  AdminProfileStackParamList,
   AdminTabParamList,
   CandidateAppointmentsStackParamList,
   CandidateChatStackParamList,
@@ -45,6 +48,7 @@ const CandidateProfileStack = createNativeStackNavigator<CandidateProfileStackPa
 const AdminCandidatesStack = createNativeStackNavigator<AdminCandidatesStackParamList>();
 const AdminChatStack = createNativeStackNavigator<AdminChatStackParamList>();
 const AdminAppointmentsStack = createNativeStackNavigator<AdminAppointmentsStackParamList>();
+const AdminProfileStack = createNativeStackNavigator<AdminProfileStackParamList>();
 
 function CandidateDashboardStackScreen() {
   return (
@@ -83,6 +87,7 @@ function AdminCandidatesStackScreen() {
     <AdminCandidatesStack.Navigator screenOptions={{ headerShown: false }}>
       <AdminCandidatesStack.Screen name="CandidatesList" component={AdminCandidatesScreen} />
       <AdminCandidatesStack.Screen name="CandidateDetail" component={AdminCandidateDetailScreen} />
+      <AdminCandidatesStack.Screen name="RecruiterDetail" component={AdminRecruiterDetailScreen} />
     </AdminCandidatesStack.Navigator>
   );
 }
@@ -102,6 +107,14 @@ function AdminAppointmentsStackScreen() {
     <AdminAppointmentsStack.Navigator screenOptions={{ headerShown: false }}>
       <AdminAppointmentsStack.Screen name="AppointmentRequestsHome" component={AdminAppointmentRequestsScreen} />
     </AdminAppointmentsStack.Navigator>
+  );
+}
+
+function AdminProfileStackScreen() {
+  return (
+    <AdminProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <AdminProfileStack.Screen name="AdminProfileHome" component={AdminProfileScreen} />
+    </AdminProfileStack.Navigator>
   );
 }
 
@@ -276,6 +289,13 @@ function AdminTabs() {
           tabBarIcon: ({ color, size }) => (
             <TabIconWithBadge name="time-outline" color={color} size={size} badgeCount={unattendedCount} />
           )
+        }}
+      />
+      <AdminTabsNavigator.Screen
+        name="Profile"
+        component={AdminProfileStackScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => <TabIconWithBadge name="person-circle-outline" color={color} size={size} />
         }}
       />
     </AdminTabsNavigator.Navigator>

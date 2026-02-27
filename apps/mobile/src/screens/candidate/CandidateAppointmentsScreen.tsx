@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -13,18 +14,25 @@ import { APPOINTMENT_STATUS_LABELS, AppointmentStatus } from "@zenith/shared";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import {
+  formatCandidateAppointmentCanceledChat,
+  formatCandidateAppointmentRequestChat
+} from "../../lib/appointmentChat";
+import {
   createAppointmentRequest,
   deleteAppointment,
   watchCandidateAppointments,
   updateAppointmentStatus
 } from "../../services/appointmentService";
+import { addAppointmentToDeviceCalendar } from "../../services/calendarService";
+import { sendMessage } from "../../services/messagingService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
-import { clearCandidateAppointmentUpdates } from "../../services/userService";
+import { clearCandidateAppointmentUpdates, watchUser } from "../../services/userService";
 
 type AppointmentViewRow = {
   id: string;
   startsAt: string;
+  endsAt?: string;
   status: AppointmentStatus;
   phoneNumber: string;
   notes?: string;
@@ -53,8 +61,8 @@ export function CandidateAppointmentsScreen() {
   const [requestTime, setRequestTime] = useState<Date>(new Date());
   const [phoneNumber, setPhoneNumber] = useState("");
   const [note, setNote] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [candidateName, setCandidateName] = useState("Candidate");
+  const [activePicker, setActivePicker] = useState<"date" | "time" | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -75,6 +83,18 @@ export function CandidateAppointmentsScreen() {
   }, [session?.user.uid]);
 
   useEffect(() => {
+    if (!session?.user.uid) {
+      return;
+    }
+
+    return watchUser(
+      session.user.uid,
+      (data) => setCandidateName(String(data?.fullName ?? "Candidate")),
+      () => setCandidateName("Candidate")
+    );
+  }, [session?.user.uid]);
+
+  useEffect(() => {
     if (!session?.user.uid || !isFocused) {
       return;
     }
@@ -91,14 +111,12 @@ export function CandidateAppointmentsScreen() {
   }, [requestDate, requestTime]);
 
   const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(false);
     if (selectedDate) {
       setRequestDate(selectedDate);
     }
   };
 
   const onTimeChange = (_event: DateTimePickerEvent, selectedTime?: Date) => {
-    setShowTimePicker(false);
     if (selectedTime) {
       setRequestTime(selectedTime);
     }
@@ -116,14 +134,29 @@ export function CandidateAppointmentsScreen() {
 
     try {
       setSaving(true);
+      const trimmedNote = note.trim();
       await createAppointmentRequest({
         candidateId: session.user.uid,
         createdBy: session.user.uid,
         createdByRole: "candidate",
         startsAt: startsAtIso,
         phoneNumber: phoneNumber.trim(),
-        notes: note.trim()
+        notes: trimmedNote
       });
+      try {
+        await sendMessage({
+          candidateId: session.user.uid,
+          senderId: session.user.uid,
+          senderRole: "candidate",
+          text: formatCandidateAppointmentRequestChat({
+            candidateName,
+            startsAt: startsAtIso,
+            notes: trimmedNote
+          })
+        });
+      } catch {
+        // Keep appointment request successful even if chat send fails.
+      }
       setNote("");
       Alert.alert("Submitted", "Appointment request sent to Zenith Legal.");
     } catch (error: any) {
@@ -151,6 +184,23 @@ export function CandidateAppointmentsScreen() {
               updatedBy: session.user.uid,
               updatedByRole: "candidate"
             });
+            if (row.status === "requested") {
+              return;
+            }
+            try {
+              await sendMessage({
+                candidateId: session.user.uid,
+                senderId: session.user.uid,
+                senderRole: "candidate",
+                text: formatCandidateAppointmentCanceledChat({
+                  candidateName,
+                  startsAt: row.startsAt,
+                  notes: row.notes
+                })
+              });
+            } catch {
+              // Keep cancel successful even if chat send fails.
+            }
           } catch (error: any) {
             Alert.alert("Could not cancel", error?.message ?? "Please try again.");
           }
@@ -180,6 +230,20 @@ export function CandidateAppointmentsScreen() {
     );
   };
 
+  const addToCalendar = async (row: AppointmentViewRow) => {
+    try {
+      await addAppointmentToDeviceCalendar({
+        title: "Call with Zenith Legal",
+        notes: row.notes,
+        startsAt: row.startsAt,
+        endsAt: row.endsAt
+      });
+      Alert.alert("Added", "Appointment added to your phone calendar.");
+    } catch (error: any) {
+      Alert.alert("Could not add to calendar", error?.message ?? "Please try again.");
+    }
+  };
+
   const now = Date.now();
   const sorted = [...rows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const overdueScheduled = sorted.filter((row) => {
@@ -195,19 +259,30 @@ export function CandidateAppointmentsScreen() {
   });
 
   return (
-    <AppShell title="Appointments" subtitle="Request a call with Zenith Legal." scroll>
+    <AppShell
+      title="Appointments"
+      subtitle="Request a call with Zenith Legal."
+      topRightLogoStyle={styles.dashboardHeroLogo}
+      scroll
+    >
       <SurfaceCard>
         <Text style={styles.sectionTitle}>Request appointment</Text>
 
         <View style={styles.rowButtons}>
-          <Pressable style={styles.pickButton} onPress={() => setShowDatePicker(true)}>
+          <Pressable
+            style={[styles.pickButton, activePicker === "date" && styles.pickButtonActive]}
+            onPress={() => setActivePicker((current) => (current === "date" ? null : "date"))}
+          >
             <Text style={styles.pickLabel}>Date</Text>
             <View style={styles.pickValueRow}>
               <Text style={styles.pickValue}>{formatDate(requestDate)}</Text>
               <Text style={styles.pickChevron}>▼</Text>
             </View>
           </Pressable>
-          <Pressable style={styles.pickButton} onPress={() => setShowTimePicker(true)}>
+          <Pressable
+            style={[styles.pickButton, activePicker === "time" && styles.pickButtonActive]}
+            onPress={() => setActivePicker((current) => (current === "time" ? null : "time"))}
+          >
             <Text style={styles.pickLabel}>Time</Text>
             <View style={styles.pickValueRow}>
               <Text style={styles.pickValue}>{formatTime(requestTime)}</Text>
@@ -215,6 +290,27 @@ export function CandidateAppointmentsScreen() {
             </View>
           </Pressable>
         </View>
+
+        {activePicker === "date" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={requestDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "spinner"}
+              onChange={onDateChange}
+            />
+          </View>
+        ) : null}
+        {activePicker === "time" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={requestTime}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "spinner"}
+              onChange={onTimeChange}
+            />
+          </View>
+        ) : null}
 
         <TextInput
           style={styles.input}
@@ -237,12 +333,6 @@ export function CandidateAppointmentsScreen() {
           <Text style={styles.submitButtonText}>{saving ? "Submitting..." : "Submit request"}</Text>
         </Pressable>
 
-        {showDatePicker ? (
-          <DateTimePicker value={requestDate} mode="date" display="default" onChange={onDateChange} />
-        ) : null}
-        {showTimePicker ? (
-          <DateTimePicker value={requestTime} mode="time" display="default" onChange={onTimeChange} />
-        ) : null}
       </SurfaceCard>
 
       {loading ? (
@@ -295,6 +385,9 @@ export function CandidateAppointmentsScreen() {
                     <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
                     <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
                     {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
+                    <Pressable style={styles.calendarButton} onPress={() => addToCalendar(row)}>
+                      <Text style={styles.calendarButtonText}>Add to Calendar</Text>
+                    </Pressable>
                     <Pressable style={styles.cancelButton} onPress={() => confirmCancel(row)}>
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </Pressable>
@@ -341,6 +434,12 @@ export function CandidateAppointmentsScreen() {
 }
 
 const styles = StyleSheet.create({
+  dashboardHeroLogo: {
+    width: 90,
+    height: 90,
+    top: -6,
+    right: 8
+  },
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
@@ -366,6 +465,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 10
   },
+  pickButtonActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: "#eef4ff"
+  },
   pickLabel: {
     color: theme.colors.textSecondary,
     fontSize: 12,
@@ -385,6 +488,14 @@ const styles = StyleSheet.create({
   pickChevron: {
     color: theme.colors.textSecondary,
     fontSize: 12
+  },
+  inlinePickerWrap: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden"
   },
   input: {
     borderWidth: 1,
@@ -442,6 +553,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 7
+  },
+  calendarButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#9dc2ff",
+    backgroundColor: "#eef5ff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  calendarButtonText: {
+    color: theme.colors.primary,
+    fontWeight: "700"
   },
   cancelButtonText: {
     color: theme.colors.danger,

@@ -11,7 +11,6 @@ import {
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CandidateContactBar } from "../components/AppShell";
 import { useAuth } from "../state/AuthContext";
 import { theme } from "../ui/theme";
 
@@ -46,7 +45,6 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right", "bottom"]}>
-      <CandidateContactBar />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.select({ ios: "padding", android: undefined })}

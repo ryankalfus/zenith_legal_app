@@ -1,0 +1,122 @@
+{
+  "batch": "Cross-cutting Sweep",
+  "batch_index": 9,
+  "assessments": {
+    "authorization_consistency": 68.0
+  },
+  "dimension_notes": {
+    "authorization_consistency": {
+      "evidence": [
+        "Admin elevation checks are email-string based (`request.auth.token.email`) in callable functions, without verified-email enforcement before assigning admin claims.",
+        "Multiple admin-only mobile write paths accept caller-provided `adminUid`/`updatedByRole` and perform direct Firestore writes from client services.",
+        "`apps/admin/app/app/page.tsx` performs direct candidate-side writes for authorization and appointment workflow states that differ from mobile service workflow constraints.",
+        "Cloud Function triggers infer actor authorization from mutable document fields like `updatedByRole`/`senderRole` written by clients."
+      ],
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "admin_claim_depends_on_email_string_only",
+      "summary": "Admin claim issuance relies on matching email string, without stronger identity checks like verified-email enforcement.",
+      "related_files": [
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/callable/adminRole.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/screens/AuthScreen.tsx",
+        "apps/admin/app/auth/page.tsx"
+      ],
+      "evidence": [
+        "`ensureZenithAdminClaim` grants admin if `request.auth.token.email` equals configured admin email, but does not check `email_verified`.",
+        "`setAdminRoleByEmail` authorization also depends on requester email string and target email string matching allowlists/config.",
+        "Both mobile and admin web auth flows allow self-service signup, then immediately attempt admin bootstrap based on email match."
+      ],
+      "suggestion": "Move admin elevation to a hardened server path that requires verified identity (for example `email_verified === true` plus controlled bootstrap flow), and stop using client-side email match as an admin gate.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "admin_mutations_done_from_client_without_shared_guard",
+      "summary": "Admin-only mutations are scattered across client services with no shared authorization guard, and caller-supplied role metadata.",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminNewConversationScreen.tsx"
+      ],
+      "evidence": [
+        "`saveCandidateFirmStatus`, `updateCandidateFirmStatus`, and `removeCandidateFirmStatus` perform direct writes/deletes without local admin-role assertion.",
+        "`createAdminAppointment` and admin status/detail updates rely on caller-provided `updatedByRole`/`adminUid` values.",
+        "Admin chat operations (`startConversationAsAdmin`, `deleteConversationForAdmin`) are direct client writes without a centralized authz service boundary."
+      ],
+      "suggestion": "Consolidate admin mutations behind server-validated callable functions (or a single authorization gateway service) and remove caller-controlled role fields from client write payloads.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "legacy_web_app_path_bypasses_current_workflow_controls",
+      "summary": "Legacy `/app` candidate flow writes workflow-critical fields directly, creating inconsistent authorization behavior across clients.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "README.md"
+      ],
+      "evidence": [
+        "`/app` route updates `authorizationRequests` directly and creates appointments with `status: \"scheduled\"` as candidate, while mobile service path starts with `status: \"requested\"` and admin handling.",
+        "This creates two trust boundaries for the same domain objects, with inconsistent role assumptions.",
+        "README documents candidate/admin permission expectations, but this route keeps direct write behavior that weakens consistency."
+      ],
+      "suggestion": "Retire or lock down `/app` legacy mutation paths, and route both web/mobile through one consistent service layer with identical role checks and transition rules.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "split_workflow_boundaries"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "triggers_trust_client_written_actor_role_fields",
+      "summary": "Backend triggers treat client-written actor-role fields as authority, which can desynchronize authorization intent from actual actor identity.",
+      "related_files": [
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/messagePush.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`sendPushOnAppointmentChange` gates behavior on `after.updatedByRole === \"admin\"`, where `updatedByRole` is written from client payloads.",
+        "`sendPushOnMessageCreate` gates behavior on `message.senderRole === \"admin\"`, where `senderRole` is also client-supplied in `sendMessage`.",
+        "This pattern relies on document field integrity rather than server-derived actor identity."
+      ],
+      "suggestion": "Derive actor role server-side (callable context auth or trusted server writes), and treat role fields in documents as display metadata only, not authorization signals.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Authorization logic is split across UI screens, client services, and triggers instead of one server-enforced policy boundary.",
+      "Role/actor metadata in documents is being used as a trust source, not just as audit data."
+    ],
+    "likely_symptoms": [
+      "admin_mutations_done_from_client_without_shared_guard",
+      "triggers_trust_client_written_actor_role_fields",
+      "legacy_web_app_path_bypasses_current_workflow_controls"
+    ],
+    "possible_false_positives": []
+  }
+}

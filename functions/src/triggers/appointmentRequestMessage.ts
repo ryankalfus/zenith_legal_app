@@ -9,13 +9,12 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-function formatAppointmentMessage(startsAtInput: unknown, phoneInput: unknown) {
-  const phoneNumber = String(phoneInput ?? "").trim();
+function formatAppointmentDateTime(startsAtInput: unknown) {
   const startsAt = String(startsAtInput ?? "").trim();
   const startsAtDate = new Date(startsAt);
 
   if (Number.isNaN(startsAtDate.getTime())) {
-    return `APPOINTMENT REQUESTED... ${startsAt || "n/a"}... n/a... ${phoneNumber || "n/a"}`;
+    return startsAt || "an unknown date/time";
   }
 
   const dateText = startsAtDate.toLocaleDateString("en-US", {
@@ -28,10 +27,21 @@ function formatAppointmentMessage(startsAtInput: unknown, phoneInput: unknown) {
       hour: "numeric",
       minute: "2-digit",
       hour12: true
-    })
-    .toLowerCase();
+    });
 
-  return `APPOINTMENT REQUESTED... ${dateText}... ${timeText}... ${phoneNumber || "n/a"}`;
+  return `${dateText} at ${timeText}`;
+}
+
+function formatAppointmentMessage(input: {
+  candidateName: string;
+  startsAt: unknown;
+  notes: unknown;
+}) {
+  const candidateName = String(input.candidateName ?? "").trim() || "Candidate";
+  const note = String(input.notes ?? "").trim();
+  const noteSuffix = note ? ` Note: ${note}` : "";
+
+  return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${noteSuffix}`;
 }
 
 export const syncAppointmentRequestMessage = onDocumentCreated(
@@ -50,7 +60,13 @@ export const syncAppointmentRequestMessage = onDocumentCreated(
       return;
     }
 
-    const text = formatAppointmentMessage(appointment.startsAt, appointment.phoneNumber);
+    const candidateDoc = await db.collection("users").doc(candidateId).get();
+    const candidateName = String(candidateDoc.data()?.fullName ?? "Candidate");
+    const text = formatAppointmentMessage({
+      candidateName,
+      startsAt: appointment.startsAt,
+      notes: appointment.notes
+    });
 
     const conversationRef = db.collection("conversations").doc(candidateId);
     await conversationRef.set(

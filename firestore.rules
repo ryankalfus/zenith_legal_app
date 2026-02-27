@@ -5,30 +5,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function hasTokenClaim(claimKey) {
-      return request.auth.token.keys().hasAny([claimKey]);
-    }
-
-    function isZenithAdminEmailToken() {
-      return hasTokenClaim('email')
-        && request.auth.token.email == 'mason@zenithlegal.com'
-        && (
-          !hasTokenClaim('role') ||
-          request.auth.token.role == 'admin'
-        );
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
     }
 
     function isAdmin() {
       return isAuthenticated()
-        && isZenithAdminEmailToken();
+        && (
+          request.auth.token.role == 'admin' ||
+          userDoc(request.auth.uid).data.role == 'admin'
+        );
     }
 
     function isOwner(uid) {
       return isAuthenticated() && request.auth.uid == uid;
-    }
-
-    function userDoc(uid) {
-      return get(/databases/$(database)/documents/users/$(uid));
     }
 
     function isOwnerOrAdmin(uid) {
@@ -39,7 +29,9 @@ service cloud.firestore {
       allow read: if isOwnerOrAdmin(uid);
       allow create: if isOwner(uid);
       allow update: if (
-        isAdmin() ||
+        (
+          isAdmin()
+        ) ||
         (
           isOwner(uid) &&
           request.resource.data.role == resource.data.role &&

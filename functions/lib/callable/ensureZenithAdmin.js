@@ -11,7 +11,8 @@ if (!(0, app_1.getApps)().length) {
 }
 const auth = (0, auth_1.getAuth)();
 const db = (0, firestore_1.getFirestore)();
-const zenithAdminName = "Zenith Legal";
+const defaultZenithAdminName = "Mason Kalfus";
+const defaultZenithAdminPhone = "+12024863535";
 exports.ensureZenithAdminClaim = (0, https_1.onCall)(async (request) => {
     if (!request.auth?.uid) {
         throw new https_1.HttpsError("unauthenticated", "Must be signed in.");
@@ -19,7 +20,7 @@ exports.ensureZenithAdminClaim = (0, https_1.onCall)(async (request) => {
     const requesterEmail = String(request.auth.token.email ?? "").trim().toLowerCase();
     const allowedAdminEmail = (0, env_1.getZenithAdminEmail)();
     if (!requesterEmail || requesterEmail !== allowedAdminEmail) {
-        throw new https_1.HttpsError("permission-denied", "Only the Zenith Legal account can be admin.");
+        throw new https_1.HttpsError("permission-denied", "Only the Zenith Legal owner account can use this action.");
     }
     const uid = request.auth.uid;
     const user = await auth.getUser(uid);
@@ -27,12 +28,19 @@ exports.ensureZenithAdminClaim = (0, https_1.onCall)(async (request) => {
         ...(user.customClaims ?? {}),
         role: "admin"
     });
-    await auth.updateUser(uid, { displayName: zenithAdminName }).catch(() => undefined);
-    await db.collection("users").doc(uid).set({
+    const userRef = db.collection("users").doc(uid);
+    const existing = await userRef.get();
+    const existingData = existing.data() ?? {};
+    const existingName = String(existingData.fullName ?? "").trim();
+    const existingPhone = String(existingData.mobile ?? "").trim();
+    await userRef.set({
         uid,
         role: "admin",
-        fullName: zenithAdminName,
         email: requesterEmail,
+        fullName: existingName && existingName.toLowerCase() !== "zenith legal"
+            ? existingName
+            : defaultZenithAdminName,
+        mobile: existingPhone || defaultZenithAdminPhone,
         updatedAt: firestore_1.FieldValue.serverTimestamp()
     }, { merge: true });
     return { success: true, uid };

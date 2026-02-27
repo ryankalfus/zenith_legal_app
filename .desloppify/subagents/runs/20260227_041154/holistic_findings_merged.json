@@ -1,0 +1,1232 @@
+{
+  "assessments": {
+    "abstraction_fitness": {
+      "score": 52.8,
+      "components": [
+        "Abstraction Leverage",
+        "Indirection Cost",
+        "Interface Honesty"
+      ],
+      "component_scores": {
+        "Abstraction Leverage": 69.4,
+        "Indirection Cost": 77.6,
+        "Interface Honesty": 74.5
+      }
+    },
+    "ai_generated_debt": 90.5,
+    "api_surface_coherence": 47.2,
+    "authorization_consistency": 46.0,
+    "convention_outlier": 70.3,
+    "cross_module_architecture": 48.8,
+    "design_coherence": 47.4,
+    "error_consistency": 63.6,
+    "high_level_elegance": 49.2,
+    "incomplete_migration": 74.7,
+    "low_level_elegance": 77.3,
+    "mid_level_elegance": 49.5,
+    "package_organization": 53.9
+  },
+  "dimension_notes": {
+    "cross_module_architecture": {
+      "evidence": [
+        "apps/mobile/src/lib/firebase.ts initializes Firebase app and conditionally connects emulators at import time, and this module is imported by state and service modules (AuthContext, userService, messagingService, adminService), creating global startup side effects tied to import order.",
+        "Admin identity/authorization policy is duplicated across client and functions: apps/mobile/src/state/AuthContext.tsx computes admin from EXPO_PUBLIC_ZENITH_ADMIN_EMAIL and mutates role docs, while functions/src/config/env.ts + callable modules enforce server-side ZENITH_ADMIN_EMAIL and SUPER_ADMIN_EMAILS.",
+        "Conversation data contract is spread across modules: apps/mobile/src/services/messagingService.ts writes conversation/message shape and visibility flags, while functions/src/callable/deleteAccount.ts assumes exact conversation + messageAttachments layout for destructive cleanup."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "high_level_elegance": {
+      "evidence": [
+        "apps/mobile/src/state/AuthContext.tsx combines authentication lifecycle, first-time user document provisioning, admin role claim orchestration, token refresh logic, and push token persistence in one provider.",
+        "apps/mobile/src/components/AppShell.tsx mixes reusable shell layout primitives with product-specific Zenith contact behavior, reducing clarity of ownership for UI infrastructure vs business UI.",
+        "Admin role ownership is not represented by a single boundary: the same role intent is implemented in AuthContext.tsx, functions/src/callable/ensureZenithAdmin.ts, and functions/src/callable/adminRole.ts with overlapping responsibilities."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "convention_outlier": {
+      "evidence": [
+        "Sibling triggers use different behavioral conventions for the same guard path: messagePush logs missing users (functions/src/triggers/messagePush.ts:25) while appointmentPush silently returns (functions/src/triggers/appointmentPush.ts:39-40).",
+        "Both trigger files repeat near-identical Firebase bootstrap and Firestore setup blocks (functions/src/triggers/messagePush.ts:3-11, functions/src/triggers/appointmentPush.ts:2-10), indicating style-island duplication instead of a shared convention."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "error_consistency": {
+      "evidence": [
+        "sendExpoPush performs network I/O but has no local error handling or context wrapping around expo.sendPushNotificationsAsync (functions/src/utils/push.ts:20-21), so failures lose trigger-specific context.",
+        "Trigger handlers call sendExpoPush directly without adding event metadata on failure paths (functions/src/triggers/messagePush.ts:31-35, functions/src/triggers/appointmentPush.ts:45-49), making failure behavior inconsistent and harder to trace."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "mid_level_elegance": {
+      "evidence": [
+        "Messaging read-state choreography is repeated at multiple seams: `MessagesScreen` marks read in two separate effects and `AdminInboxScreen` marks read before navigation, causing redundant cross-layer writes.",
+        "Candidate/admin appointment flows duplicate seam logic (date/time merge, status grouping, request/update orchestration) across `CandidateAppointmentsScreen` and `AdminAppointmentRequestsScreen` instead of a shared boundary helper.",
+        "Web admin pages each create multiple raw `onSnapshot` subscriptions inline and manual teardown arrays, creating fragile handoff code between auth state and data listeners."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "abstraction_fitness": {
+      "evidence": [
+        "Firebase client bootstrapping is implemented separately with different lifecycle behavior: admin uses lazy getters and guard flags in `apps/admin/src/lib/firebase.ts`, while mobile performs eager initialization and emulator wiring at import time in `apps/mobile/src/lib/firebase.ts`.",
+        "Two admin web pages (`apps/admin/app/app/page.tsx`, `apps/admin/app/dashboard/candidates/[candidateId]/page.tsx`) directly mix auth gating, Firestore subscriptions, and domain mutations in-page rather than through cohesive domain services.",
+        "App shell API carries two names for the same concept (`showCandidateContactBar` and `showZenithContactBar`) in `apps/mobile/src/components/AppShell.tsx`, which weakens interface honesty."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": "",
+      "sub_axes": {
+        "abstraction_leverage": 68.0,
+        "indirection_cost": 74.0,
+        "interface_honesty": 70.0
+      }
+    },
+    "low_level_elegance": {
+      "evidence": [
+        "Several UI files rely on `any` and cast-based adaptation (`useNavigation<any>`, `setRows(next as ...)`, `messages: any[]`) in `MessagesScreen`, `AdminCandidateDetailScreen`, and `apps/admin/app/app/page.tsx`, reducing local precision and forcing defensive code.",
+        "Date parsing/formatting helpers are reimplemented with slight differences across candidate/admin screens (`AdminCandidatesScreen`, `AdminCandidateDetailScreen`, `CandidateProfileScreen`, `CandidateAppointmentsScreen`), increasing local inconsistency and maintenance burden.",
+        "Inline Firestore mutation blocks in large components are long and repetitive, making local control flow harder to reason about."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "api_surface_coherence": {
+      "evidence": [
+        "Service mutation APIs use inconsistent post-write contracts: some verify persistence with read-back and throw (`createAppointmentRequest`, `updateAppointmentStatus`, `saveCandidateFirmStatus`), while sibling mutations do fire-and-forget updates/deletes (`deleteAppointment`, `respondToAuthorization`, `removeCandidateFirmStatus`).",
+        "Public watcher APIs expose mixed data typing rigor: typed rows in `adminService.ts` and `appointmentService.ts`, but `any`/`any[]` payloads in `messagingService.ts`, `authorizationService.ts`, and `userService.ts`.",
+        "Firebase access surface differs by app without a shared contract: mobile exports initialized singletons (`auth`, `db`, `functions`), while admin exports lazy getters with runtime guards (`getFirebaseAuth`, `getFirebaseDb`, `getFirebaseFunctions`)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "ai_generated_debt": {
+      "evidence": [
+        "apps/admin/next-env.d.ts contains only standard Next.js triple-slash references and the default framework note.",
+        "No verbose restating comments, defensive wrappers, debug logging, or generic placeholder logic are present."
+      ],
+      "impact_scope": "local",
+      "fix_scope": "single_edit",
+      "confidence": "high",
+      "issues_preventing_higher_score": "File is generated boilerplate with minimal logic, so there is limited evidence to prove exemplary craftsmanship beyond being clean."
+    },
+    "incomplete_migration": {
+      "evidence": [
+        "File references current Next.js type entries (`next` and `next/image-types/global`) without legacy alternative paths.",
+        "No TODO/FIXME/deprecation markers or dual old/new API traces appear in this file."
+      ],
+      "impact_scope": "local",
+      "fix_scope": "single_edit",
+      "confidence": "high",
+      "issues_preventing_higher_score": "Single generated type stub provides narrow migration visibility; broader migration completeness cannot be validated from this file alone."
+    },
+    "package_organization": {
+      "evidence": [
+        "holistic_context.structure shows a split screen layout (`apps/mobile/src/screens/` and `apps/mobile/src/screens/admin/`), but `AdminInboxScreen.tsx` (admin-only) is still placed in the shared root screens folder.",
+        "`apps/mobile/src/services/` is a flat folder with 8 files serving different domains (auth/account, admin directory, appointments, messaging), and `accountService.ts` has one importer while neighboring services are shared broadly, indicating weak placement cohesion.",
+        "coupling_matrix confirms heavy screen->services reliance (`apps/mobile/src/screens/admin/ -> services` = 8, `apps/mobile/src/screens/ -> services` = 5), but folder names do not expose clear domain seams for chat, profile/account, and appointments."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "design_coherence": {
+      "evidence": [
+        "Appointment workflow orchestration is repeated across screens (`CandidateAppointmentsScreen` and `AdminAppointmentRequestsScreen`) with duplicated date/time helpers, status bucketing, ignore/delete flows, and calendar actions.",
+        "Profile data shaping and date utilities are duplicated between `ProfileSetupScreen` and `CandidateProfileScreen` (`isIsoDate`, `formatIsoDate`, `parseIsoDate`, `formatDisplayDate`) with near-identical picker/form structure.",
+        "Role-specific service functions duplicate core logic instead of sharing one domain pathway (`watchCandidateStatuses` vs `watchAdminCandidateStatuses`; `createAppointmentRequest` vs `createAdminAppointment`).",
+        "Several UI files combine auth/session checks, real-time subscriptions, and direct Firestore write orchestration in one component (`apps/admin/app/app/page.tsx`, `apps/admin/app/dashboard/candidates/[candidateId]/page.tsx`, `apps/mobile/src/screens/MessagesScreen.tsx`)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    },
+    "authorization_consistency": {
+      "evidence": [
+        "Admin elevation checks are email-string based (`request.auth.token.email`) in callable functions, without verified-email enforcement before assigning admin claims.",
+        "Multiple admin-only mobile write paths accept caller-provided `adminUid`/`updatedByRole` and perform direct Firestore writes from client services.",
+        "`apps/admin/app/app/page.tsx` performs direct candidate-side writes for authorization and appointment workflow states that differ from mobile service workflow constraints.",
+        "Cloud Function triggers infer actor authorization from mutable document fields like `updatedByRole`/`senderRole` written by clients."
+      ],
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "confidence": "high",
+      "issues_preventing_higher_score": ""
+    }
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "import_time_firebase_bootstrap_coupling",
+      "summary": "Global Firebase initialization and emulator wiring at import time creates hidden startup coupling across mobile modules.",
+      "related_files": [
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/mobile/src/services/userService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/adminService.ts"
+      ],
+      "evidence": [
+        "apps/mobile/src/lib/firebase.ts executes initializeApp(...) and connect*Emulator(...) in module scope.",
+        "Multiple service/context modules directly import exported singletons (auth/db/storage/functions), so importing a service implicitly performs runtime configuration work.",
+        "This pattern makes boot behavior environment-dependent and hard to isolate in tests because module import triggers side effects."
+      ],
+      "suggestion": "Introduce a Firebase runtime boundary (e.g., createFirebaseClients/getFirebaseClients) initialized once from app entry, then inject clients into services/context or expose a lazily initialized accessor with explicit bootstrap call.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_global_runtime"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "split_admin_policy_between_client_and_backend",
+      "summary": "Admin role policy is fragmented across client and backend with different config sources and overlapping authority.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/config/env.ts",
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/callable/adminRole.ts"
+      ],
+      "evidence": [
+        "AuthContext.tsx derives admin status from EXPO_PUBLIC_ZENITH_ADMIN_EMAIL and updates user role docs client-side.",
+        "functions/src/config/env.ts derives backend admin policy from ZENITH_ADMIN_EMAIL and SUPER_ADMIN_EMAILS.",
+        "ensureZenithAdminClaim and setAdminRoleByEmail both assign admin claims/server docs, producing multiple authority paths for the same role decision."
+      ],
+      "suggestion": "Centralize admin-eligibility decisions server-side only: make client treat role as read-only, expose one callable for reconciliation, and share one config key contract across mobile/functions to remove divergent policy logic.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_auth_authority"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "conversation_contract_scattered_across_features",
+      "summary": "Conversation storage schema and lifecycle rules are duplicated across messaging and account-deletion paths.",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "functions/src/callable/deleteAccount.ts"
+      ],
+      "evidence": [
+        "messagingService.ts writes many conversation fields (visibility flags, unread counters, preview fields, participantIds) and message attachment paths.",
+        "deleteAccount.ts hardcodes deletion traversal for conversations/{candidateId}/messages and messageAttachments/{candidateId}/, tightly coupling cleanup to client schema details.",
+        "No shared schema/contract module exists in the assigned files to make these assumptions explicit and versioned."
+      ],
+      "suggestion": "Create a shared conversation domain contract (field names + path builders + lifecycle helpers) used by both mobile services and functions cleanup logic, then route destructive cleanup through a domain service instead of raw hardcoded paths.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "implicit_global_runtime"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "auth_provider_overloaded_domain_orchestrator",
+      "summary": "AuthContext has accumulated multiple domain responsibilities beyond session state ownership.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/config/env.ts"
+      ],
+      "evidence": [
+        "AuthContext.tsx handles auth subscription, first-time user provisioning, admin claim synchronization, admin role correction, and push-token writes.",
+        "These concerns span identity, authorization, profile lifecycle, and notifications, but they are orchestrated in a single provider hook.",
+        "Backend callables already implement role orchestration, yet AuthContext duplicates reconciliation behavior at app state layer."
+      ],
+      "suggestion": "Split AuthContext into focused collaborators (session observer, profile bootstrap service, admin-role reconciler, push registration service) and keep provider limited to composition and exposed session API.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "distributed_auth_authority"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "ui_shell_mixes_layout_with_business_contact_policy",
+      "summary": "Shared layout component owns product-specific contact behavior, blurring UI infrastructure boundaries.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "apps/mobile/src/ui/theme.ts"
+      ],
+      "evidence": [
+        "AppShell exports generic layout helpers (AppShell/SurfaceCard/EmptyState) but also embeds CandidateContactBar with hardwired Zenith contact actions.",
+        "The shell-level prop logic (showCandidateContactBar/showZenithContactBar) encodes feature policy in what should be a reusable structural component."
+      ],
+      "suggestion": "Keep AppShell purely structural and move contact-bar policy into a feature-level wrapper (e.g., CandidateShell/AdminShell) so domain behavior is composed above the generic UI shell.",
+      "confidence": "medium",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "mixed_layer_ownership"
+    },
+    {
+      "dimension": "convention_outlier",
+      "identifier": "trigger_observability_convention_drift",
+      "summary": "Sibling push triggers use inconsistent missing-user handling conventions",
+      "related_files": [
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts"
+      ],
+      "evidence": [
+        "messagePush warns when user doc is missing (logger.warn at line 25) before returning.",
+        "appointmentPush returns on missing user doc without logging (line 39-40), so equivalent conditions produce different operational signals."
+      ],
+      "suggestion": "Define one convention for guard-path observability in push triggers (for example: structured warn with trigger name and candidateId) and apply it consistently in both modules via a shared helper.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "push_boundary_missing_error_contract",
+      "summary": "Push send failures propagate without consistent context or classification",
+      "related_files": [
+        "functions/src/utils/push.ts",
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts"
+      ],
+      "evidence": [
+        "sendExpoPush awaits expo.sendPushNotificationsAsync in a loop with no try/catch or error decoration.",
+        "Both triggers call sendExpoPush directly and provide no catch/wrap path that records trigger type, candidateId, or appointmentId/messageId for failure diagnostics."
+      ],
+      "suggestion": "Introduce a shared error contract for push delivery: catch in sendExpoPush (or caller), attach contextual metadata, log structured details, and rethrow a typed error so both triggers fail in the same traceable way.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_push_orchestration_seam",
+      "summary": "Message and appointment triggers duplicate the same integration choreography",
+      "related_files": [
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/utils/push.ts"
+      ],
+      "evidence": [
+        "Both triggers repeat DB fetch -> missing-user guard -> pushTokens extraction -> sendExpoPush call with similar payload construction steps.",
+        "Shared seam logic is split across multiple files, so behavioral adjustments (token hygiene, logging policy, retries) must be changed in parallel."
+      ],
+      "suggestion": "Extract a shared trigger-level dispatcher (for example, sendCandidatePushFromTrigger) that handles user lookup, token extraction, guard logging, and send call; keep each trigger focused on event-specific gating and payload text.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "split_firebase_bootstrap_contract",
+      "summary": "Firebase initialization abstractions are duplicated and behaviorally inconsistent across admin and mobile clients.",
+      "related_files": [
+        "apps/admin/src/lib/firebase.ts",
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/admin/src/lib/auth.ts"
+      ],
+      "evidence": [
+        "Admin uses `getFirebase*()` lazy accessors with per-service emulator guard booleans, while mobile initializes app/auth/db/functions/storage eagerly at module load and connects emulators immediately.",
+        "Auth code in `apps/admin/src/lib/auth.ts` depends on admin-specific getter behavior, so shared client invariants are not explicit across platforms."
+      ],
+      "suggestion": "Create a shared Firebase client bootstrap contract (config validation + emulator policy + lazy/eager lifecycle decision) and provide thin platform adapters rather than independent implementations.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "missing_shared_frontend_infrastructure_boundary"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "page_level_firestore_god_objects",
+      "summary": "Admin web pages act as god components that bypass service abstractions and directly orchestrate many domain operations.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx"
+      ],
+      "evidence": [
+        "Each page performs auth checks, opens many `onSnapshot` listeners, writes to multiple collections, and contains messaging/appointment/status update workflows in one file.",
+        "State is broadly untyped (`any[]`, `any`) while business workflows are embedded inline, indicating absent domain-level abstractions."
+      ],
+      "suggestion": "Extract domain services/hooks per capability (candidate profile, statuses, messaging, appointments) and keep pages as composition/orchestration shells with typed view models.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "missing_shared_frontend_infrastructure_boundary"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "messaging_readstate_write_churn",
+      "summary": "Read-state propagation is duplicated across seams, causing unnecessary writes and unclear ownership of message-read lifecycle.",
+      "related_files": [
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`MessagesScreen` calls `markConversationRead` in two effects (focus change and message length change), then `AdminInboxScreen` also calls it before navigation.",
+        "The service boundary does not define a single authoritative trigger for read-state updates, so multiple callers perform the same side effect."
+      ],
+      "suggestion": "Centralize read-state transitions behind one seam (for example, a thread lifecycle hook that handles focus/open events once) and remove duplicate caller-side writes.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "duplicated_cross_screen_orchestration"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "appointment_flow_seam_duplication",
+      "summary": "Candidate and admin appointment screens duplicate scheduling seam logic instead of sharing boundary translators.",
+      "related_files": [
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx"
+      ],
+      "evidence": [
+        "Both screens implement similar date/time merge helpers, upcoming/overdue filtering, and status update orchestration with near-parallel structure.",
+        "Boundary logic to convert UI inputs into appointment payloads is repeated independently, increasing drift risk."
+      ],
+      "suggestion": "Extract shared appointment seam utilities (time merge/validation, derived list builders, payload mappers) and reuse them in role-specific screens.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "duplicated_cross_screen_orchestration"
+    },
+    {
+      "dimension": "low_level_elegance",
+      "identifier": "any_type_erosion_in_core_screens",
+      "summary": "Core screens rely on `any` and casts, which obscures intent and pushes complexity into defensive runtime checks.",
+      "related_files": [
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx",
+        "apps/admin/app/app/page.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx"
+      ],
+      "evidence": [
+        "`messages` and several collection states are typed as `any[]`; navigation types are often `useNavigation<any>()`; and snapshot rows are cast (`setRows(next as ...)`) instead of validated.",
+        "These patterns force repeated `String(...)`, optional chaining fallbacks, and ad-hoc object shape assumptions in render paths."
+      ],
+      "suggestion": "Define shared DTO/view-model types for messaging/candidate/status entities and type screen/service boundaries end-to-end to eliminate cast-based flow.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "weak_type_contracts_between_ui_and_data_layers"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "inconsistent_mutation_contracts",
+      "summary": "Sibling write APIs expose inconsistent success/failure contracts, making callers guess whether persistence is verified.",
+      "related_files": [
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`appointmentService.ts` performs read-after-write verification in multiple mutators and throws explicit persistence errors.",
+        "`statusService.ts` verifies persistence in `saveCandidateFirmStatus` and one candidate transition path, but `updateCandidateFirmStatus` and `removeCandidateFirmStatus` do not verify.",
+        "`authorizationService.ts` and `messagingService.ts` mutation endpoints generally return after update/write without contract-level verification."
+      ],
+      "suggestion": "Define one mutation contract for service APIs (for example: all mutators return a typed result and map backend failures into consistent error types), then align all service functions to that contract.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "service_contract_fragmentation"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "mixed_public_typing_on_watchers",
+      "summary": "Watcher APIs mix strongly typed and `any` payloads for similar data-stream patterns.",
+      "related_files": [
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "apps/mobile/src/services/userService.ts"
+      ],
+      "evidence": [
+        "`adminService.ts` and `appointmentService.ts` define exported row types used by watcher callbacks.",
+        "`messagingService.ts` exposes `onData: (messages: any[]) => void` and `onData: (rows: any[]) => void`.",
+        "`authorizationService.ts` and `userService.ts` similarly expose `any[]` / `any` callback payloads."
+      ],
+      "suggestion": "Create shared DTO types for conversation/message/authorization/user streams and update all watcher signatures to return explicit typed rows.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "service_contract_fragmentation"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "firebase_client_api_shape_drift",
+      "summary": "Firebase client access APIs differ across mobile and admin apps, reducing coherence for shared integration patterns.",
+      "related_files": [
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/admin/src/lib/firebase.ts",
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/state/AuthContext.tsx"
+      ],
+      "evidence": [
+        "Mobile module initializes and exports singleton instances directly (`auth`, `db`, `functions`, `storage`).",
+        "Admin module requires getter calls with browser checks and config assertions before use.",
+        "Auth modules in each app consume these different shapes, so cross-app service patterns are not portable."
+      ],
+      "suggestion": "Adopt a shared API shape guideline (either singleton exports or accessor functions with explicit init semantics) and wrap app-specific runtime constraints behind the same interface.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_boundary_translation_helpers",
+      "summary": "Boundary translation code for timestamps is duplicated across service modules with slightly different helpers.",
+      "related_files": [
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/statusService.ts"
+      ],
+      "evidence": [
+        "`adminService.ts` implements `getTimestampMs`.",
+        "`messagingService.ts` implements `toSortMs`.",
+        "`statusService.ts` implements `asSortMs` with near-identical conversion rules."
+      ],
+      "suggestion": "Extract one shared timestamp normalization utility and use it across services so ordering/preview/status behavior follows one seam-level rule.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "missing_shared_service_primitives"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_admin_bootstrap_orchestration",
+      "summary": "Admin claim/profile bootstrapping is orchestrated in two places with divergent fallback behavior.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/admin/src/lib/auth.ts"
+      ],
+      "evidence": [
+        "Both modules check for the same Zenith admin email and attempt callable-based role bootstrap.",
+        "Admin web auth includes strict-to-legacy callable fallback and multiple retries; mobile auth has a different flow and suppresses failures differently.",
+        "Both modules also perform profile/doc role updates, creating duplicated seam logic across clients."
+      ],
+      "suggestion": "Move admin bootstrap orchestration into one shared callable-backed contract and keep clients as thin callers that only consume a unified authorization result.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_auth_bootstrap_logic"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "mixed_screen_partitioning",
+      "summary": "Screen placement mixes role-based and shared organization, leaving admin-only UI in a shared folder.",
+      "related_files": [
+        "apps/mobile/src/screens/AdminInboxScreen.tsx",
+        "apps/mobile/src/screens/AuthScreen.tsx",
+        "apps/mobile/src/screens/MessagesScreen.tsx"
+      ],
+      "evidence": [
+        "`AdminInboxScreen.tsx` is imported into the admin stack but sits in `src/screens/` instead of `src/screens/admin/`.",
+        "`AuthScreen.tsx` and `MessagesScreen.tsx` are in the same root folder despite different responsibility boundaries (auth entry vs chat thread UI).",
+        "The current placement obscures role ownership when navigating screen code."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/screens/chat/` and move `MessagesScreen.tsx` there; move `AdminInboxScreen.tsx` to `apps/mobile/src/screens/admin/`; keep `AuthScreen.tsx` in root auth entry area. (2) Move order: `git mv apps/mobile/src/screens/MessagesScreen.tsx apps/mobile/src/screens/chat/MessagesScreen.tsx` then `git mv apps/mobile/src/screens/AdminInboxScreen.tsx apps/mobile/src/screens/admin/AdminInboxScreen.tsx`. (3) Update imports in `RootNavigator.tsx` and any direct screen references using `rg -n \"screens/(AdminInboxScreen|MessagesScreen)\" apps/mobile/src`. (4) Validate with `npx tsc -p apps/mobile/tsconfig.json --noEmit`.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_mobile_feature_boundaries"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "flat_services_domain_mixing",
+      "summary": "A single flat services folder mixes multiple bounded contexts and includes straggler modules.",
+      "related_files": [
+        "apps/mobile/src/services/accountService.ts",
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "`accountService.ts` contains a single callable wrapper and is imported by one profile screen, while other services are cross-screen infrastructure.",
+        "`adminService.ts` and `appointmentService.ts` are both widely consumed and domain-heavy, but stored alongside one-off account logic in the same directory.",
+        "Directory profile shows `apps/mobile/src/services/` has 8 files and is the main dependency target for all screen groups, indicating high centrality but low domain partitioning."
+      ],
+      "suggestion": "Staged reorg plan: (1) create domain subfolders: `services/account/`, `services/admin/`, `services/appointments/`, `services/messaging/`. (2) Move order: start with low-risk singleton `accountService.ts`, then `adminService.ts`, then `appointmentService.ts` so import churn is incremental. (3) Update imports with `rg -n \"services/(accountService|adminService|appointmentService)\" apps/mobile/src` and edit paths. (4) Validate each stage with `npx tsc -p apps/mobile/tsconfig.json --noEmit` and run app smoke navigation for profile/admin/appointment flows.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_mobile_feature_boundaries"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "appointment_trigger_responsibility_blur",
+      "summary": "Appointment cancellation trigger combines messaging projection and notification transport concerns in one module.",
+      "related_files": [
+        "functions/src/triggers/appointmentCancelNotify.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/appointmentRequestExpiry.ts"
+      ],
+      "evidence": [
+        "`appointmentCancelNotify.ts` formats domain text, writes conversation/message records, and calls external email API directly.",
+        "Sibling triggers (`appointmentPush.ts`, `appointmentRequestExpiry.ts`) are single-purpose handlers, creating an inconsistent decomposition standard inside the same trigger package.",
+        "This increases change risk because channel policy and conversation projection are coupled to one event handler."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `functions/src/appointments/` with submodules `lifecycle/`, `projections/`, and `notifications/`. (2) Move order: extract pure formatter first, then extract conversation projection writer, then extract email sender adapter; finally make `appointmentCancelNotify.ts` orchestrate only. (3) Update imports via `rg -n \"appointmentCancelNotify|appointmentPush|appointmentRequestExpiry\" functions/src`. (4) Validate with `npx tsc -p functions/tsconfig.json --noEmit` and emulator test for cancel/request-expiry/admin-update events.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_appointment_lifecycle_policy"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "implicit_cross_layer_appointment_policy",
+      "summary": "Appointment lifecycle rules are implicitly duplicated across mobile writes and backend trigger filters.",
+      "related_files": [
+        "apps/mobile/src/services/appointmentService.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/appointmentCancelNotify.ts"
+      ],
+      "evidence": [
+        "Mobile writes fields like `status`, `updatedByRole`, `startsAt`, and triggers rely on these exact values for side-effect gating.",
+        "No shared policy module defines lifecycle transitions or side-effect matrix, so behavior is inferred from scattered conditionals.",
+        "This makes ownership and onboarding harder: top-level design is event-coupled but not explicitly modeled."
+      ],
+      "suggestion": "Staged reorg plan: (1) introduce shared appointment lifecycle contract in `packages/shared/src` (status transitions + side-effect intents). (2) Move order: define constants/types first, update `appointmentService.ts` to use them, then update trigger guards to consume the same contract. (3) Update imports with `rg -n \"updatedByRole|status === \\\"requested\\\"|status !== \\\"canceled\\\"\" apps/mobile/src functions/src`. (4) Validate with `npx tsc -p apps/mobile/tsconfig.json --noEmit && npx tsc -p functions/tsconfig.json --noEmit` and run appointment flow smoke tests.",
+      "confidence": "medium",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_appointment_lifecycle_policy"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "client_owns_server_role_contract",
+      "summary": "Auth provider enforces admin role contracts client-side, blurring trust boundaries.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "README.md",
+        "apps/mobile/src/lib/firebase.ts"
+      ],
+      "evidence": [
+        "AuthContext calls ensureZenithAdminClaim, then still infers/overrides role using Firestore doc role and local email checks.",
+        "For non-whitelisted emails with admin doc role, AuthContext writes role back to candidate from client code.",
+        "README documents server-side admin enforcement, but runtime role governance is partially duplicated in client state orchestration."
+      ],
+      "suggestion": "Move role authority to server-only contract: expose a single read-only session bootstrap response (claims + normalized profile role), remove client-side role mutation paths from AuthContext, and keep AuthContext as consumer-only state mapping.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "unclear_authority_boundaries"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "appshell_mixed_ownership_surface",
+      "summary": "AppShell file mixes layout primitives with feature policy behavior.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "README.md"
+      ],
+      "evidence": [
+        "AppShell exports shell container plus unrelated primitives (SurfaceCard, EmptyState) and a feature policy contact bar in one module.",
+        "Dual props showCandidateContactBar/showZenithContactBar with fallback chaining indicate a compatibility bridge embedded in a core shell contract."
+      ],
+      "suggestion": "Split AppShell into focused modules: keep shell layout in AppShell, move contact policy to a dedicated feature component, and move generic primitives to a separate surface primitives module; then expose a small explicit public API from components/index.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_module_ownership"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "theme_hub_contains_domain_policy",
+      "summary": "UI theme hub contains domain status policy, creating package boundary mismatch.",
+      "related_files": [
+        "apps/mobile/src/ui/theme.ts",
+        "apps/mobile/src/components/Avatar.tsx",
+        "apps/mobile/src/components/AppShell.tsx"
+      ],
+      "evidence": [
+        "theme.ts has very high fan-in (14 importers) and should be stable design-token infrastructure, but it also includes CandidateFirmStatus-driven statusColors policy.",
+        "Shared components consume theme for visual tokens, so domain status mapping in the same module expands change blast radius for unrelated UI imports."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/ui/tokens/theme.ts` for pure tokens and `apps/mobile/src/features/status/ui/statusColors.ts` for CandidateFirmStatus mapping; (2) move `statusColors` first, keep temporary re-export from old path; (3) update imports with `rg \"statusColors|theme\" apps/mobile/src -n` and replace old references; (4) remove re-export after migration; (5) validate with `npm run dev:mobile` and `npx tsc -p apps/mobile/tsconfig.json --noEmit`.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "package_boundary_drift"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "shared_components_embed_contact_policy",
+      "summary": "High-reuse components package contains feature-specific contact policy logic.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "README.md"
+      ],
+      "evidence": [
+        "components directory has avg_fan_in 7.0 with many consumers, but AppShell imports contact-specific behavior and defaults it on for all consumers.",
+        "This placement couples generic shell usage to Zenith contact policy and forces opt-out behavior via policy flags."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/features/support/components/CandidateContactBar.tsx`; (2) move contact bar code and link logic there; (3) keep `AppShell` policy-neutral and accept an optional `topInsetComponent`; (4) update imports using `rg \"CandidateContactBar|showZenithContactBar|showCandidateContactBar\" apps/mobile/src -n`; (5) run `npx tsc -p apps/mobile/tsconfig.json --noEmit` and smoke test via `npm run dev:mobile`.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "package_boundary_drift"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "appointment_flow_duplication",
+      "summary": "Appointment screen logic is duplicated across candidate and admin flows instead of sharing a common workflow model.",
+      "related_files": [
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "Both screens define local date/time helpers (`formatDate`, `formatTime`) and transform date+time into ISO (`startsAtIso` via memo vs `mergeDateAndTime`) with similar validation/alerts.",
+        "Both screens split rows into status/time buckets and implement nearly the same destructive overdue ignore behavior (`deleteAppointment`).",
+        "Both screens attach calendar actions and status transition actions while duplicating UI-state orchestration for pickers and save progress."
+      ],
+      "suggestion": "Extract shared appointment workflow primitives (time merge/validation, row partitioning, transition handlers) into a domain hook/service, then keep screens focused on role-specific UI differences only.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "profile_form_logic_copied",
+      "summary": "Profile setup and profile edit screens reimplement the same date parsing and profile field behavior, creating parallel maintenance paths.",
+      "related_files": [
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx"
+      ],
+      "evidence": [
+        "Both files define the same date helpers with equivalent behavior (`isIsoDate`, `formatIsoDate`, `parseIsoDate`, `formatDisplayDate`).",
+        "Both files render highly similar DOB/JD picker flows and preferred-city/practice selection patterns with separate local state machines.",
+        "Validation rules for ISO date strings are implemented independently in both screens."
+      ],
+      "suggestion": "Move profile date utilities and reusable profile form sections into shared modules/components (e.g., `profileDate.ts`, `ProfileFields`) and keep screen-specific concerns in thin wrappers.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "service_role_forks_duplicate_core_logic",
+      "summary": "Service layer includes role-specific APIs that are functionally identical or near-identical, signaling missing core abstractions.",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "`watchCandidateStatuses` and `watchAdminCandidateStatuses` execute the same query, mapping, sort, and callback logic.",
+        "`createAppointmentRequest` and `createAdminAppointment` write nearly the same appointment payload, differing mostly in role and initial status.",
+        "Both services expose duplicated pathways that force callers to choose by role instead of calling a single normalized command."
+      ],
+      "suggestion": "Collapse duplicated role-specific methods into one parameterized core operation per domain action, with narrow role-policy branching inside a single implementation.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "messaging_flow_mixed_responsibilities",
+      "summary": "Messaging behavior is split across large client-side orchestration blocks and overloaded service methods, increasing change risk.",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx"
+      ],
+      "evidence": [
+        "`sendMessage` handles conversation aggregate updates, unread counters, preview fields for both roles, optional attachment upload/storage, and message creation in one function.",
+        "`MessagesScreen` has overlapping read-mark side effects (focus-based and message-length-based) that repeat the same `markConversationRead` call path.",
+        "`refreshLocalPreview` scans up to 100 messages and rewrites role-specific preview fields, coupling deletion behavior to denormalized projection repair."
+      ],
+      "suggestion": "Split messaging into explicit domain steps (attachment upload, message persist, projection/unread update) and centralize read-state policy in one hook/effect path per screen.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "projection_and_transport_coupled_in_ui_service"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "admin_web_pages_as_god_components",
+      "summary": "Admin web pages combine auth gating, realtime subscriptions, and multi-domain write commands in single components.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx",
+        "apps/admin/app/dashboard/page.tsx"
+      ],
+      "evidence": [
+        "`app/page.tsx` wires many independent snapshots (users, firms, statuses, auth requests, messages, appointments) and also performs profile updates, messaging, appointment CRUD, and account deletion.",
+        "`dashboard/candidates/[candidateId]/page.tsx` repeats direct Firestore orchestration for statuses, requests, messages, and appointments instead of delegating to a domain service layer.",
+        "Both files duplicate conversation bootstrap and appointment creation primitives that already exist in mobile services, creating parallel implementations."
+      ],
+      "suggestion": "Introduce admin domain services/hooks for candidate detail workflows and move Firestore orchestration out of page components; keep pages as composition/orchestration of smaller feature modules.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "ui_direct_firestore_orchestration"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "admin_identity_enforcement_split_paths",
+      "summary": "Admin identity enforcement logic is duplicated between a callable and a script with separate mutation paths.",
+      "related_files": [
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/scripts/enforceSingleAdmin.ts"
+      ],
+      "evidence": [
+        "Both files independently resolve the configured admin email, assign admin custom claims, normalize display name, and write role data into `users` docs.",
+        "The script additionally demotes other admins, while callable only promotes requester, resulting in two enforcement behaviors for the same policy area.",
+        "Policy-critical mutation logic is copied in two entry points instead of sharing one audited core function."
+      ],
+      "suggestion": "Extract shared admin-policy mutation helpers (promote/sync/demote) and call them from both script and callable so policy behavior stays consistent and testable.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "identity_policy_duplicated_entrypoints"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "admin_claim_depends_on_email_string_only",
+      "summary": "Admin claim issuance relies on matching email string, without stronger identity checks like verified-email enforcement.",
+      "related_files": [
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/callable/adminRole.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/screens/AuthScreen.tsx",
+        "apps/admin/app/auth/page.tsx"
+      ],
+      "evidence": [
+        "`ensureZenithAdminClaim` grants admin if `request.auth.token.email` equals configured admin email, but does not check `email_verified`.",
+        "`setAdminRoleByEmail` authorization also depends on requester email string and target email string matching allowlists/config.",
+        "Both mobile and admin web auth flows allow self-service signup, then immediately attempt admin bootstrap based on email match."
+      ],
+      "suggestion": "Move admin elevation to a hardened server path that requires verified identity (for example `email_verified === true` plus controlled bootstrap flow), and stop using client-side email match as an admin gate.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "admin_mutations_done_from_client_without_shared_guard",
+      "summary": "Admin-only mutations are scattered across client services with no shared authorization guard, and caller-supplied role metadata.",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminNewConversationScreen.tsx"
+      ],
+      "evidence": [
+        "`saveCandidateFirmStatus`, `updateCandidateFirmStatus`, and `removeCandidateFirmStatus` perform direct writes/deletes without local admin-role assertion.",
+        "`createAdminAppointment` and admin status/detail updates rely on caller-provided `updatedByRole`/`adminUid` values.",
+        "Admin chat operations (`startConversationAsAdmin`, `deleteConversationForAdmin`) are direct client writes without a centralized authz service boundary."
+      ],
+      "suggestion": "Consolidate admin mutations behind server-validated callable functions (or a single authorization gateway service) and remove caller-controlled role fields from client write payloads.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "legacy_web_app_path_bypasses_current_workflow_controls",
+      "summary": "Legacy `/app` candidate flow writes workflow-critical fields directly, creating inconsistent authorization behavior across clients.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "README.md"
+      ],
+      "evidence": [
+        "`/app` route updates `authorizationRequests` directly and creates appointments with `status: \"scheduled\"` as candidate, while mobile service path starts with `status: \"requested\"` and admin handling.",
+        "This creates two trust boundaries for the same domain objects, with inconsistent role assumptions.",
+        "README documents candidate/admin permission expectations, but this route keeps direct write behavior that weakens consistency."
+      ],
+      "suggestion": "Retire or lock down `/app` legacy mutation paths, and route both web/mobile through one consistent service layer with identical role checks and transition rules.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "split_workflow_boundaries"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "triggers_trust_client_written_actor_role_fields",
+      "summary": "Backend triggers treat client-written actor-role fields as authority, which can desynchronize authorization intent from actual actor identity.",
+      "related_files": [
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/messagePush.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`sendPushOnAppointmentChange` gates behavior on `after.updatedByRole === \"admin\"`, where `updatedByRole` is written from client payloads.",
+        "`sendPushOnMessageCreate` gates behavior on `message.senderRole === \"admin\"`, where `senderRole` is also client-supplied in `sendMessage`.",
+        "This pattern relies on document field integrity rather than server-derived actor identity."
+      ],
+      "suggestion": "Derive actor role server-side (callable context auth or trusted server writes), and treat role fields in documents as display metadata only, not authorization signals.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "client_trust_and_claim_bootstrap"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "conversation_meta_split_ownership",
+      "summary": "Conversation meta is owned by both client and trigger, creating boundary drift and reconciliation flags",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "functions/src/triggers/conversationMeta.ts",
+        "functions/src/triggers/appointmentRequestMessage.ts"
+      ],
+      "evidence": [
+        "`sendMessage` writes unread counters and last-message fields directly before writing the message document.",
+        "`syncConversationMetaOnMessageCreate` also rewrites last-message and unread counters for every message.",
+        "The `metaHandledClient` flag is required to suppress trigger-side increments, indicating duplicated ownership."
+      ],
+      "suggestion": "Pick one writer for conversation aggregates. Recommended: make triggers authoritative for all aggregate/meta fields, remove aggregate writes from `sendMessage`/`markConversationRead` except explicit read receipts, and keep client writes to raw message/read-intent only.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "dual_source_admin_authorization",
+      "summary": "Admin access is granted from mixed claim/doc sources with silent bootstrap failures",
+      "related_files": [
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/callable/ensureZenithAdmin.ts"
+      ],
+      "evidence": [
+        "`isAuthorizedAdmin` returns true when either custom claim OR Firestore `role=admin` is present.",
+        "Claim bootstrap errors are swallowed (`catch(() => undefined)`), then role checks continue.",
+        "Mobile auth context repeats claim/doc merging, so policy is duplicated across clients."
+      ],
+      "suggestion": "Standardize on one source of truth for admin authorization (custom claim). Treat Firestore role as display metadata only, fail closed on claim bootstrap failure, and centralize admin-role derivation in a shared auth utility used by both web and mobile.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "silent_failure_pathways",
+      "summary": "Critical auth/data operations frequently swallow errors and continue with degraded state",
+      "related_files": [
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/services/userService.ts"
+      ],
+      "evidence": [
+        "Auth flows suppress callable/token/doc write errors with `.catch(() => undefined)` and continue.",
+        "Message read side effects are fired and silently ignored (`markConversationRead(...).catch(() => undefined)`), making delivery/read failures invisible.",
+        "Storage delete and other mutations often ignore failures, producing inconsistent post-conditions."
+      ],
+      "suggestion": "Adopt a single boundary error policy: either propagate typed errors to UI/retry handlers or log-and-surface an explicit degraded-state flag. Replace silent catches in auth/session paths with structured `Result`/error objects and central telemetry.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "duplicated_role_specific_helpers",
+      "summary": "Role-specific and date helper logic is copy-pasted instead of parameterized/shared",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx"
+      ],
+      "evidence": [
+        "`watchCandidateStatuses` and `watchAdminCandidateStatuses` are structurally identical.",
+        "Multiple appointment watchers share near-identical snapshot wiring and mapping patterns.",
+        "ISO date parse/format helper sets are duplicated across profile-related screens."
+      ],
+      "suggestion": "Extract shared query/watch factories and shared date utility module (`src/utils/dates.ts`), then keep role-specific behavior as small parameters instead of duplicated functions.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "copy_paste_domain_utilities"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "conversation_contract_drift",
+      "summary": "Shared conversation type/schema does not match runtime conversation document fields",
+      "related_files": [
+        "packages/shared/src/types/domain.ts",
+        "packages/shared/src/schemas/index.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "Runtime code reads/writes `hiddenForAdmin`, `hiddenForCandidate`, and per-viewer preview fields.",
+        "Shared `Conversation` interface and `conversationSchema` omit these fields, so contract consumers cannot rely on a complete shape.",
+        "Service APIs then fall back to `any` data handling for conversation flows."
+      ],
+      "suggestion": "Either (a) extend shared `Conversation` types/schemas to include viewer-specific fields, or (b) split into `ConversationCore` + `ConversationViewerState` schema/types and update services to use typed parsing instead of `any`.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "shared_contract_not_kept_in_sync_with_runtime_shape"
+    },
+    {
+      "dimension": "convention_outlier",
+      "identifier": "date_helper_convention_drift",
+      "summary": "Equivalent date helpers use inconsistent names and signatures across sibling screens",
+      "related_files": [
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx"
+      ],
+      "evidence": [
+        "Profile screens use `formatDisplayDate`, admin detail uses `formatShortDate` for same output intent.",
+        "Helper signatures differ (`value: string` vs `input?: string`) for equivalent parse path."
+      ],
+      "suggestion": "Standardize helper naming/signature via shared utility: `parseIsoDate(input?: string): Date | null` and `formatIsoDateDisplay(input?: string): string`, then replace per-screen variants.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "copy_paste_domain_utilities"
+    },
+    {
+      "dimension": "incomplete_migration",
+      "identifier": "legacy_web_admin_parallel_stack",
+      "summary": "Legacy Next admin pages still duplicate active domain workflows beside mobile stack",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "Web admin pages perform direct Firestore subscriptions and mutations for statuses/messages/appointments.",
+        "Mobile admin uses a separate service abstraction for the same domain workflows.",
+        "Auth bootstrap still contains strict+legacy callable fallback path, indicating migration not fully closed."
+      ],
+      "suggestion": "Run a staged migration closure: Stage 1 map web-admin-only capabilities; Stage 2 move shared logic to service modules consumed by both clients; Stage 3 remove `/app` legacy workflow and legacy callable fallback once parity is verified; Stage 4 delete dead code and enforce one admin surface.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "parallel_legacy_and_new_paths"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "screen_level_god_components",
+      "summary": "Several screen modules mix too many responsibilities, causing persistent change friction",
+      "related_files": [
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/admin/app/app/page.tsx"
+      ],
+      "evidence": [
+        "`AdminAppointmentRequestsScreen` combines subscription orchestration, filters/sorts, modal state machines, CRUD handlers, and calendar integration in one file.",
+        "Multiple large files remain monolithic (1074 LOC, 534 LOC, 432 LOC, 430 LOC), matching prior structural findings and still present.",
+        "Repeated giant component pattern appears in both mobile and web surfaces."
+      ],
+      "suggestion": "Refactor by responsibility slices: extract `useAppointmentsData`, `useAppointmentEditor`, and presentation components (`AppointmentList`, `AppointmentEditorModal`, `UnattendedPanel`), then enforce max component-size and hook-count thresholds in review checks.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "screen_orchestrators_without_view_model_layer"
+    }
+  ],
+  "review_quality": {
+    "batch_count": 10,
+    "dimension_coverage": 0.254,
+    "evidence_density": 2.124,
+    "high_score_missing_issue_note": 0,
+    "finding_pressure": 116.578,
+    "dimensions_with_findings": 12
+  },
+  "review_scope": {
+    "reviewed_files_count": 62,
+    "successful_batch_count": 10,
+    "full_sweep_included": true,
+    "total_files": 61,
+    "imported_dimensions": [
+      "abstraction_fitness",
+      "ai_generated_debt",
+      "api_surface_coherence",
+      "authorization_consistency",
+      "convention_outlier",
+      "cross_module_architecture",
+      "design_coherence",
+      "error_consistency",
+      "high_level_elegance",
+      "incomplete_migration",
+      "low_level_elegance",
+      "mid_level_elegance",
+      "package_organization"
+    ]
+  },
+  "reviewed_files": [
+    "apps/mobile/src/ui/theme.ts",
+    "apps/mobile/src/state/AuthContext.tsx",
+    "apps/mobile/src/components/AppShell.tsx",
+    "apps/mobile/src/lib/firebase.ts",
+    "apps/mobile/src/components/Avatar.tsx",
+    "apps/mobile/src/services/userService.ts",
+    "apps/mobile/src/services/messagingService.ts",
+    "apps/mobile/src/services/adminService.ts",
+    "functions/src/config/env.ts",
+    "functions/src/callable/adminRole.ts",
+    "functions/src/callable/deleteAccount.ts",
+    "functions/src/callable/ensureZenithAdmin.ts",
+    "functions/src/index.ts",
+    "functions/src/utils/push.ts",
+    "functions/src/triggers/appointmentPush.ts",
+    "functions/src/triggers/messagePush.ts",
+    "apps/admin/src/lib/auth.ts",
+    "functions/src/triggers/signupSummaryEmail.ts",
+    "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx",
+    "apps/admin/src/lib/firebase.ts",
+    "apps/mobile/src/screens/AdminInboxScreen.tsx",
+    "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+    "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx",
+    "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+    "apps/mobile/src/screens/MessagesScreen.tsx",
+    "apps/mobile/src/screens/candidate/CandidateDashboardScreen.tsx",
+    "apps/admin/app/app/page.tsx",
+    "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx",
+    "apps/mobile/src/screens/AuthScreen.tsx",
+    "apps/mobile/src/screens/admin/AdminCandidatesScreen.tsx",
+    "apps/mobile/src/screens/admin/AdminNewConversationScreen.tsx",
+    "apps/mobile/src/navigation/RootNavigator.tsx",
+    "apps/mobile/src/services/appointmentService.ts",
+    "apps/mobile/src/services/authorizationService.ts",
+    "apps/mobile/src/services/statusService.ts",
+    "apps/admin/next-env.d.ts",
+    "apps/mobile/src/services/accountService.ts",
+    "functions/src/triggers/appointmentCancelNotify.ts",
+    "functions/src/triggers/appointmentRequestExpiry.ts",
+    "README.md",
+    "apps/admin/app/auth/page.tsx",
+    "functions/src/scripts/backfillConversationMeta.ts",
+    "functions/src/scripts/enforceSingleAdmin.ts",
+    "functions/src/scripts/seedFirms.ts",
+    "apps/admin/app/dashboard/page.tsx",
+    "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+    "apps/admin/app/layout.tsx",
+    "apps/admin/app/page.tsx",
+    "apps/mobile/App.tsx",
+    "apps/mobile/src/components/StatusChip.tsx",
+    "apps/mobile/src/lib/notifications.ts",
+    "apps/mobile/src/lib/zenithContact.ts",
+    "apps/mobile/src/navigation/types.ts",
+    "apps/mobile/src/services/calendarService.ts",
+    "apps/mobile/src/utils/profilePhotoSourcePicker.ts",
+    "functions/src/triggers/appointmentRequestMessage.ts",
+    "functions/src/triggers/appointmentUpdateFlag.ts",
+    "functions/src/triggers/conversationMeta.ts",
+    "packages/shared/src/constants/options.ts",
+    "packages/shared/src/index.ts",
+    "packages/shared/src/schemas/index.ts",
+    "packages/shared/src/types/domain.ts"
+  ],
+  "provenance": {
+    "kind": "blind_review_batch_import",
+    "blind": true,
+    "runner": "codex",
+    "run_stamp": "20260227_041154",
+    "created_at": "2026-02-27T04:17:56+00:00",
+    "batch_count": 10,
+    "batch_indexes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "packet_path": "/Users/ryankalfus/Downloads/zenith_legal_app/.desloppify/review_packet_blind.json",
+    "packet_sha256": "66d5efcdb2df50dcf3a6333b1b0f338be6b2184e1a1bdf52aed7110e1ff8591b"
+  },
+  "assessment_coverage": {
+    "scored_dimensions": [
+      "naming_quality",
+      "logic_clarity",
+      "type_safety",
+      "contract_coherence",
+      "error_consistency",
+      "abstraction_fitness",
+      "ai_generated_debt",
+      "high_level_elegance",
+      "mid_level_elegance",
+      "low_level_elegance",
+      "cross_module_architecture",
+      "initialization_coupling",
+      "convention_outlier",
+      "dependency_health",
+      "test_strategy",
+      "api_surface_coherence",
+      "authorization_consistency",
+      "incomplete_migration",
+      "package_organization",
+      "design_coherence"
+    ],
+    "selected_dimensions": [
+      "cross_module_architecture",
+      "convention_outlier",
+      "error_consistency",
+      "abstraction_fitness",
+      "api_surface_coherence",
+      "authorization_consistency",
+      "ai_generated_debt",
+      "incomplete_migration",
+      "package_organization",
+      "high_level_elegance",
+      "mid_level_elegance",
+      "low_level_elegance",
+      "design_coherence"
+    ],
+    "imported_dimensions": [
+      "abstraction_fitness",
+      "ai_generated_debt",
+      "api_surface_coherence",
+      "authorization_consistency",
+      "convention_outlier",
+      "cross_module_architecture",
+      "design_coherence",
+      "error_consistency",
+      "high_level_elegance",
+      "incomplete_migration",
+      "low_level_elegance",
+      "mid_level_elegance",
+      "package_organization"
+    ],
+    "missing_dimensions": [
+      "naming_quality",
+      "logic_clarity",
+      "type_safety",
+      "contract_coherence",
+      "initialization_coupling",
+      "dependency_health",
+      "test_strategy"
+    ]
+  }
+}

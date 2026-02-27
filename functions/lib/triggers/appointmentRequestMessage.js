@@ -9,12 +9,11 @@ if (!(0, app_1.getApps)().length) {
     (0, app_1.initializeApp)();
 }
 const db = (0, firestore_2.getFirestore)();
-function formatAppointmentMessage(startsAtInput, phoneInput) {
-    const phoneNumber = String(phoneInput ?? "").trim();
+function formatAppointmentDateTime(startsAtInput) {
     const startsAt = String(startsAtInput ?? "").trim();
     const startsAtDate = new Date(startsAt);
     if (Number.isNaN(startsAtDate.getTime())) {
-        return `APPOINTMENT REQUESTED... ${startsAt || "n/a"}... n/a... ${phoneNumber || "n/a"}`;
+        return startsAt || "an unknown date/time";
     }
     const dateText = startsAtDate.toLocaleDateString("en-US", {
         month: "2-digit",
@@ -26,9 +25,14 @@ function formatAppointmentMessage(startsAtInput, phoneInput) {
         hour: "numeric",
         minute: "2-digit",
         hour12: true
-    })
-        .toLowerCase();
-    return `APPOINTMENT REQUESTED... ${dateText}... ${timeText}... ${phoneNumber || "n/a"}`;
+    });
+    return `${dateText} at ${timeText}`;
+}
+function formatAppointmentMessage(input) {
+    const candidateName = String(input.candidateName ?? "").trim() || "Candidate";
+    const note = String(input.notes ?? "").trim();
+    const noteSuffix = note ? ` Note: ${note}` : "";
+    return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${noteSuffix}`;
 }
 exports.syncAppointmentRequestMessage = (0, firestore_1.onDocumentCreated)("appointments/{appointmentId}", async (event) => {
     const appointment = event.data?.data();
@@ -42,7 +46,13 @@ exports.syncAppointmentRequestMessage = (0, firestore_1.onDocumentCreated)("appo
         });
         return;
     }
-    const text = formatAppointmentMessage(appointment.startsAt, appointment.phoneNumber);
+    const candidateDoc = await db.collection("users").doc(candidateId).get();
+    const candidateName = String(candidateDoc.data()?.fullName ?? "Candidate");
+    const text = formatAppointmentMessage({
+        candidateName,
+        startsAt: appointment.startsAt,
+        notes: appointment.notes
+    });
     const conversationRef = db.collection("conversations").doc(candidateId);
     await conversationRef.set({
         candidateId,

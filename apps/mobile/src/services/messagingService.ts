@@ -135,6 +135,28 @@ export function watchCandidateUnreadMessageCount(
   );
 }
 
+export function watchConversationHeaderOverride(
+  candidateId: string,
+  onData: (data: { assignedHeaderEmail?: string; assignedHeaderPhone?: string }) => void,
+  onError: (err: Error) => void
+) {
+  return onSnapshot(
+    doc(db, "conversations", candidateId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onData({});
+        return;
+      }
+      const data = snapshot.data() as Record<string, unknown>;
+      onData({
+        assignedHeaderEmail: String(data.assignedHeaderEmail ?? ""),
+        assignedHeaderPhone: String(data.assignedHeaderPhone ?? "")
+      });
+    },
+    (err) => onError(err as Error)
+  );
+}
+
 export async function markConversationRead(
   candidateId: string,
   role: "candidate" | "admin"

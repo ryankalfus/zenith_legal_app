@@ -1,0 +1,145 @@
+{
+  "batch": "Architecture & Coupling",
+  "batch_index": 1,
+  "assessments": {
+    "cross_module_architecture": 72.0,
+    "high_level_elegance": 69.0
+  },
+  "dimension_notes": {
+    "cross_module_architecture": {
+      "evidence": [
+        "apps/mobile/src/lib/firebase.ts initializes Firebase app and conditionally connects emulators at import time, and this module is imported by state and service modules (AuthContext, userService, messagingService, adminService), creating global startup side effects tied to import order.",
+        "Admin identity/authorization policy is duplicated across client and functions: apps/mobile/src/state/AuthContext.tsx computes admin from EXPO_PUBLIC_ZENITH_ADMIN_EMAIL and mutates role docs, while functions/src/config/env.ts + callable modules enforce server-side ZENITH_ADMIN_EMAIL and SUPER_ADMIN_EMAILS.",
+        "Conversation data contract is spread across modules: apps/mobile/src/services/messagingService.ts writes conversation/message shape and visibility flags, while functions/src/callable/deleteAccount.ts assumes exact conversation + messageAttachments layout for destructive cleanup."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    },
+    "high_level_elegance": {
+      "evidence": [
+        "apps/mobile/src/state/AuthContext.tsx combines authentication lifecycle, first-time user document provisioning, admin role claim orchestration, token refresh logic, and push token persistence in one provider.",
+        "apps/mobile/src/components/AppShell.tsx mixes reusable shell layout primitives with product-specific Zenith contact behavior, reducing clarity of ownership for UI infrastructure vs business UI.",
+        "Admin role ownership is not represented by a single boundary: the same role intent is implemented in AuthContext.tsx, functions/src/callable/ensureZenithAdmin.ts, and functions/src/callable/adminRole.ts with overlapping responsibilities."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "import_time_firebase_bootstrap_coupling",
+      "summary": "Global Firebase initialization and emulator wiring at import time creates hidden startup coupling across mobile modules.",
+      "related_files": [
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/mobile/src/services/userService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/adminService.ts"
+      ],
+      "evidence": [
+        "apps/mobile/src/lib/firebase.ts executes initializeApp(...) and connect*Emulator(...) in module scope.",
+        "Multiple service/context modules directly import exported singletons (auth/db/storage/functions), so importing a service implicitly performs runtime configuration work.",
+        "This pattern makes boot behavior environment-dependent and hard to isolate in tests because module import triggers side effects."
+      ],
+      "suggestion": "Introduce a Firebase runtime boundary (e.g., createFirebaseClients/getFirebaseClients) initialized once from app entry, then inject clients into services/context or expose a lazily initialized accessor with explicit bootstrap call.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_global_runtime"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "split_admin_policy_between_client_and_backend",
+      "summary": "Admin role policy is fragmented across client and backend with different config sources and overlapping authority.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/config/env.ts",
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/callable/adminRole.ts"
+      ],
+      "evidence": [
+        "AuthContext.tsx derives admin status from EXPO_PUBLIC_ZENITH_ADMIN_EMAIL and updates user role docs client-side.",
+        "functions/src/config/env.ts derives backend admin policy from ZENITH_ADMIN_EMAIL and SUPER_ADMIN_EMAILS.",
+        "ensureZenithAdminClaim and setAdminRoleByEmail both assign admin claims/server docs, producing multiple authority paths for the same role decision."
+      ],
+      "suggestion": "Centralize admin-eligibility decisions server-side only: make client treat role as read-only, expose one callable for reconciliation, and share one config key contract across mobile/functions to remove divergent policy logic.",
+      "confidence": "high",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_auth_authority"
+    },
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "conversation_contract_scattered_across_features",
+      "summary": "Conversation storage schema and lifecycle rules are duplicated across messaging and account-deletion paths.",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "functions/src/callable/deleteAccount.ts"
+      ],
+      "evidence": [
+        "messagingService.ts writes many conversation fields (visibility flags, unread counters, preview fields, participantIds) and message attachment paths.",
+        "deleteAccount.ts hardcodes deletion traversal for conversations/{candidateId}/messages and messageAttachments/{candidateId}/, tightly coupling cleanup to client schema details.",
+        "No shared schema/contract module exists in the assigned files to make these assumptions explicit and versioned."
+      ],
+      "suggestion": "Create a shared conversation domain contract (field names + path builders + lifecycle helpers) used by both mobile services and functions cleanup logic, then route destructive cleanup through a domain service instead of raw hardcoded paths.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "implicit_global_runtime"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "auth_provider_overloaded_domain_orchestrator",
+      "summary": "AuthContext has accumulated multiple domain responsibilities beyond session state ownership.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/config/env.ts"
+      ],
+      "evidence": [
+        "AuthContext.tsx handles auth subscription, first-time user provisioning, admin claim synchronization, admin role correction, and push-token writes.",
+        "These concerns span identity, authorization, profile lifecycle, and notifications, but they are orchestrated in a single provider hook.",
+        "Backend callables already implement role orchestration, yet AuthContext duplicates reconciliation behavior at app state layer."
+      ],
+      "suggestion": "Split AuthContext into focused collaborators (session observer, profile bootstrap service, admin-role reconciler, push registration service) and keep provider limited to composition and exposed session API.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "distributed_auth_authority"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "ui_shell_mixes_layout_with_business_contact_policy",
+      "summary": "Shared layout component owns product-specific contact behavior, blurring UI infrastructure boundaries.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "apps/mobile/src/ui/theme.ts"
+      ],
+      "evidence": [
+        "AppShell exports generic layout helpers (AppShell/SurfaceCard/EmptyState) but also embeds CandidateContactBar with hardwired Zenith contact actions.",
+        "The shell-level prop logic (showCandidateContactBar/showZenithContactBar) encodes feature policy in what should be a reusable structural component."
+      ],
+      "suggestion": "Keep AppShell purely structural and move contact-bar policy into a feature-level wrapper (e.g., CandidateShell/AdminShell) so domain behavior is composed above the generic UI shell.",
+      "confidence": "medium",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "mixed_layer_ownership"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Implicit global runtime setup (module-scope initialization) is being used as a dependency injection substitute.",
+      "Authorization/admin ownership is distributed across client and backend instead of enforced by one authoritative boundary.",
+      "Feature/domain contracts are encoded as repeated literals and path assumptions rather than shared boundary abstractions."
+    ],
+    "likely_symptoms": [
+      "import_time_firebase_bootstrap_coupling",
+      "conversation_contract_scattered_across_features",
+      "auth_provider_overloaded_domain_orchestrator"
+    ],
+    "possible_false_positives": []
+  }
+}

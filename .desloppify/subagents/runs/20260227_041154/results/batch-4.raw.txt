@@ -1,0 +1,146 @@
+{
+  "batch": "Testing & API",
+  "batch_index": 4,
+  "assessments": {
+    "api_surface_coherence": 68.0,
+    "mid_level_elegance": 70.0
+  },
+  "dimension_notes": {
+    "api_surface_coherence": {
+      "evidence": [
+        "Service mutation APIs use inconsistent post-write contracts: some verify persistence with read-back and throw (`createAppointmentRequest`, `updateAppointmentStatus`, `saveCandidateFirmStatus`), while sibling mutations do fire-and-forget updates/deletes (`deleteAppointment`, `respondToAuthorization`, `removeCandidateFirmStatus`).",
+        "Public watcher APIs expose mixed data typing rigor: typed rows in `adminService.ts` and `appointmentService.ts`, but `any`/`any[]` payloads in `messagingService.ts`, `authorizationService.ts`, and `userService.ts`.",
+        "Firebase access surface differs by app without a shared contract: mobile exports initialized singletons (`auth`, `db`, `functions`), while admin exports lazy getters with runtime guards (`getFirebaseAuth`, `getFirebaseDb`, `getFirebaseFunctions`)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "mid_level_elegance": {
+      "evidence": [
+        "Cross-module seam logic is duplicated instead of centralized: timestamp normalization appears in multiple variants (`getTimestampMs`, `toSortMs`, `asSortMs`) across service modules.",
+        "Admin authorization orchestration is duplicated across app boundaries (`AuthContext.tsx` and `apps/admin/src/lib/auth.ts`) with different fallback/retry behavior, creating seam drift risk.",
+        "Conversation metadata lifecycle is split across multiple service functions (`sendMessage`, `markConversationRead`, `hideMessageForViewer`, `refreshLocalPreview`) without a single boundary translator for preview/unread semantics."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "inconsistent_mutation_contracts",
+      "summary": "Sibling write APIs expose inconsistent success/failure contracts, making callers guess whether persistence is verified.",
+      "related_files": [
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`appointmentService.ts` performs read-after-write verification in multiple mutators and throws explicit persistence errors.",
+        "`statusService.ts` verifies persistence in `saveCandidateFirmStatus` and one candidate transition path, but `updateCandidateFirmStatus` and `removeCandidateFirmStatus` do not verify.",
+        "`authorizationService.ts` and `messagingService.ts` mutation endpoints generally return after update/write without contract-level verification."
+      ],
+      "suggestion": "Define one mutation contract for service APIs (for example: all mutators return a typed result and map backend failures into consistent error types), then align all service functions to that contract.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "service_contract_fragmentation"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "mixed_public_typing_on_watchers",
+      "summary": "Watcher APIs mix strongly typed and `any` payloads for similar data-stream patterns.",
+      "related_files": [
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/authorizationService.ts",
+        "apps/mobile/src/services/userService.ts"
+      ],
+      "evidence": [
+        "`adminService.ts` and `appointmentService.ts` define exported row types used by watcher callbacks.",
+        "`messagingService.ts` exposes `onData: (messages: any[]) => void` and `onData: (rows: any[]) => void`.",
+        "`authorizationService.ts` and `userService.ts` similarly expose `any[]` / `any` callback payloads."
+      ],
+      "suggestion": "Create shared DTO types for conversation/message/authorization/user streams and update all watcher signatures to return explicit typed rows.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "service_contract_fragmentation"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "firebase_client_api_shape_drift",
+      "summary": "Firebase client access APIs differ across mobile and admin apps, reducing coherence for shared integration patterns.",
+      "related_files": [
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/admin/src/lib/firebase.ts",
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/state/AuthContext.tsx"
+      ],
+      "evidence": [
+        "Mobile module initializes and exports singleton instances directly (`auth`, `db`, `functions`, `storage`).",
+        "Admin module requires getter calls with browser checks and config assertions before use.",
+        "Auth modules in each app consume these different shapes, so cross-app service patterns are not portable."
+      ],
+      "suggestion": "Adopt a shared API shape guideline (either singleton exports or accessor functions with explicit init semantics) and wrap app-specific runtime constraints behind the same interface.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_boundary_translation_helpers",
+      "summary": "Boundary translation code for timestamps is duplicated across service modules with slightly different helpers.",
+      "related_files": [
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/services/statusService.ts"
+      ],
+      "evidence": [
+        "`adminService.ts` implements `getTimestampMs`.",
+        "`messagingService.ts` implements `toSortMs`.",
+        "`statusService.ts` implements `asSortMs` with near-identical conversion rules."
+      ],
+      "suggestion": "Extract one shared timestamp normalization utility and use it across services so ordering/preview/status behavior follows one seam-level rule.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "missing_shared_service_primitives"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_admin_bootstrap_orchestration",
+      "summary": "Admin claim/profile bootstrapping is orchestrated in two places with divergent fallback behavior.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "apps/admin/src/lib/auth.ts"
+      ],
+      "evidence": [
+        "Both modules check for the same Zenith admin email and attempt callable-based role bootstrap.",
+        "Admin web auth includes strict-to-legacy callable fallback and multiple retries; mobile auth has a different flow and suppresses failures differently.",
+        "Both modules also perform profile/doc role updates, creating duplicated seam logic across clients."
+      ],
+      "suggestion": "Move admin bootstrap orchestration into one shared callable-backed contract and keep clients as thin callers that only consume a unified authorization result.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_auth_bootstrap_logic"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "No shared service contract standard for mutation result semantics and watcher typing.",
+      "Integration seam utilities (timestamp conversion, conversation preview lifecycle, admin bootstrap) are implemented per module instead of centralized."
+    ],
+    "likely_symptoms": [
+      "inconsistent_mutation_contracts",
+      "mixed_public_typing_on_watchers",
+      "duplicated_boundary_translation_helpers"
+    ],
+    "possible_false_positives": []
+  }
+}

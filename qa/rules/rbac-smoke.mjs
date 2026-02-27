@@ -127,7 +127,7 @@ async function seedData() {
   await adminDb.doc("users/admin1").set({
     uid: "admin1",
     role: "admin",
-    fullName: "Zenith Legal",
+    fullName: "Mason Kalfus",
     email: "mason@zenithlegal.com",
     mobile: "+15550000003",
     emailVerified: true,
@@ -155,6 +155,21 @@ async function seedData() {
     requestedBy: "admin1",
     requestedAt: "2026-02-25T00:00:00.000Z"
   });
+
+  await adminDb.doc("users/admin2").set({
+    uid: "admin2",
+    role: "admin",
+    fullName: "Recruiter Two",
+    email: "recruiter2@example.com",
+    mobile: "+15550000004",
+    emailVerified: true,
+    phoneVerified: true,
+    pushTokens: [],
+    preferences: {
+      preferredCities: [],
+      practiceArea: "Antitrust"
+    }
+  });
 }
 
 async function run() {
@@ -180,12 +195,12 @@ async function run() {
     password: defaultPassword,
     claims: { role: "admin" }
   });
-  const nonZenithAdmin = await getSignedInClient({
-    uid: "candidateB",
-    email: "candidateB@example.com",
+  const secondAdmin = await getSignedInClient({
+    uid: "admin2",
+    email: "recruiter2@example.com",
     password: defaultPassword,
     claims: { role: "admin" },
-    label: "candidateB-admin-claim"
+    label: "admin2"
   });
 
   const results = [];
@@ -281,10 +296,10 @@ async function run() {
   );
 
   results.push(
-    await assertFails("non-Zenith claimed admin cannot write firm", () =>
-      setDoc(doc(nonZenithAdmin.db, "firms", "firm-2"), {
+    await assertSucceeds("admin claim account can write firm", () =>
+      setDoc(doc(secondAdmin.db, "firms", "firm-2"), {
         id: "firm-2",
-        name: "Blocked Firm",
+        name: "Allowed Firm",
         isActive: true
       })
     )
@@ -293,7 +308,7 @@ async function run() {
   await candidateA.close();
   await candidateB.close();
   await adminUser.close();
-  await nonZenithAdmin.close();
+  await secondAdmin.close();
 
   const passed = results.filter(Boolean).length;
   const failed = results.length - passed;

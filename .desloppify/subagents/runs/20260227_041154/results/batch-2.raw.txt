@@ -1,0 +1,108 @@
+{
+  "batch": "Conventions & Errors",
+  "batch_index": 2,
+  "assessments": {
+    "convention_outlier": 79.0,
+    "error_consistency": 74.0,
+    "mid_level_elegance": 76.0
+  },
+  "dimension_notes": {
+    "convention_outlier": {
+      "evidence": [
+        "Sibling triggers use different behavioral conventions for the same guard path: messagePush logs missing users (functions/src/triggers/messagePush.ts:25) while appointmentPush silently returns (functions/src/triggers/appointmentPush.ts:39-40).",
+        "Both trigger files repeat near-identical Firebase bootstrap and Firestore setup blocks (functions/src/triggers/messagePush.ts:3-11, functions/src/triggers/appointmentPush.ts:2-10), indicating style-island duplication instead of a shared convention."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "error_consistency": {
+      "evidence": [
+        "sendExpoPush performs network I/O but has no local error handling or context wrapping around expo.sendPushNotificationsAsync (functions/src/utils/push.ts:20-21), so failures lose trigger-specific context.",
+        "Trigger handlers call sendExpoPush directly without adding event metadata on failure paths (functions/src/triggers/messagePush.ts:31-35, functions/src/triggers/appointmentPush.ts:45-49), making failure behavior inconsistent and harder to trace."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "mid_level_elegance": {
+      "evidence": [
+        "Two trigger modules reimplement the same orchestration seam: read candidate/user id from event, fetch user doc, extract pushTokens, send push payload (functions/src/triggers/messagePush.ts:16-35, functions/src/triggers/appointmentPush.ts:15-49).",
+        "Boundary translation and guard choreography are duplicated across files instead of centralized in one push-dispatch seam, increasing drift risk and edit blast radius."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "convention_outlier",
+      "identifier": "trigger_observability_convention_drift",
+      "summary": "Sibling push triggers use inconsistent missing-user handling conventions",
+      "related_files": [
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts"
+      ],
+      "evidence": [
+        "messagePush warns when user doc is missing (logger.warn at line 25) before returning.",
+        "appointmentPush returns on missing user doc without logging (line 39-40), so equivalent conditions produce different operational signals."
+      ],
+      "suggestion": "Define one convention for guard-path observability in push triggers (for example: structured warn with trigger name and candidateId) and apply it consistently in both modules via a shared helper.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "push_boundary_missing_error_contract",
+      "summary": "Push send failures propagate without consistent context or classification",
+      "related_files": [
+        "functions/src/utils/push.ts",
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts"
+      ],
+      "evidence": [
+        "sendExpoPush awaits expo.sendPushNotificationsAsync in a loop with no try/catch or error decoration.",
+        "Both triggers call sendExpoPush directly and provide no catch/wrap path that records trigger type, candidateId, or appointmentId/messageId for failure diagnostics."
+      ],
+      "suggestion": "Introduce a shared error contract for push delivery: catch in sendExpoPush (or caller), attach contextual metadata, log structured details, and rethrow a typed error so both triggers fail in the same traceable way.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "duplicated_push_orchestration_seam",
+      "summary": "Message and appointment triggers duplicate the same integration choreography",
+      "related_files": [
+        "functions/src/triggers/messagePush.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/utils/push.ts"
+      ],
+      "evidence": [
+        "Both triggers repeat DB fetch -> missing-user guard -> pushTokens extraction -> sendExpoPush call with similar payload construction steps.",
+        "Shared seam logic is split across multiple files, so behavioral adjustments (token hygiene, logging policy, retries) must be changed in parallel."
+      ],
+      "suggestion": "Extract a shared trigger-level dispatcher (for example, sendCandidatePushFromTrigger) that handles user lookup, token extraction, guard logging, and send call; keep each trigger focused on event-specific gating and payload text.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "candidate_push_trigger_pattern"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "No shared push-trigger seam for user lookup, observability policy, and error contract.",
+      "Operational behavior conventions are encoded per-file instead of codified in reusable trigger utilities."
+    ],
+    "likely_symptoms": [
+      "trigger_observability_convention_drift",
+      "push_boundary_missing_error_contract",
+      "duplicated_push_orchestration_seam"
+    ],
+    "possible_false_positives": []
+  }
+}

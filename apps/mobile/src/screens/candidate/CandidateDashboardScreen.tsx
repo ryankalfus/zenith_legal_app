@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -23,14 +22,39 @@ import {
 import { watchUser } from "../../services/userService";
 import { theme } from "../../ui/theme";
 
-const LOGO = require("../../../assets/zenith-legal-logo.png");
-
 type DashboardRow = {
   id: string;
   candidateId: string;
   firmId: string;
   status: CandidateFirmStatus;
+  updatedAt?: unknown;
 };
+
+function formatStatusUpdatedDate(input: unknown) {
+  if (!input) {
+    return "Not set";
+  }
+  if (typeof input === "object" && input && "toDate" in input && typeof (input as any).toDate === "function") {
+    try {
+      return (input as any).toDate().toLocaleDateString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric"
+      });
+    } catch {
+      return "Not set";
+    }
+  }
+  const parsed = new Date(String(input));
+  if (Number.isNaN(parsed.getTime())) {
+    return "Not set";
+  }
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  });
+}
 
 export function CandidateDashboardScreen() {
   const { session } = useAuth();
@@ -134,21 +158,12 @@ export function CandidateDashboardScreen() {
 
   return (
     <AppShell
-      title="Dashboard"
-      subtitle="Track your assigned firms and request action when needed."
+      title="Zenith Legal Dashboard"
+      subtitle="Track your firms at a new level"
       showCandidateContactBar
+      topRightLogoStyle={styles.dashboardHeroLogo}
       scroll
     >
-      <SurfaceCard>
-        <View style={styles.brandRow}>
-          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-          <View>
-            <Text style={styles.brandTitle}>Zenith Legal</Text>
-            <Text style={styles.brandSubtitle}>Your live candidate status board</Text>
-          </View>
-        </View>
-      </SurfaceCard>
-
       {loading ? (
         <View style={styles.centerBlock}>
           <ActivityIndicator />
@@ -178,6 +193,7 @@ export function CandidateDashboardScreen() {
                 <Text style={styles.firmName}>{firmMap[row.firmId] ?? row.firmId}</Text>
               </View>
               <StatusChip status={row.status} />
+              <Text style={styles.statusDate}>Status updated: {formatStatusUpdatedDate(row.updatedAt)}</Text>
               {isWaiting ? (
                 <Pressable
                   style={styles.requestButton}
@@ -220,28 +236,16 @@ export function CandidateDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12
-  },
-  logo: {
-    width: 56,
-    height: 56
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary
-  },
-  brandSubtitle: {
-    color: theme.colors.textSecondary,
-    marginTop: 2
-  },
   centerBlock: {
     alignItems: "center",
     gap: 8,
     marginTop: 12
+  },
+  dashboardHeroLogo: {
+    width: 90,
+    height: 90,
+    top: -6,
+    right: 8
   },
   errorText: {
     color: theme.colors.danger,
@@ -259,6 +263,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  statusDate: {
+    marginTop: 6,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
   },
   requestButton: {
     marginTop: 10,

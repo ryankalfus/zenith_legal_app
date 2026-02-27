@@ -1,0 +1,152 @@
+{
+  "batch": "Design coherence — Mechanical Concern Signals",
+  "batch_index": 8,
+  "assessments": {
+    "design_coherence": 71.0
+  },
+  "dimension_notes": {
+    "design_coherence": {
+      "evidence": [
+        "Appointment workflow orchestration is repeated across screens (`CandidateAppointmentsScreen` and `AdminAppointmentRequestsScreen`) with duplicated date/time helpers, status bucketing, ignore/delete flows, and calendar actions.",
+        "Profile data shaping and date utilities are duplicated between `ProfileSetupScreen` and `CandidateProfileScreen` (`isIsoDate`, `formatIsoDate`, `parseIsoDate`, `formatDisplayDate`) with near-identical picker/form structure.",
+        "Role-specific service functions duplicate core logic instead of sharing one domain pathway (`watchCandidateStatuses` vs `watchAdminCandidateStatuses`; `createAppointmentRequest` vs `createAdminAppointment`).",
+        "Several UI files combine auth/session checks, real-time subscriptions, and direct Firestore write orchestration in one component (`apps/admin/app/app/page.tsx`, `apps/admin/app/dashboard/candidates/[candidateId]/page.tsx`, `apps/mobile/src/screens/MessagesScreen.tsx`)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "design_coherence",
+      "identifier": "appointment_flow_duplication",
+      "summary": "Appointment screen logic is duplicated across candidate and admin flows instead of sharing a common workflow model.",
+      "related_files": [
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "Both screens define local date/time helpers (`formatDate`, `formatTime`) and transform date+time into ISO (`startsAtIso` via memo vs `mergeDateAndTime`) with similar validation/alerts.",
+        "Both screens split rows into status/time buckets and implement nearly the same destructive overdue ignore behavior (`deleteAppointment`).",
+        "Both screens attach calendar actions and status transition actions while duplicating UI-state orchestration for pickers and save progress."
+      ],
+      "suggestion": "Extract shared appointment workflow primitives (time merge/validation, row partitioning, transition handlers) into a domain hook/service, then keep screens focused on role-specific UI differences only.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "profile_form_logic_copied",
+      "summary": "Profile setup and profile edit screens reimplement the same date parsing and profile field behavior, creating parallel maintenance paths.",
+      "related_files": [
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx"
+      ],
+      "evidence": [
+        "Both files define the same date helpers with equivalent behavior (`isIsoDate`, `formatIsoDate`, `parseIsoDate`, `formatDisplayDate`).",
+        "Both files render highly similar DOB/JD picker flows and preferred-city/practice selection patterns with separate local state machines.",
+        "Validation rules for ISO date strings are implemented independently in both screens."
+      ],
+      "suggestion": "Move profile date utilities and reusable profile form sections into shared modules/components (e.g., `profileDate.ts`, `ProfileFields`) and keep screen-specific concerns in thin wrappers.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "service_role_forks_duplicate_core_logic",
+      "summary": "Service layer includes role-specific APIs that are functionally identical or near-identical, signaling missing core abstractions.",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "`watchCandidateStatuses` and `watchAdminCandidateStatuses` execute the same query, mapping, sort, and callback logic.",
+        "`createAppointmentRequest` and `createAdminAppointment` write nearly the same appointment payload, differing mostly in role and initial status.",
+        "Both services expose duplicated pathways that force callers to choose by role instead of calling a single normalized command."
+      ],
+      "suggestion": "Collapse duplicated role-specific methods into one parameterized core operation per domain action, with narrow role-policy branching inside a single implementation.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "role_forked_workflows_without_shared_domain_core"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "messaging_flow_mixed_responsibilities",
+      "summary": "Messaging behavior is split across large client-side orchestration blocks and overloaded service methods, increasing change risk.",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx"
+      ],
+      "evidence": [
+        "`sendMessage` handles conversation aggregate updates, unread counters, preview fields for both roles, optional attachment upload/storage, and message creation in one function.",
+        "`MessagesScreen` has overlapping read-mark side effects (focus-based and message-length-based) that repeat the same `markConversationRead` call path.",
+        "`refreshLocalPreview` scans up to 100 messages and rewrites role-specific preview fields, coupling deletion behavior to denormalized projection repair."
+      ],
+      "suggestion": "Split messaging into explicit domain steps (attachment upload, message persist, projection/unread update) and centralize read-state policy in one hook/effect path per screen.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "projection_and_transport_coupled_in_ui_service"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "admin_web_pages_as_god_components",
+      "summary": "Admin web pages combine auth gating, realtime subscriptions, and multi-domain write commands in single components.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx",
+        "apps/admin/app/dashboard/page.tsx"
+      ],
+      "evidence": [
+        "`app/page.tsx` wires many independent snapshots (users, firms, statuses, auth requests, messages, appointments) and also performs profile updates, messaging, appointment CRUD, and account deletion.",
+        "`dashboard/candidates/[candidateId]/page.tsx` repeats direct Firestore orchestration for statuses, requests, messages, and appointments instead of delegating to a domain service layer.",
+        "Both files duplicate conversation bootstrap and appointment creation primitives that already exist in mobile services, creating parallel implementations."
+      ],
+      "suggestion": "Introduce admin domain services/hooks for candidate detail workflows and move Firestore orchestration out of page components; keep pages as composition/orchestration of smaller feature modules.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "ui_direct_firestore_orchestration"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "admin_identity_enforcement_split_paths",
+      "summary": "Admin identity enforcement logic is duplicated between a callable and a script with separate mutation paths.",
+      "related_files": [
+        "functions/src/callable/ensureZenithAdmin.ts",
+        "functions/src/scripts/enforceSingleAdmin.ts"
+      ],
+      "evidence": [
+        "Both files independently resolve the configured admin email, assign admin custom claims, normalize display name, and write role data into `users` docs.",
+        "The script additionally demotes other admins, while callable only promotes requester, resulting in two enforcement behaviors for the same policy area.",
+        "Policy-critical mutation logic is copied in two entry points instead of sharing one audited core function."
+      ],
+      "suggestion": "Extract shared admin-policy mutation helpers (promote/sync/demote) and call them from both script and callable so policy behavior stays consistent and testable.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "identity_policy_duplicated_entrypoints"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Role-based feature growth produced parallel implementations instead of shared domain primitives.",
+      "UI components are directly responsible for persistence orchestration, causing mixed concerns and duplicated workflows.",
+      "Policy logic in server functions/scripts evolved via copy-modify rather than centralized policy modules."
+    ],
+    "likely_symptoms": [
+      "appointment_flow_duplication",
+      "profile_form_logic_copied",
+      "service_role_forks_duplicate_core_logic"
+    ],
+    "possible_false_positives": []
+  }
+}

@@ -32,11 +32,15 @@ export async function updateCandidateProfile(
     mobile: string;
     preferredCities: string[];
     practiceArea: string;
+    dateOfBirth?: string;
+    jdDegreeDate?: string;
   }
 ) {
   await updateDoc(doc(db, "users", uid), {
     fullName: payload.fullName,
     mobile: payload.mobile,
+    dateOfBirth: payload.dateOfBirth || deleteField(),
+    jdDegreeDate: payload.jdDegreeDate || deleteField(),
     preferences: {
       preferredCities: payload.preferredCities,
       practiceArea: payload.practiceArea
@@ -56,18 +60,36 @@ export async function uploadCandidateProfilePhoto(
   const response = await fetch(file.uri);
   const blob = await response.blob();
 
-  const path = `profilePhotos/${uid}/avatar/${Date.now()}-${file.fileName}`;
-  const photoRef = ref(storage, path);
-  await uploadBytes(photoRef, blob, { contentType: file.mimeType });
+  const safeName = file.fileName.replace(/[^\w.-]+/g, "_");
+  const stampedName = `${Date.now()}-${safeName}`;
+  const primaryPath = `profilePhotos/${uid}/avatar/${stampedName}`;
+  const fallbackPath = `messageAttachments/${uid}/profile/${stampedName}`;
+
+  let savedPath = primaryPath;
+  let photoRef = ref(storage, primaryPath);
+
+  try {
+    await uploadBytes(photoRef, blob, { contentType: file.mimeType });
+  } catch (error: any) {
+    const code = String(error?.code ?? "");
+    if (code !== "storage/unauthorized") {
+      throw error;
+    }
+    // Backward-compatible fallback for projects still running older Storage rules.
+    savedPath = fallbackPath;
+    photoRef = ref(storage, fallbackPath);
+    await uploadBytes(photoRef, blob, { contentType: file.mimeType });
+  }
+
   const avatarUrl = await getDownloadURL(photoRef);
 
   await updateDoc(doc(db, "users", uid), {
     avatarUrl,
-    avatarPath: path,
+    avatarPath: savedPath,
     updatedAt: serverTimestamp()
   });
 
-  return { avatarUrl, avatarPath: path };
+  return { avatarUrl, avatarPath: savedPath };
 }
 
 export async function removeCandidateProfilePhoto(uid: string, avatarPath?: string) {

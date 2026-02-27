@@ -7,7 +7,7 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
-import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { arrayUnion, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "../lib/firebase";
 import { registerForPushNotificationsAsync } from "../lib/notifications";
@@ -30,6 +30,8 @@ type AuthContextValue = {
     mobile: string;
     preferredCities: string[];
     practiceArea: string;
+    dateOfBirth?: string;
+    jdDegreeDate?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -42,7 +44,6 @@ const zenithAdminEmail =
   (process.env.EXPO_PUBLIC_ZENITH_ADMIN_EMAIL ?? extra.zenithAdminEmail ?? "mason@zenithlegal.com")
     .trim()
     .toLowerCase();
-const zenithAdminName = "Zenith Legal";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -56,16 +57,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const userEmail = String(user.email ?? "").trim().toLowerCase();
+      let tokenResult = await user.getIdTokenResult().catch(() => null);
+      let roleFromClaim = String(tokenResult?.claims?.role ?? "").trim().toLowerCase();
+
+      if (userEmail === zenithAdminEmail && roleFromClaim !== "admin") {
+        try {
+          const ensureZenithAdmin = httpsCallable(functions, "ensureZenithAdminClaim");
+          await ensureZenithAdmin();
+          tokenResult = await user.getIdTokenResult(true).catch(() => tokenResult);
+          roleFromClaim = String(tokenResult?.claims?.role ?? "").trim().toLowerCase();
+        } catch {
+          // Keep session available even if callable fails.
+        }
+      }
+
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
-      const userEmail = String(user.email ?? "").trim().toLowerCase();
-      const isZenithAdmin = userEmail === zenithAdminEmail;
 
       if (!userDoc.exists()) {
+        const initialRole: "candidate" | "admin" = roleFromClaim === "admin" ? "admin" : "candidate";
         await setDoc(userRef, {
           uid: user.uid,
-          role: isZenithAdmin ? "admin" : "candidate",
-          fullName: isZenithAdmin ? zenithAdminName : "",
+          role: initialRole,
+          fullName: "",
           email: userEmail,
           mobile: user.phoneNumber ?? "",
           emailVerified: Boolean(user.emailVerified),
@@ -81,45 +96,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      if (isZenithAdmin) {
-        try {
-          const ensureZenithAdmin = httpsCallable(functions, "ensureZenithAdminClaim");
-          await ensureZenithAdmin();
-          await user.getIdToken(true);
-        } catch {
-          // Keep session available; dashboard guard will still validate claim access.
-        }
-      }
-
       const refreshed = await getDoc(userRef);
       const data = refreshed.data() as { role?: "candidate" | "admin"; fullName?: string } | undefined;
-      const tokenResult = await user.getIdTokenResult(true).catch(() => null);
-      const hasAdminClaim = tokenResult?.claims?.role === "admin";
-      const hasAdminDocRole = data?.role === "admin";
-      const shouldBeAdmin = isZenithAdmin && (hasAdminClaim || hasAdminDocRole);
+      const roleFromDoc = String(data?.role ?? "").trim().toLowerCase();
+      let sessionRole: "candidate" | "admin" =
+        roleFromClaim === "admin" || roleFromDoc === "admin" ? "admin" : "candidate";
 
-      if (isZenithAdmin && shouldBeAdmin && data?.role !== "admin") {
+      if (sessionRole === "admin" && data?.role !== "admin") {
         await setDoc(
           userRef,
           {
-            uid: user.uid,
-            email: zenithAdminEmail,
-            fullName: zenithAdminName,
             role: "admin",
             updatedAt: serverTimestamp()
           },
           { merge: true }
         ).catch(() => undefined);
-      }
-
-      const sessionRole: "candidate" | "admin" =
-        shouldBeAdmin ? "admin" : "candidate";
-
-      if (!isZenithAdmin && data?.role === "admin") {
-        await updateDoc(userRef, {
-          role: "candidate",
-          updatedAt: serverTimestamp()
-        }).catch(() => undefined);
       }
 
       setSession({
@@ -167,6 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fullName: input.fullName,
       email: input.email,
       mobile: input.mobile,
+      dateOfBirth: input.dateOfBirth || deleteField(),
+      jdDegreeDate: input.jdDegreeDate || deleteField(),
       preferences: {
         preferredCities: input.preferredCities,
         practiceArea: input.practiceArea

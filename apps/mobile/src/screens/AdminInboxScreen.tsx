@@ -103,10 +103,11 @@ export function AdminInboxScreen() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const activeRows = rows.filter((row) => Boolean(candidateDirectory[row.candidateId]));
     if (!term) {
-      return rows;
+      return activeRows;
     }
-    return rows.filter((row) => {
+    return activeRows.filter((row) => {
       const name = getDisplayName(row).toLowerCase();
       return name.includes(term);
     });
@@ -154,6 +155,7 @@ export function AdminInboxScreen() {
     <AppShell
       title="Chat"
       subtitle="Candidate direct messages"
+      showTopRightLogo={false}
       headerRight={(
         <Pressable style={styles.plusButton} onPress={() => navigation.navigate("NewConversation")}>
           <Ionicons name="add" size={18} color={theme.colors.primary} />

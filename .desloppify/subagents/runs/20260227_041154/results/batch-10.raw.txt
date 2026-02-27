@@ -1,0 +1,328 @@
+{
+  "batch": "Full Codebase Sweep",
+  "batch_index": 10,
+  "assessments": {
+    "cross_module_architecture": 74.0,
+    "convention_outlier": 82.0,
+    "error_consistency": 78.0,
+    "abstraction_fitness": 79.0,
+    "api_surface_coherence": 80.0,
+    "authorization_consistency": 76.0,
+    "ai_generated_debt": 87.0,
+    "incomplete_migration": 75.0,
+    "package_organization": 86.0,
+    "high_level_elegance": 86.0,
+    "mid_level_elegance": 86.0,
+    "low_level_elegance": 85.0,
+    "design_coherence": 73.0
+  },
+  "dimension_notes": {
+    "cross_module_architecture": {
+      "evidence": [
+        "Conversation metadata is written in client service `sendMessage` (`apps/mobile/src/services/messagingService.ts` lines 282-305) and also recomputed in backend trigger `syncConversationMetaOnMessageCreate` (`functions/src/triggers/conversationMeta.ts` lines 28-53).",
+        "The trigger has a special `metaHandledClient` branch (`functions/src/triggers/conversationMeta.ts` lines 26, 37-48), which confirms boundary overlap rather than single ownership."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    },
+    "convention_outlier": {
+      "evidence": [
+        "Date helper logic is duplicated with drift: `parseIsoDate(value: string)` in `ProfileSetupScreen` and `CandidateProfileScreen`, but `parseIsoDate(input?: string)` in `AdminCandidateDetailScreen`.",
+        "Formatting helper names diverge for same behavior (`formatDisplayDate` vs `formatShortDate`) across candidate/admin screens."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "error_consistency": {
+      "evidence": [
+        "Repeated silent swallow pattern (`.catch(() => undefined)` / `.catch(() => null)`) in auth and service paths (`apps/admin/src/lib/auth.ts` lines 90, 99, 101, 106, 121, 127, 128, 140; `apps/mobile/src/screens/MessagesScreen.tsx` lines 73, 80).",
+        "Different failure contracts are mixed in same subsystem: throw (`statusService`, `appointmentService`), null returns (`calendarService`, helper parsers), and ignore-and-continue paths."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "abstraction_fitness": {
+      "evidence": [
+        "Role-specific watchers are duplicated with identical logic (`watchCandidateStatuses` and `watchAdminCandidateStatuses` in `apps/mobile/src/services/statusService.ts` lines 47-81).",
+        "Appointment watcher APIs repeat near-identical snapshot mapping pipelines instead of one parameterized abstraction (`apps/mobile/src/services/appointmentService.ts` lines 44-106).",
+        "Parallel screen-level helpers (ISO date parse/format) indicate missed shared utility abstraction (`ProfileSetupScreen`, `CandidateProfileScreen`, `AdminCandidateDetailScreen`)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "sub_axes": {
+        "abstraction_leverage": 71.0,
+        "indirection_cost": 82.0,
+        "interface_honesty": 80.0
+      }
+    },
+    "api_surface_coherence": {
+      "evidence": [
+        "Runtime conversation fields used by messaging flows (`hiddenForAdmin`, `hiddenForCandidate`, per-viewer message preview fields) are not represented in shared `Conversation` type/schema (`packages/shared/src/types/domain.ts` lines 69-83, `packages/shared/src/schemas/index.ts` lines 93-107, vs `apps/mobile/src/services/messagingService.ts` lines 109-113 and 149-180).",
+        "Service boundaries rely heavily on `any[]`/`any` payloads (`watchMessages`, `watchAdminConversations`, `watchPendingAuthorizations`), creating inconsistent API strictness across adjacent services."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "authorization_consistency": {
+      "evidence": [
+        "`isAuthorizedAdmin` accepts either custom claim OR Firestore role doc (`apps/admin/src/lib/auth.ts` lines 101-110), while claim bootstrap failures are suppressed and flow continues (`lines 99, 127`).",
+        "Mobile auth context uses the same dual-source role derivation (`apps/mobile/src/state/AuthContext.tsx` uses `hasAdminClaim || hasAdminDocRole` and suppressed claim bootstrap errors).",
+        "Role-sensitive write APIs in client services are inconsistent about actor provenance requirements (some require explicit admin UID, others perform direct update/delete without actor context parameters)."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "medium"
+    },
+    "ai_generated_debt": {
+      "evidence": [
+        "There is repeated formulaic defensive casting (`as any`) and boilerplate error branches in service/screen code, but not at pervasive codebase-wide volume.",
+        "Most comments are purpose-oriented and not excessive; this keeps debt moderate rather than severe."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "medium",
+      "issues_preventing_higher_score": "Recurring formulaic `as any` and copy-paste helper/catch patterns still reduce signal-to-noise in core service modules."
+    },
+    "incomplete_migration": {
+      "evidence": [
+        "Legacy web admin flows under `apps/admin/app/app/page.tsx` and `apps/admin/app/dashboard/candidates/[candidateId]/page.tsx` still implement direct Firestore read/write orchestration that overlaps with newer mobile service layer behavior.",
+        "Auth bootstrap keeps strict callable plus fallback to legacy callable (`ensureZenithAdminClaim` then `setAdminRoleByEmail`) in `apps/admin/src/lib/auth.ts`, showing active dual-path migration residue."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    },
+    "package_organization": {
+      "evidence": [
+        "Objective structure shows high coupling concentration: `apps/mobile/src/screens/admin/ -> components` (9 edges) and `-> services` (8 edges), and `apps/mobile/src/screens/candidate/ -> services` (8 edges) from `holistic_context.structure.coupling_matrix`.",
+        "Directory profiles show large screen folders with heavy fan-out (`apps/mobile/src/screens/admin/` total_loc 1934, avg_fan_out 6.2; `apps/mobile/src/screens/candidate/` total_loc 1325, avg_fan_out 7.0), indicating pressure for finer sub-packaging."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "issues_preventing_higher_score": "Feature screens remain broad orchestration hubs; splitting screen-adjacent domain logic into `screens/*/hooks` and `screens/*/view-models` would improve navigability."
+    },
+    "high_level_elegance": {
+      "evidence": [
+        "Top-level separation by app (`admin`, `mobile`, `functions`, `shared`) is understandable, but overlapping ownership of conversation/admin logic across client and functions blurs subsystem boundaries.",
+        "Two admin UI surfaces (legacy web and mobile-native admin) both carry domain orchestration responsibilities."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "medium",
+      "issues_preventing_higher_score": "Domain ownership is not singular for core workflows (admin auth/conversation metadata), so decomposition is clear at root but blurred at runtime boundaries."
+    },
+    "mid_level_elegance": {
+      "evidence": [
+        "Integration seams are workable but noisy: screens often subscribe to multiple streams and manually map/normalize payloads inline (`AdminAppointmentRequestsScreen` lines 93-117).",
+        "Cross-layer handoff for messaging requires coordination flags (`metaHandledClient`) to avoid double-counting, indicating seam friction."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "medium",
+      "issues_preventing_higher_score": "Boundary translation and side-effect choreography are repeated in screens/services instead of being centralized in seam adapters."
+    },
+    "low_level_elegance": {
+      "evidence": [
+        "Many functions are direct and readable, but recurring inline mapping/sorting/error branches add local friction in large screens and services.",
+        "Several modules use repetitive small helper bodies and fallback branches that could be consolidated."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "medium"
+    },
+    "design_coherence": {
+      "evidence": [
+        "Single-screen files carry multiple responsibilities (subscriptions, filtering, modal flows, form state, CRUD mutations, calendar actions): `AdminAppointmentRequestsScreen.tsx` is 1074 LOC with many local state slices.",
+        "Large monolithic screens recur in both mobile and admin web (`MessagesScreen.tsx` 432 LOC, `CandidateAppointmentsScreen.tsx` 534 LOC, `apps/admin/app/app/page.tsx` 430 LOC, admin candidate detail web page 385 LOC).",
+        "This pattern aligns with prior structural findings and remains present in current code."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "conversation_meta_split_ownership",
+      "summary": "Conversation meta is owned by both client and trigger, creating boundary drift and reconciliation flags",
+      "related_files": [
+        "apps/mobile/src/services/messagingService.ts",
+        "functions/src/triggers/conversationMeta.ts",
+        "functions/src/triggers/appointmentRequestMessage.ts"
+      ],
+      "evidence": [
+        "`sendMessage` writes unread counters and last-message fields directly before writing the message document.",
+        "`syncConversationMetaOnMessageCreate` also rewrites last-message and unread counters for every message.",
+        "The `metaHandledClient` flag is required to suppress trigger-side increments, indicating duplicated ownership."
+      ],
+      "suggestion": "Pick one writer for conversation aggregates. Recommended: make triggers authoritative for all aggregate/meta fields, remove aggregate writes from `sendMessage`/`markConversationRead` except explicit read receipts, and keep client writes to raw message/read-intent only.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "authorization_consistency",
+      "identifier": "dual_source_admin_authorization",
+      "summary": "Admin access is granted from mixed claim/doc sources with silent bootstrap failures",
+      "related_files": [
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/state/AuthContext.tsx",
+        "functions/src/callable/ensureZenithAdmin.ts"
+      ],
+      "evidence": [
+        "`isAuthorizedAdmin` returns true when either custom claim OR Firestore `role=admin` is present.",
+        "Claim bootstrap errors are swallowed (`catch(() => undefined)`), then role checks continue.",
+        "Mobile auth context repeats claim/doc merging, so policy is duplicated across clients."
+      ],
+      "suggestion": "Standardize on one source of truth for admin authorization (custom claim). Treat Firestore role as display metadata only, fail closed on claim bootstrap failure, and centralize admin-role derivation in a shared auth utility used by both web and mobile.",
+      "confidence": "medium",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "silent_failure_pathways",
+      "summary": "Critical auth/data operations frequently swallow errors and continue with degraded state",
+      "related_files": [
+        "apps/admin/src/lib/auth.ts",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/services/userService.ts"
+      ],
+      "evidence": [
+        "Auth flows suppress callable/token/doc write errors with `.catch(() => undefined)` and continue.",
+        "Message read side effects are fired and silently ignored (`markConversationRead(...).catch(() => undefined)`), making delivery/read failures invisible.",
+        "Storage delete and other mutations often ignore failures, producing inconsistent post-conditions."
+      ],
+      "suggestion": "Adopt a single boundary error policy: either propagate typed errors to UI/retry handlers or log-and-surface an explicit degraded-state flag. Replace silent catches in auth/session paths with structured `Result`/error objects and central telemetry.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "distributed_domain_logic_without_single_owner"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "duplicated_role_specific_helpers",
+      "summary": "Role-specific and date helper logic is copy-pasted instead of parameterized/shared",
+      "related_files": [
+        "apps/mobile/src/services/statusService.ts",
+        "apps/mobile/src/services/appointmentService.ts",
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx"
+      ],
+      "evidence": [
+        "`watchCandidateStatuses` and `watchAdminCandidateStatuses` are structurally identical.",
+        "Multiple appointment watchers share near-identical snapshot wiring and mapping patterns.",
+        "ISO date parse/format helper sets are duplicated across profile-related screens."
+      ],
+      "suggestion": "Extract shared query/watch factories and shared date utility module (`src/utils/dates.ts`), then keep role-specific behavior as small parameters instead of duplicated functions.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "copy_paste_domain_utilities"
+    },
+    {
+      "dimension": "api_surface_coherence",
+      "identifier": "conversation_contract_drift",
+      "summary": "Shared conversation type/schema does not match runtime conversation document fields",
+      "related_files": [
+        "packages/shared/src/types/domain.ts",
+        "packages/shared/src/schemas/index.ts",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "Runtime code reads/writes `hiddenForAdmin`, `hiddenForCandidate`, and per-viewer preview fields.",
+        "Shared `Conversation` interface and `conversationSchema` omit these fields, so contract consumers cannot rely on a complete shape.",
+        "Service APIs then fall back to `any` data handling for conversation flows."
+      ],
+      "suggestion": "Either (a) extend shared `Conversation` types/schemas to include viewer-specific fields, or (b) split into `ConversationCore` + `ConversationViewerState` schema/types and update services to use typed parsing instead of `any`.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "shared_contract_not_kept_in_sync_with_runtime_shape"
+    },
+    {
+      "dimension": "convention_outlier",
+      "identifier": "date_helper_convention_drift",
+      "summary": "Equivalent date helpers use inconsistent names and signatures across sibling screens",
+      "related_files": [
+        "apps/mobile/src/screens/ProfileSetupScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateProfileScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx"
+      ],
+      "evidence": [
+        "Profile screens use `formatDisplayDate`, admin detail uses `formatShortDate` for same output intent.",
+        "Helper signatures differ (`value: string` vs `input?: string`) for equivalent parse path."
+      ],
+      "suggestion": "Standardize helper naming/signature via shared utility: `parseIsoDate(input?: string): Date | null` and `formatIsoDateDisplay(input?: string): string`, then replace per-screen variants.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "copy_paste_domain_utilities"
+    },
+    {
+      "dimension": "incomplete_migration",
+      "identifier": "legacy_web_admin_parallel_stack",
+      "summary": "Legacy Next admin pages still duplicate active domain workflows beside mobile stack",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "Web admin pages perform direct Firestore subscriptions and mutations for statuses/messages/appointments.",
+        "Mobile admin uses a separate service abstraction for the same domain workflows.",
+        "Auth bootstrap still contains strict+legacy callable fallback path, indicating migration not fully closed."
+      ],
+      "suggestion": "Run a staged migration closure: Stage 1 map web-admin-only capabilities; Stage 2 move shared logic to service modules consumed by both clients; Stage 3 remove `/app` legacy workflow and legacy callable fallback once parity is verified; Stage 4 delete dead code and enforce one admin surface.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "parallel_legacy_and_new_paths"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "screen_level_god_components",
+      "summary": "Several screen modules mix too many responsibilities, causing persistent change friction",
+      "related_files": [
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx",
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/admin/app/app/page.tsx"
+      ],
+      "evidence": [
+        "`AdminAppointmentRequestsScreen` combines subscription orchestration, filters/sorts, modal state machines, CRUD handlers, and calendar integration in one file.",
+        "Multiple large files remain monolithic (1074 LOC, 534 LOC, 432 LOC, 430 LOC), matching prior structural findings and still present.",
+        "Repeated giant component pattern appears in both mobile and web surfaces."
+      ],
+      "suggestion": "Refactor by responsibility slices: extract `useAppointmentsData`, `useAppointmentEditor`, and presentation components (`AppointmentList`, `AppointmentEditorModal`, `UnattendedPanel`), then enforce max component-size and hook-count thresholds in review checks.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "screen_orchestrators_without_view_model_layer"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "No single ownership boundary for conversation/admin domain state across client and backend.",
+      "Copy-paste implementation strategy for role/date/query helpers instead of shared utilities.",
+      "Migration strategy left parallel legacy/new paths active without hard deprecation gates."
+    ],
+    "likely_symptoms": [
+      "conversation_meta_split_ownership",
+      "silent_failure_pathways",
+      "date_helper_convention_drift"
+    ],
+    "possible_false_positives": []
+  }
+}

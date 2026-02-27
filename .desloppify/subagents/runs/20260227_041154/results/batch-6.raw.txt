@@ -1,0 +1,124 @@
+{
+  "batch": "Package Organization",
+  "batch_index": 6,
+  "assessments": {
+    "package_organization": 78.0,
+    "high_level_elegance": 74.0
+  },
+  "dimension_notes": {
+    "package_organization": {
+      "evidence": [
+        "holistic_context.structure shows a split screen layout (`apps/mobile/src/screens/` and `apps/mobile/src/screens/admin/`), but `AdminInboxScreen.tsx` (admin-only) is still placed in the shared root screens folder.",
+        "`apps/mobile/src/services/` is a flat folder with 8 files serving different domains (auth/account, admin directory, appointments, messaging), and `accountService.ts` has one importer while neighboring services are shared broadly, indicating weak placement cohesion.",
+        "coupling_matrix confirms heavy screen->services reliance (`apps/mobile/src/screens/admin/ -> services` = 8, `apps/mobile/src/screens/ -> services` = 5), but folder names do not expose clear domain seams for chat, profile/account, and appointments."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "high_level_elegance": {
+      "evidence": [
+        "`functions/src/triggers/appointmentCancelNotify.ts` handles multiple responsibilities (appointment status reaction, conversation/message projection, and external email dispatch) while sibling appointment triggers each handle narrower concerns.",
+        "Appointment behavior is split across mobile writes (`appointmentService.ts` status/actor fields) and backend trigger conditionals (`appointmentPush.ts`, `appointmentRequestExpiry.ts`, `appointmentCancelNotify.ts`) with duplicated implicit policy rules rather than one explicit lifecycle module.",
+        "This decomposition makes ownership of appointment side effects unclear: a new appointment event requires scanning multiple files to know which side effects happen."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "package_organization",
+      "identifier": "mixed_screen_partitioning",
+      "summary": "Screen placement mixes role-based and shared organization, leaving admin-only UI in a shared folder.",
+      "related_files": [
+        "apps/mobile/src/screens/AdminInboxScreen.tsx",
+        "apps/mobile/src/screens/AuthScreen.tsx",
+        "apps/mobile/src/screens/MessagesScreen.tsx"
+      ],
+      "evidence": [
+        "`AdminInboxScreen.tsx` is imported into the admin stack but sits in `src/screens/` instead of `src/screens/admin/`.",
+        "`AuthScreen.tsx` and `MessagesScreen.tsx` are in the same root folder despite different responsibility boundaries (auth entry vs chat thread UI).",
+        "The current placement obscures role ownership when navigating screen code."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/screens/chat/` and move `MessagesScreen.tsx` there; move `AdminInboxScreen.tsx` to `apps/mobile/src/screens/admin/`; keep `AuthScreen.tsx` in root auth entry area. (2) Move order: `git mv apps/mobile/src/screens/MessagesScreen.tsx apps/mobile/src/screens/chat/MessagesScreen.tsx` then `git mv apps/mobile/src/screens/AdminInboxScreen.tsx apps/mobile/src/screens/admin/AdminInboxScreen.tsx`. (3) Update imports in `RootNavigator.tsx` and any direct screen references using `rg -n \"screens/(AdminInboxScreen|MessagesScreen)\" apps/mobile/src`. (4) Validate with `npx tsc -p apps/mobile/tsconfig.json --noEmit`.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_mobile_feature_boundaries"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "flat_services_domain_mixing",
+      "summary": "A single flat services folder mixes multiple bounded contexts and includes straggler modules.",
+      "related_files": [
+        "apps/mobile/src/services/accountService.ts",
+        "apps/mobile/src/services/adminService.ts",
+        "apps/mobile/src/services/appointmentService.ts"
+      ],
+      "evidence": [
+        "`accountService.ts` contains a single callable wrapper and is imported by one profile screen, while other services are cross-screen infrastructure.",
+        "`adminService.ts` and `appointmentService.ts` are both widely consumed and domain-heavy, but stored alongside one-off account logic in the same directory.",
+        "Directory profile shows `apps/mobile/src/services/` has 8 files and is the main dependency target for all screen groups, indicating high centrality but low domain partitioning."
+      ],
+      "suggestion": "Staged reorg plan: (1) create domain subfolders: `services/account/`, `services/admin/`, `services/appointments/`, `services/messaging/`. (2) Move order: start with low-risk singleton `accountService.ts`, then `adminService.ts`, then `appointmentService.ts` so import churn is incremental. (3) Update imports with `rg -n \"services/(accountService|adminService|appointmentService)\" apps/mobile/src` and edit paths. (4) Validate each stage with `npx tsc -p apps/mobile/tsconfig.json --noEmit` and run app smoke navigation for profile/admin/appointment flows.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_mobile_feature_boundaries"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "appointment_trigger_responsibility_blur",
+      "summary": "Appointment cancellation trigger combines messaging projection and notification transport concerns in one module.",
+      "related_files": [
+        "functions/src/triggers/appointmentCancelNotify.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/appointmentRequestExpiry.ts"
+      ],
+      "evidence": [
+        "`appointmentCancelNotify.ts` formats domain text, writes conversation/message records, and calls external email API directly.",
+        "Sibling triggers (`appointmentPush.ts`, `appointmentRequestExpiry.ts`) are single-purpose handlers, creating an inconsistent decomposition standard inside the same trigger package.",
+        "This increases change risk because channel policy and conversation projection are coupled to one event handler."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `functions/src/appointments/` with submodules `lifecycle/`, `projections/`, and `notifications/`. (2) Move order: extract pure formatter first, then extract conversation projection writer, then extract email sender adapter; finally make `appointmentCancelNotify.ts` orchestrate only. (3) Update imports via `rg -n \"appointmentCancelNotify|appointmentPush|appointmentRequestExpiry\" functions/src`. (4) Validate with `npx tsc -p functions/tsconfig.json --noEmit` and emulator test for cancel/request-expiry/admin-update events.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_appointment_lifecycle_policy"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "implicit_cross_layer_appointment_policy",
+      "summary": "Appointment lifecycle rules are implicitly duplicated across mobile writes and backend trigger filters.",
+      "related_files": [
+        "apps/mobile/src/services/appointmentService.ts",
+        "functions/src/triggers/appointmentPush.ts",
+        "functions/src/triggers/appointmentCancelNotify.ts"
+      ],
+      "evidence": [
+        "Mobile writes fields like `status`, `updatedByRole`, `startsAt`, and triggers rely on these exact values for side-effect gating.",
+        "No shared policy module defines lifecycle transitions or side-effect matrix, so behavior is inferred from scattered conditionals.",
+        "This makes ownership and onboarding harder: top-level design is event-coupled but not explicitly modeled."
+      ],
+      "suggestion": "Staged reorg plan: (1) introduce shared appointment lifecycle contract in `packages/shared/src` (status transitions + side-effect intents). (2) Move order: define constants/types first, update `appointmentService.ts` to use them, then update trigger guards to consume the same contract. (3) Update imports with `rg -n \"updatedByRole|status === \\\"requested\\\"|status !== \\\"canceled\\\"\" apps/mobile/src functions/src`. (4) Validate with `npx tsc -p apps/mobile/tsconfig.json --noEmit && npx tsc -p functions/tsconfig.json --noEmit` and run appointment flow smoke tests.",
+      "confidence": "medium",
+      "impact_scope": "codebase",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "implicit_appointment_lifecycle_policy"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Feature boundaries are encoded by file names and conditionals instead of explicit domain folders/modules.",
+      "Appointment side-effect policy is distributed across handlers without a single lifecycle contract."
+    ],
+    "likely_symptoms": [
+      "mixed_screen_partitioning",
+      "flat_services_domain_mixing",
+      "appointment_trigger_responsibility_blur"
+    ],
+    "possible_false_positives": []
+  }
+}

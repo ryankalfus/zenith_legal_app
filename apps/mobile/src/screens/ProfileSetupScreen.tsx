@@ -1,24 +1,61 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "../components/Avatar";
 import { CandidateContactBar } from "../components/AppShell";
 import { uploadCandidateProfilePhoto } from "../services/userService";
 import { useAuth } from "../state/AuthContext";
+import { openProfilePhotoSourcePicker, ProfilePhotoFile } from "../utils/profilePhotoSourcePicker";
+
+function isIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime());
+}
+
+function formatIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseIsoDate(value: string) {
+  if (!isIsoDate(value)) {
+    return null;
+  }
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDisplayDate(value: string) {
+  const parsed = parseIsoDate(value);
+  if (!parsed) {
+    return "Not set";
+  }
+  return parsed.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
 
 export function ProfileSetupScreen() {
   const { session, completeProfile } = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(session?.user.email ?? "");
   const [mobile, setMobile] = useState(session?.user.phoneNumber ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [jdDegreeDate, setJdDegreeDate] = useState("");
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
-  const [photoFile, setPhotoFile] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
+  const [photoFile, setPhotoFile] = useState<ProfilePhotoFile | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeDatePicker, setActiveDatePicker] = useState<"dob" | "jd" | null>(null);
 
-  const isValid = useMemo(() => fullName.trim().length > 0 && email.trim().length > 0, [fullName, email]);
+  const isValid = useMemo(() => {
+    return fullName.trim().length > 0 && email.trim().length > 0 && isIsoDate(dateOfBirth.trim());
+  }, [dateOfBirth, email, fullName]);
 
   const toggleCity = (city: string) => {
     setPreferredCities((prev) =>
@@ -31,12 +68,35 @@ export function ProfileSetupScreen() {
       return;
     }
 
+    if (!fullName.trim()) {
+      Alert.alert("Display name required", "Please enter your display name.");
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert("Email required", "Please enter your email.");
+      return;
+    }
+    if (!dateOfBirth.trim()) {
+      Alert.alert("Date of birth required", "Please select your date of birth.");
+      return;
+    }
+    if (!isIsoDate(dateOfBirth.trim())) {
+      Alert.alert("Invalid date of birth", "Use YYYY-MM-DD format.");
+      return;
+    }
+    if (jdDegreeDate.trim() && !isIsoDate(jdDegreeDate.trim())) {
+      Alert.alert("Invalid JD date", "Use YYYY-MM-DD format.");
+      return;
+    }
+
     try {
       setSaving(true);
       await completeProfile({
         fullName,
         email,
         mobile,
+        dateOfBirth: dateOfBirth.trim() || undefined,
+        jdDegreeDate: jdDegreeDate.trim() || undefined,
         preferredCities,
         practiceArea
       });
@@ -50,21 +110,29 @@ export function ProfileSetupScreen() {
     }
   };
 
-  const onPickPhoto = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: "image/*"
-    });
-    if (result.canceled || !result.assets[0]) {
+  const onPickPhoto = () => {
+    openProfilePhotoSourcePicker(
+      (selectedPhoto) => {
+        setPhotoFile(selectedPhoto);
+      },
+      (error) => {
+        Alert.alert("Could not choose photo", error?.message ?? "Try again.");
+      }
+    );
+  };
+
+  const onDobChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!selectedDate) {
       return;
     }
-    const asset = result.assets[0];
-    setPhotoFile({
-      uri: asset.uri,
-      mimeType: asset.mimeType ?? "image/jpeg",
-      fileName: asset.name ?? "profile-photo.jpg"
-    });
+    setDateOfBirth(formatIsoDate(selectedDate));
+  };
+
+  const onJdChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!selectedDate) {
+      return;
+    }
+    setJdDegreeDate(formatIsoDate(selectedDate));
   };
 
   return (
@@ -96,6 +164,51 @@ export function ProfileSetupScreen() {
 
         <Text style={styles.label}>Mobile</Text>
         <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
+
+        <Text style={styles.label}>Date of birth</Text>
+        <Pressable
+          style={[styles.pickButton, activeDatePicker === "dob" && styles.pickButtonActive]}
+          onPress={() => setActiveDatePicker((current) => (current === "dob" ? null : "dob"))}
+        >
+          <Text style={styles.pickLabel}>Date of birth</Text>
+          <Text style={styles.pickValue}>{formatDisplayDate(dateOfBirth)}</Text>
+        </Pressable>
+        {activeDatePicker === "dob" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={parseIsoDate(dateOfBirth) ?? new Date(1998, 0, 1)}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "spinner"}
+              onChange={onDobChange}
+            />
+          </View>
+        ) : null}
+
+        <Text style={styles.label}>JD (Law) degree date (optional)</Text>
+        <View style={styles.optionalPickerRow}>
+          <Pressable
+            style={[styles.pickButton, styles.optionalPickerMain, activeDatePicker === "jd" && styles.pickButtonActive]}
+            onPress={() => setActiveDatePicker((current) => (current === "jd" ? null : "jd"))}
+          >
+            <Text style={styles.pickLabel}>JD degree date</Text>
+            <Text style={styles.pickValue}>{formatDisplayDate(jdDegreeDate)}</Text>
+          </Pressable>
+          {jdDegreeDate ? (
+            <Pressable style={styles.clearButton} onPress={() => setJdDegreeDate("")}>
+              <Text style={styles.clearButtonText}>Clear</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {activeDatePicker === "jd" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={parseIsoDate(jdDegreeDate) ?? new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "spinner"}
+              onChange={onJdChange}
+            />
+          </View>
+        ) : null}
 
         <Text style={styles.label}>Preferred cities</Text>
         <View style={styles.wrap}>
@@ -166,6 +279,55 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     backgroundColor: "white"
+  },
+  optionalPickerRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "stretch"
+  },
+  optionalPickerMain: {
+    flex: 1
+  },
+  pickButton: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    gap: 3
+  },
+  pickButtonActive: {
+    borderColor: "#1d4ed8",
+    backgroundColor: "#dbeafe"
+  },
+  pickLabel: {
+    color: "#4b5563",
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  pickValue: {
+    color: "#1f2a3c",
+    fontWeight: "700"
+  },
+  inlinePickerWrap: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    overflow: "hidden"
+  },
+  clearButton: {
+    borderWidth: 1,
+    borderColor: "#f1b6b6",
+    borderRadius: 10,
+    backgroundColor: "#fff3f3",
+    paddingHorizontal: 12,
+    justifyContent: "center"
+  },
+  clearButtonText: {
+    color: "#dc2626",
+    fontWeight: "700"
   },
   wrap: {
     flexDirection: "row",

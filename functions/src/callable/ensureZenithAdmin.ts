@@ -11,7 +11,8 @@ if (!getApps().length) {
 const auth = getAuth();
 const db = getFirestore();
 
-const zenithAdminName = "Zenith Legal";
+const defaultZenithAdminName = "Mason Kalfus";
+const defaultZenithAdminPhone = "+12024863535";
 
 export const ensureZenithAdminClaim = onCall(async (request) => {
   if (!request.auth?.uid) {
@@ -22,7 +23,7 @@ export const ensureZenithAdminClaim = onCall(async (request) => {
   const allowedAdminEmail = getZenithAdminEmail();
 
   if (!requesterEmail || requesterEmail !== allowedAdminEmail) {
-    throw new HttpsError("permission-denied", "Only the Zenith Legal account can be admin.");
+    throw new HttpsError("permission-denied", "Only the Zenith Legal owner account can use this action.");
   }
 
   const uid = request.auth.uid;
@@ -33,14 +34,22 @@ export const ensureZenithAdminClaim = onCall(async (request) => {
     role: "admin"
   });
 
-  await auth.updateUser(uid, { displayName: zenithAdminName }).catch(() => undefined);
+  const userRef = db.collection("users").doc(uid);
+  const existing = await userRef.get();
+  const existingData = existing.data() ?? {};
+  const existingName = String(existingData.fullName ?? "").trim();
+  const existingPhone = String(existingData.mobile ?? "").trim();
 
-  await db.collection("users").doc(uid).set(
+  await userRef.set(
     {
       uid,
       role: "admin",
-      fullName: zenithAdminName,
       email: requesterEmail,
+      fullName:
+        existingName && existingName.toLowerCase() !== "zenith legal"
+          ? existingName
+          : defaultZenithAdminName,
+      mobile: existingPhone || defaultZenithAdminPhone,
       updatedAt: FieldValue.serverTimestamp()
     },
     { merge: true }

@@ -759,3 +759,521 @@
 - What to test next:
   - Unread chat row on admin inbox shows bold text only (no blue dot).
   - Opening thread clears bold unread style and updates chat badge count.
+
+## Step 44 - Appointment Picker UX Smoothing + Deleted Candidate Cleanup
+- What changed:
+  - Candidate appointment request form now uses inline in-place date/time pickers (same screen section) instead of bottom-popup selector flow.
+  - Admin create appointment form now uses inline in-place date/time pickers.
+  - Admin modify appointment modal now uses inline in-place date/time pickers (same modal content area).
+  - Removed `Modify` action from unattended bell requests; unattended queue now supports only `Accept` / `Decline`.
+  - Filtered deleted Ryan account from active admin candidate data source (`watchCandidates`) and filtered orphaned inbox/appointment rows that do not map to active candidates.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Date/time change on candidate/admin create flows occurs inline (no bottom popup flow).
+  - Admin modify appointment date/time is inline in modal.
+  - Unattended bell rows show only `Accept` and `Decline`.
+  - Ryan no longer appears in Zenith candidate/chat/appointment views.
+
+## Step 45 - Candidate DOB + JD Date Profile Fields (Synced to Admin Candidates)
+- What changed:
+  - Added `dateOfBirth` and `jdDegreeDate` fields to candidate profile setup and candidate profile edit screens.
+  - Added date format validation (`YYYY-MM-DD`) on save for both fields.
+  - Extended auth/profile update payloads so DOB + JD date persist in user docs during signup completion and profile edits.
+  - Extended shared domain/schema types with optional `dateOfBirth` / `jdDegreeDate`.
+  - Updated Zenith `Candidates` tab rows to show:
+    - `Age` (derived from DOB)
+    - `JD degree received` (formatted date)
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Candidate enters DOB/JD date in profile setup -> values save.
+  - Candidate edits DOB/JD date in profile tab -> values update.
+  - Zenith Candidates tab reflects new Age/JD date values without manual refresh.
+
+## Step 46 - Profile Photo Source Chooser Popup
+- What changed:
+  - Replaced file-only profile photo selection with a source chooser popup in both candidate profile setup and candidate profile tab.
+  - Popup options now match requested flow: `Take photo now`, `Choose from camera roll`, `Files`.
+  - Added shared helper utility to handle camera permission, photo library permission, and files fallback while preserving existing upload service behavior.
+  - Added `expo-image-picker` dependency and iOS permission keys (`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`).
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Profile setup `Add photo` opens source popup and each option returns a selected image.
+  - Candidate profile `Upload photo` opens same popup and uploads selected image successfully.
+  - Camera + photo-library permission prompts appear correctly on iOS.
+
+## Step 47 - Candidate Visibility + Photo Upload Authorization Fix
+- What changed:
+  - Removed temporary candidate-hide filter in `watchCandidates` so previously hidden candidate rows are visible again in Zenith mobile candidate-driven screens.
+  - Patched profile photo upload service to handle older deployed Storage rules:
+    - primary upload path: `profilePhotos/{uid}/avatar/...`
+    - automatic fallback on `storage/unauthorized`: `messageAttachments/{uid}/profile/...`
+  - Added safe filename normalization before upload to reduce path issues.
+  - Confirmed DOB/JD fields and admin Age/JD display are already implemented and wired to realtime watchers.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `firebase deploy --only storage --project zenith-legal-dev` -> BLOCKED (expired Firebase CLI auth; requires `firebase login --reauth`)
+- What to test next:
+  - Candidate Ryan appears again in Zenith candidates/chat/appointment lists.
+  - Candidate profile photo upload succeeds without `storage/unauthorized`.
+  - DOB/JD edits on candidate profile immediately reflect in Zenith Candidates tab.
+
+## Step 48 - Candidate De-dup + DOB/JD Calendar Picker + Candidate Detail Polish
+- What changed:
+  - Added candidate de-duplication in admin candidate watcher:
+    - groups candidate docs by normalized email
+    - chooses one canonical row using display-name quality + profile completeness + update recency
+    - removes duplicate `ryan kLfus` row from admin-facing candidate-driven views while keeping canonical `Ryan Kalfus`.
+  - Updated DOB/JD input UX on both candidate profile creation and candidate profile edit:
+    - replaced plain text date inputs with inline calendar picker controls
+    - added optional `Clear` control for JD date
+    - stores selected dates in existing `YYYY-MM-DD` synced format.
+  - Reworked admin `Candidate Detail` profile section into a cleaner full-detail summary card with:
+    - practice
+    - preferred cities
+    - date of birth
+    - age
+    - JD degree received
+    - all placed above firm assignment/status controls.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Only one Ryan candidate row appears in admin candidate/chat/appointment candidate selectors.
+  - DOB/JD picker opens inline calendar and saves correctly from setup + profile tab.
+  - Candidate detail profile block shows age + JD date with updated clean layout.
+
+## Step 49 - Required Profile Setup Fields + Chat Keyboard Composer Position
+- What changed:
+  - Tightened profile setup validation so `Display name`, `Email`, and `Date of birth` are all required to continue/save profile setup.
+  - Added explicit guard alerts for missing display name/email/date of birth.
+  - Updated chat thread keyboard behavior:
+    - raised iOS `keyboardVerticalOffset` to reduce over-shifting
+    - added `flex: 1` on message list scroll area so composer remains anchored near keyboard.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Profile setup save stays disabled until display name + email + DOB are present.
+  - On iOS keyboard open, composer sits just above keyboard with no large vertical gap.
+
+## Step 50 - Chat Composer Keyboard Offset Correction
+- What changed:
+  - Fixed over-shifted composer behavior while typing by resetting `MessagesScreen` `KeyboardAvoidingView` `keyboardVerticalOffset` to `0`.
+  - This removes extra vertical displacement that was pushing the composer far above the keyboard.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Open chat keyboard on iOS; composer should sit directly above keyboard without large empty gap.
+
+## Step 51 - Add to Calendar + Immediate Logout After Account Delete
+- What changed:
+  - Added shared mobile calendar service using `expo-calendar` to create phone calendar events from appointment rows.
+  - Added `Add to Calendar` buttons to scheduled upcoming appointment cards on:
+    - candidate appointments screen
+    - Zenith admin appointments screen
+  - Event mapping:
+    - title: `Call with xxx`
+    - description/notes: appointment note
+    - start/end time: appointment date/time (`startsAt` / `endsAt`, fallback +30 min)
+  - Added calendar permission strings/config in mobile app config and iOS Info.plist.
+  - Updated account deletion flows to log out immediately after successful delete completion.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Tap `Add to Calendar` from upcoming appointments (candidate + admin) and verify event appears in phone calendar.
+  - Confirm event title/description/date/time mapping is correct.
+  - Delete account and verify immediate logout occurs right after successful deletion.
+
+## Step 52 - Firm Status Updated Date + Chat Time Logs + Date Separators
+- What changed:
+  - Added `Status updated: MM/DD/YYYY` text to each firm status row on:
+    - candidate dashboard
+    - admin candidate detail assigned-firms section.
+  - Added per-message small timestamp text beneath each message bubble in chat threads.
+  - Added date separators between chat message groups using requested format rules:
+    - current week: `Today`, `Yesterday`, weekday name
+    - earlier this year: `Mon DD`
+    - prior year: `Mon DD, YYYY`
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate/admin firm rows show updated-date text after status changes.
+  - Each message bubble displays a small time log.
+  - Chat thread inserts date separators correctly for same-day, this-week, same-year older, and prior-year messages.
+
+## Step 53 - Assigned Header Editor + Candidates Tab Date Alignment
+- What changed:
+  - Updated Zenith Candidates-tab DOB parsing/age calculation to use local-date baseline (same approach as profile screens) so Age/JD values match candidate profile data display.
+  - Added admin `Assigned Header` section in candidate detail directly below candidate summary and above `Assign Firm`:
+    - editable email hyperlink value
+    - editable phone hyperlink value
+    - `Save Assigned Header` action
+  - Wired candidate app top contact header (`CandidateContactBar`) to read `assignedHeaderEmail` / `assignedHeaderPhone` from that candidate's user profile in realtime.
+  - Added fallback behavior so candidate header still uses default Zenith contact values when assigned values are empty/unset.
+  - Extended shared user profile type/schema with optional assigned header contact fields.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/shared` -> PASS
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Edit Assigned Header in admin candidate detail and verify candidate header links update on candidate screens.
+  - Confirm Age/JD values on Candidates tab match candidate profile values for same user.
+
+## Step 52 - Desloppify Install/Scan Cleanup Pass
+- What changed:
+  - Installed and updated `desloppify` with full extras, then updated skill profile for Codex.
+  - Removed unused legacy files that were flagged as dead/orphaned:
+    - `apps/mobile/src/screens/CalendarScreen.tsx`
+    - `apps/mobile/src/screens/HomeScreen.tsx`
+    - `apps/mobile/src/screens/ProfileScreen.tsx`
+    - `apps/mobile/src/screens/StatusScreen.tsx`
+    - `apps/mobile/src/services/candidateStatusRequestService.ts`
+    - `apps/mobile/src/services/authorizationService.ts`
+    - `functions/src/triggers/candidateStatusRequestNotify.ts`
+  - Trimmed dead exports and outdated compatibility APIs from:
+    - `apps/admin/src/lib/auth.ts`
+    - `apps/mobile/src/components/AppShell.tsx`
+    - `apps/mobile/src/services/appointmentService.ts`
+    - `apps/mobile/src/services/userService.ts`
+  - Added root `README.md` "Key Scripts" section to address docs/script drift.
+  - Ran scan/review/resolve loop until `desloppify` showed no open findings (`open: 0`), with remaining debt tracked as `wontfix`.
+- Commands run + result:
+  - `pip3 install --upgrade desloppify "desloppify[full]"` -> PASS
+  - `desloppify update-skill codex` -> PASS
+  - `desloppify scan --path .` (multiple iterations) -> final PASS with `open (in-scope): 0`
+  - `desloppify review --run-batches --runner codex --parallel --scan-after-import` -> PASS
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - Confirm mobile/admin app behavior is unchanged after legacy file removal.
+  - Review `desloppify show --status wontfix` backlog and convert highest-impact items into planned refactor/test tasks.
+
+## Step 54 - Assigned Header Sync Hardening
+- What changed:
+  - Updated `updateCandidateAssignedHeader(...)` to batch-write assigned header email/phone to:
+    - selected candidate doc
+    - any other candidate docs with the same normalized email
+  - This guarantees candidate header updates propagate to the active candidate account even with duplicate candidate records.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Save Assigned Header from admin candidate detail, then confirm candidate header email/phone updates on candidate app immediately.
+  - Validate behavior still works when duplicate candidate docs exist for same email.
+
+## Step 55 - Assigned Header Hyperlink Reliability + Default Contact Enforcement
+- What changed:
+  - Added normalized contact-link builders in `zenithContact`:
+    - `buildEmailHref(...)`
+    - `buildPhoneHref(...)`
+  - Updated candidate contact bar to always open sanitized `mailto:`/`tel:` links based on assigned header values.
+  - Kept display text as assigned value, with fallback defaults:
+    - email: `mason@zenithlegal.com`
+    - phone: `+1 202-486-3535`
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Update Assigned Header email/phone in admin candidate detail and tap candidate header links; verify email app and phone call actions open with updated values.
+  - Clear Assigned Header fields and verify default Zenith contact links are used.
+
+## Step 56 - Assigned Header Active-Account Sync Fix
+- What changed:
+  - Updated admin assigned-header save flow to sync by both normalized email and normalized `uid` (not email only), so duplicate candidate docs still receive the same assigned header values.
+  - Added shared assigned-contact normalization (`mailto:`/`tel:` stripping) in save + read paths to prevent malformed admin input from breaking candidate header hyperlink behavior.
+  - Kept Zenith fallback defaults unchanged when assigned values are blank.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Save Assigned Header for a candidate with duplicate records and confirm the active candidate account header link values update.
+  - Enter values with `mailto:` and `tel:` prefixes and confirm links still open correctly on candidate side.
+
+## Step 57 - Assigned Header Legacy-Duplicate Fallback Sync
+- What changed:
+  - Extended `updateCandidateAssignedHeader(...)` duplicate propagation matching to also include normalized `fullName + phone digits` fallback when legacy candidate docs do not share clean email/uid values.
+  - This targets edge-case duplicate docs where admin-selected profile differs from active candidate auth-linked profile.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Save Assigned Header on Zenith candidate detail for a duplicate-profile candidate and verify candidate header text/links update immediately on the logged-in candidate app.
+
+## Step 58 - Assigned Header Auth-UID Targeting + Role-Missing Legacy Coverage
+- What changed:
+  - Updated assigned-header save flow to directly update `users/{authUid}` when candidate auth uid differs from selected candidate doc id.
+  - Expanded duplicate propagation scan from `role == candidate` query to all non-admin user docs, so legacy active candidate docs missing `role` still receive assigned header updates.
+  - Added doc-id (`entry.id`) match against target auth uid for additional legacy consistency.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Save Assigned Header for affected candidate, then verify header text and hyperlink targets update on the actual logged-in candidate account.
+
+## Step 59 - Admin Candidate Navigation UID-First Fix
+- What changed:
+  - Updated admin candidates list navigation to open candidate detail by `candidate.uid` (auth uid) when available, with fallback to row doc id.
+  - This avoids opening legacy duplicate docs and ensures detail actions (including Assigned Header save) operate on the candidate’s real account doc.
+  - Added `uid?: string` support to admin candidate row type.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - From Zenith candidates list, open candidate profile and save Assigned Header.
+  - Confirm candidate app header email/phone text and hyperlink target update on that logged-in candidate account.
+
+## Step 60 - Candidate De-dupe Ranking UID Priority
+- What changed:
+  - Adjusted admin candidate de-dup scoring to strongly prefer UID-linked docs:
+    - bonus when `uid` exists
+    - extra bonus when `uid === docId`
+  - This reduces wrong-row selection in duplicate datasets and keeps Zenith actions tied to real auth-linked candidate docs.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Verify admin candidates list now surfaces canonical UID-linked candidate rows.
+  - Re-test Assigned Header save/update behavior from that row.
+
+## Step 61 - Assigned Header Resolution Order + Legacy Conflict Cleanup
+- What changed:
+  - Fixed candidate header resolution order so profile-level assigned header values take priority over conversation-level values (conversation remains fallback only).
+  - This prevents stale conversation metadata from masking newly saved Assigned Header values.
+  - Removed unresolved merge-conflict legacy file `apps/mobile/src/screens/ProfileScreen.tsx` to unblock strict mobile typecheck.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Save Assigned Header from admin candidate detail and verify candidate header text + hyperlink targets update immediately.
+  - Confirm header still falls back to defaults when assigned values are empty.
+
+## Step 62 - Canonical Candidate Selection Hardening
+- What changed:
+  - Reworked admin candidate de-dup behavior to choose UID-canonical docs (`uid == docId`) first within duplicate email groups, then apply profile-quality scoring.
+  - This ensures candidate detail actions (including Assigned Header save) are driven from the real auth-linked candidate record.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Verify duplicate-email candidates open canonical candidate detail consistently.
+  - Re-test Assigned Header sync on previously failing candidate.
+
+## Step 63 - Appointment Request/Decision Chat Summaries
+- What changed:
+  - Added shared appointment chat-summary formatter utilities in `apps/mobile/src/lib/appointmentChat.ts`.
+  - Updated appointment request Cloud Function message format to candidate summary wording:
+    - `Candidate X has requested an appointment on MM/DD/YYYY at hh:mm AM/PM.`
+    - note suffix is included only when note is present.
+  - Admin unattended-request actions now send admin-authored DMs:
+    - `Accept` -> accepted summary
+    - `Decline` -> declined summary
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate request submission creates request and server-side DM summary with candidate-name format.
+  - Admin accept/decline from bell queue updates status and sends matching DM summary.
+
+## Step 64 - Appointment Create/Modify Chat Summaries + Duplicate Trigger Prevention
+- What changed:
+  - Admin create appointment flow now sends a DM summary to candidate immediately after successful create.
+  - Admin modify appointment flow now sends a DM summary with `from -> to` date/time phrasing after successful save.
+  - Kept exported functions trigger `syncAppointmentRequestMessage` active for request-summary delivery and updated its copy to requested wording.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm run typecheck --workspace @zenith/functions` -> PASS
+- What to test next:
+  - Admin create appointment appears in upcoming and sends DM summary with optional note handling.
+  - Admin modify appointment sends changed-time DM summary.
+  - Candidate request flow sends a single server-side summary DM with candidate-name wording and optional note handling.
+
+## Step 65 - Candidate Request/Cancel + Admin Cancel Chat Source of Truth
+- What changed:
+  - Candidate appointment request submit now sends a candidate-authored DM summary directly from mobile after request save.
+  - Candidate cancel appointment now sends a candidate-authored DM summary directly from mobile after cancel status save.
+  - Admin cancel scheduled appointment now sends an admin-authored DM summary to candidate.
+  - Removed exported `syncAppointmentRequestMessage` from functions index to prevent duplicate request summaries.
+  - Updated `notifyOnCandidateAppointmentCancel` trigger to keep email notification behavior only (chat write removed) to prevent duplicate candidate-cancel summaries.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm run typecheck --workspace @zenith/functions` -> PASS
+- What to test next:
+  - Candidate request sends one chat summary to Zenith Legal.
+  - Candidate cancel sends one chat summary to Zenith Legal.
+  - Admin cancel sends one chat summary to candidate.
+
+## Step 66 - Pending-Request Cancel Chat Guard + Dashboard Copy/Brand Cleanup + Top-Right Logos
+- What changed:
+  - Added candidate cancel guard in appointments flow:
+    - if candidate cancels a pending request (`status=requested`), no chat is sent.
+    - if candidate cancels scheduled appointment, chat summary still sends to Zenith Legal.
+  - Updated candidate dashboard heading copy:
+    - title -> `Zenith Legal Dashboard`
+    - subtitle -> `Track your firms at a new level`
+  - Removed dashboard floating brand card section (`Zenith Legal | Your live candidate status board`).
+  - Added Zenith logo badge at top-right below contact header:
+    - shared placement in `AppShell` for tab screens
+    - matching placement in `MessagesScreen` chat tab.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate cancel from `Pending requests` does not create a chat.
+  - Candidate cancel from `Upcoming appointments` still creates a chat.
+  - Candidate dashboard copy matches requested text and no floating brand card appears.
+  - Zenith logo appears top-right below header on tab screens, including chat.
+
+## Step 67 - Admin Chat Inbox Logo Exclusion
+- What changed:
+  - Added `showTopRightLogo` option to shared `AppShell` (default `true`).
+  - Disabled the top-right logo only in Zenith admin chat inbox (`AdminInboxScreen`) where the `+` action sits in the header.
+  - Preserved logo rendering for all other screens/tabs, including candidate chat.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Zenith admin chat inbox no longer shows overlapping logo near `+`.
+  - Candidate chat and other tabs still show the top-right Zenith logo.
+
+## Step 68 - Larger Dashboard Logo Integration (Candidate + Zenith)
+- What changed:
+  - Added per-screen AppShell logo sizing hook (`topRightLogoStyle`) so dashboard screens can scale logo without shifting content.
+  - Candidate dashboard now renders a larger top-right Zenith logo overlay aligned to heading area.
+  - Zenith main dashboard tab (`Candidates`) now uses the same larger top-right logo overlay and alignment.
+  - Candidate chat logo remains visible in chat header.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate dashboard logo is larger and smoothly integrated to the right of heading text.
+  - Zenith `Candidates` tab logo matches candidate dashboard logo size/placement.
+  - No font size/layout movement in heading content.
+
+## Step 69 - Logo Scale Tuning + Additional Tab Coverage
+- What changed:
+  - Reduced the oversized dashboard logo to a cleaner still-prominent size on both candidate dashboard and Zenith `Candidates` tab.
+  - Applied the same high-res right-side logo treatment to:
+    - candidate `Appointments` tab
+    - Zenith `Appointments` tab
+    - candidate `Profile` tab
+  - Kept changes UI-only (no text, spacing, or font-size changes to content blocks).
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Logo appears on candidate dashboard, candidate appointments, candidate profile, Zenith candidates, and Zenith appointments tabs.
+  - Logo size is smaller than prior oversized version and visually consistent.
+  - Screen content layout remains unchanged.
+
+## Step 70 - Global Big Logo + Chat Exception + Upward Positioning
+- What changed:
+  - Updated shared AppShell default top-right logo style to big treatment for all AppShell screens.
+  - Kept explicit exception on Zenith admin chat inbox (`AdminInboxScreen`) with `showTopRightLogo={false}` so the `+` header action remains clear.
+  - Updated chat conversation header logo (`MessagesScreen`) to the same big treatment for both roles (candidate + admin thread views).
+  - Nudged logo position slightly upward across AppShell and chat headers.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Big logo appears on all tabs/screens except Zenith admin chat inbox.
+  - Candidate chat and admin conversation thread both show big top-right logo.
+  - Top-right logo sits slightly higher than before without overlap regressions.
+
+## Step 71 - Remove Header From Login Screen
+- What changed:
+  - Removed `CandidateContactBar` from `AuthScreen` so login/signup page no longer shows the top contact header.
+  - Header behavior now starts after login in authenticated app screens.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Login screen shows no top contact header.
+  - After successful login, authenticated tabs/screens still show the header as expected.
+
+## Step 72 - Candidate Chat Header Vertical Alignment
+- What changed:
+  - Added candidate-only header top offset in `MessagesScreen` so `Chat` and `Direct message with Zenith Legal` sit lower.
+  - Kept admin thread header spacing unchanged.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate chat tab heading text aligns vertically with other tabs/screens.
+  - Admin chat conversation heading remains at prior position.
+
+## Step 73 - Admin Chat Header Vertical Alignment
+- What changed:
+  - Added `headingWrapStyle` support to shared `AppShell` for per-screen heading vertical adjustments.
+  - Applied admin inbox heading offset in `AdminInboxScreen` so `Chat` + subtitle sit lower and align with other tab headers.
+  - Applied small admin-thread header offset in `MessagesScreen` (admin role only) for consistent chat title/subtitle vertical position.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Admin chat inbox heading text aligns with other tabs.
+  - Admin chat conversation heading text aligns cleanly and does not overlap logo/content.
+
+## Step 74 - Full Tab Header Alignment Pass
+- What changed:
+  - Removed admin inbox custom heading offset from `AdminInboxScreen`.
+  - Removed role-specific candidate/admin header offsets from `MessagesScreen`.
+  - Set one shared `MessagesScreen` header baseline (`paddingTop: 14`) to align chat headings with other tabs.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+- What to test next:
+  - Candidate and admin chat headings align with other tab titles/subtitles.
+  - No chat tab appears visually lower than dashboard/appointments/profile headings.
+
+## Step 75 - Multi-Admin Backend Role Model + Safety Guards
+- What changed:
+  - Added `changeUserRole` callable (`functions/src/callable/changeUserRole.ts`) for admin-only promote/demote actions.
+  - Added shared cleanup helper (`functions/src/callable/userCleanup.ts`) to purge candidate-scoped data on candidate -> recruiter promotion.
+  - Updated account deletion callable (`deleteCandidateAccountData`) to block deleting the last admin and to run role-aware self-delete flow.
+  - Updated Firestore rules `isAdmin()` to role-claim based access (`request.auth.token.role == 'admin'`) and prevented client-side role field edits through direct Firestore updates.
+  - Updated function exports and deprecated `enforceSingleAdmin.ts` script behavior.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Promote candidate to recruiter from mobile admin UI and verify candidate data cleanup + role claim sync.
+  - Attempt deleting the last admin and confirm callable returns blocked error.
+
+## Step 76 - Mobile Admin UX: Recruiters Section + Admin Profile Tab
+- What changed:
+  - Added admin `Profile` tab in `RootNavigator` and new `AdminProfileScreen`.
+  - Added recruiter watchers/services (`watchRecruiters`, `watchRecruiterById`, `changeUserRoleByAdmin`, `updateAdminOwnProfile`, `changeAdminEmailWithPassword`).
+  - Rebuilt `AdminCandidatesScreen` to show `Recruiters` section above `Candidates`, with shared search across both sections.
+  - Added `AdminRecruiterDetailScreen` with destructive `Change role to Candidate` action and self-role-change block.
+  - Updated `AdminCandidateDetailScreen` with destructive `Change role to Recruiter` action (confirmation + callable).
+  - Removed old recruiter logout button from Candidates tab header.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Admin profile save (name/phone) and email change flow (old email + new email + current password).
+  - Recruiter demote and candidate promote flows with warning confirmations and realtime list movement.
+
+## Step 77 - Multi-Admin Docs/Checklist Alignment
+- What changed:
+  - Updated `qa/acceptance-checklist.md` admin auth criteria to role-based admin model.
+  - Updated `docs/firebase-setup.md` section 7 from single-admin enforcement to multi-admin claim/bootstrap + role transition flow.
+  - Added owner backfill utility (`backfillMasonAdminProfile.ts`) documentation reference.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Confirm docs match deployed Firebase project setup and callable usage.
+
+## Step 78 - Preserve Candidate Data on Promote + Dropdown Role Controls
+- What changed:
+  - Updated `changeUserRole` callable to preserve candidate data when promoting candidate -> recruiter (no candidate-data deletion path on promotion).
+  - Kept claim/doc role updates functional and realtime for both promote and demote.
+  - Replaced role-change buttons with dropdown-style role pickers (current role checked) in admin Candidates tab for both `Recruiters` and `Candidates` sections.
+  - Updated recruiter/candidate detail screens to use dropdown role pickers instead of single action buttons.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Promote candidate to recruiter, then demote back and confirm previous candidate data is still present.
+  - Verify role picker UI shows checked current role and applies selected role change correctly.
+
+## Step 79 - Role Field Placement + Not-Found Role Fix
+- What changed:
+  - Removed role dropdown controls from admin list rows in `AdminCandidatesScreen`.
+  - Kept role dropdown controls only in detail views (`AdminCandidateDetailScreen`, `AdminRecruiterDetailScreen`) as profile fields.
+  - Fixed role-change failure (`not-found`) by switching mobile role-change path to direct Firestore role update service instead of missing callable endpoint.
+  - Updated Firestore admin detection and user update rule path so admin role changes are authorized and synced.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Open candidate/recruiter detail, change role from dropdown, verify success and realtime movement between Recruiters/Candidates sections.

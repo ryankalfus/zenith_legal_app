@@ -228,3 +228,274 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for admin unread visual update (bold-only unread rows).
+
+## Appointment Picker + Candidate Cleanup (2026-02-27)
+- [x] `MVP` Candidate appointment date/time selection now uses inline in-place picker UX.
+- [x] `MVP` Zenith create-appointment and modify-appointment date/time selection now uses inline in-place picker UX.
+- [x] `MVP` Zenith unattended bell request actions reduced to `Accept` / `Decline` (no `Modify` action).
+- [x] `MVP` Deleted Ryan candidate removed from active Zenith candidate feeds and orphaned chat/appointment rows hidden from admin lists.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for inline appointment picker UX, unattended action simplification, and deleted-candidate cleanup behavior.
+
+## Candidate DOB + JD Fields (2026-02-27)
+- [x] `MVP` Candidate profile setup includes `Date of birth` and optional `JD (Law) degree date` fields.
+- [x] `MVP` Candidate profile tab includes editable `Date of birth` and optional `JD (Law) degree date` fields.
+- [x] `MVP` DOB/JD date values sync to Zenith admin Candidates view through shared user profile docs.
+- [x] `MVP` Zenith Candidates tab displays `Age` (derived from DOB) and `JD degree received` date.
+- [x] `MVP` Shared domain/schema/user-service/auth payloads include optional DOB/JD date fields.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for candidate DOB/JD profile fields and synced admin age/JD display.
+
+## Profile Photo Source Picker (2026-02-27)
+- [x] `MVP` Profile photo selection now opens a single popup with three choices: `Take photo now`, `Choose from camera roll`, `Files`.
+- [x] `MVP` Popup flow is wired in both profile setup and candidate profile tab (edit flow).
+- [x] `MVP` Existing profile photo upload pipeline stays unchanged after file selection.
+- [x] `Tech` Added `expo-image-picker` dependency and iOS permission strings required for camera + library access.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for popup-based profile photo source selection flow.
+
+## Candidate Visibility + Upload Reliability (2026-02-27)
+- [x] `MVP` Removed temporary mobile admin candidate email hide-filter so Ryan appears in candidate-driven admin views again.
+- [x] `MVP` Added profile-photo upload fallback for environments with older Storage rules (`profilePhotos` primary, `messageAttachments` fallback on unauthorized).
+- [x] `MVP` Candidate profile setup/profile tab DOB + JD fields remain editable and synced.
+- [x] `MVP` Zenith Candidates tab shows synced `Age` + `JD degree received`.
+- [ ] `Ops` Deploy latest Storage rules to project (currently blocked by expired Firebase CLI auth in local environment).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for Ryan visibility restoration and profile-photo upload unauthorized fallback fix.
+
+## Candidate Duplicate Cleanup + Date Picker UX + Candidate Detail UI (2026-02-27)
+- [x] `MVP` Admin candidate watcher now de-duplicates same-email candidate records and keeps one canonical candidate row.
+- [x] `MVP` Duplicate `ryan kLfus` candidate row is removed from admin-facing mobile candidate-driven UI lists while canonical `Ryan Kalfus` remains visible.
+- [x] `MVP` Candidate DOB and JD fields now use inline calendar pickers in profile setup and profile edit flows.
+- [x] `MVP` Candidate detail screen now shows a cleaner full profile summary including DOB, Age, and JD date above firm controls.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for same-email candidate de-dup behavior, calendar-based DOB/JD selection, and candidate-detail profile UI polish.
+
+## Profile Setup Gating + Chat Composer Keyboard Position (2026-02-27)
+- [x] `MVP` Candidate profile setup now requires `Display name`, `Email`, and `Date of birth` before save/advance.
+- [x] `MVP` Candidate profile setup shows explicit validation alerts when required fields are missing.
+- [x] `MVP` Chat composer keyboard behavior updated so composer stays closer to keyboard (less vertical gap) on iOS.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for required profile setup field gating and chat composer keyboard offset correction.
+
+## Chat Composer Offset Correction (2026-02-27)
+- [x] `MVP` Chat composer keyboard offset corrected so composer is no longer over-shifted high while typing.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for `MessagesScreen` keyboard offset reset to align composer just above keyboard.
+
+## Calendar + Delete Logout (2026-02-27)
+- [x] `MVP` Scheduled upcoming appointments now include `Add to Calendar` on candidate side.
+- [x] `MVP` Scheduled upcoming appointments now include `Add to Calendar` on Zenith admin side.
+- [x] `MVP` Calendar event mapping uses title `Call with xxx`, notes as description, and appointment date/time values.
+- [x] `Tech` Added mobile calendar integration dependency/config (`expo-calendar`) and iOS calendar permission keys.
+- [x] `MVP` Account deletion now logs the user out immediately after successful deletion.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for appointment calendar export buttons and immediate post-delete logout behavior.
+
+## Status Date + Chat Timeline Metadata (2026-02-27)
+- [x] `MVP` Firm assignment rows now show the date each status was most recently updated.
+- [x] `MVP` Chat messages now show per-message time logs in small text under each bubble.
+- [x] `MVP` Chat timeline now inserts date separators with requested relative/absolute label rules (`Today`/`Yesterday`/weekday, then month/day, then month/day/year).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for firm status update-date display and chat date/time timeline formatting.
+
+## Assigned Header + Candidates Date Consistency (2026-02-27)
+- [x] `MVP` Zenith Candidates tab age/JD display now uses profile-aligned date parsing to match candidate profile values.
+- [x] `MVP` Admin candidate detail includes new `Assigned Header` section between summary and assign-firm controls.
+- [x] `MVP` Admin can edit candidate-specific header hyperlink values (email + phone) and save them.
+- [x] `MVP` Candidate app header now reads per-candidate assigned contact values in realtime, with Zenith defaults as fallback.
+- [x] `Tech` Shared user profile type/schema now includes optional assigned header contact fields.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for Assigned Header admin controls and candidate-header realtime linkage.
+
+## Assigned Header Sync Hardening (2026-02-27)
+- [x] `MVP` Assigned Header save now syncs across same-email duplicate candidate docs so candidate header links update reliably.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for batch sync of assigned header contact values across duplicate candidate records.
+
+## Assigned Header Hyperlink Reliability (2026-02-27)
+- [x] `MVP` Candidate header hyperlinks now use sanitized `mailto:`/`tel:` values from assigned header fields.
+- [x] `MVP` Default candidate header contact values are enforced as `mason@zenithlegal.com` and `+1 202-486-3535` when assigned values are empty.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for assigned-header hyperlink normalization and default contact fallback behavior.
+
+## Assigned Header Active-Account Sync Reliability (2026-02-27)
+- [x] `MVP` Assigned Header save now propagates using both normalized candidate email and normalized candidate `uid` to reach active duplicate account docs.
+- [x] `MVP` Assigned Header values now normalize `mailto:`/`tel:` prefixes at save/read time so candidate-side hyperlinks stay functional.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for uid+email assigned-header propagation and malformed-prefix normalization.
+
+## Assigned Header Legacy Duplicate Fallback (2026-02-27)
+- [x] `MVP` Assigned Header propagation now also matches duplicate candidate docs by normalized `fullName + phone digits` fallback when email/uid linkage is inconsistent in legacy rows.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for fallback duplicate-account matching used by Assigned Header sync.
+
+## Assigned Header Auth-UID Coverage (2026-02-27)
+- [x] `MVP` Assigned Header save now directly updates the auth-linked candidate user doc (`users/{uid}`) when it differs from selected candidate doc id.
+- [x] `MVP` Assigned Header propagation no longer depends on `role == candidate` for legacy docs; it now includes all non-admin user docs to cover role-missing candidate rows.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for auth-uid direct targeting and legacy role-missing candidate doc propagation.
+
+## Admin Candidate Routing to Real Account Doc (2026-02-27)
+- [x] `MVP` Zenith candidate list now routes to candidate detail using auth UID (`uid`) when available, with doc-id fallback.
+- [x] `MVP` Candidate-detail actions now consistently target the real logged-in candidate account doc in duplicate-record scenarios.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for UID-first admin candidate routing to fix assigned-header updates landing on wrong duplicate docs.
+
+## Candidate De-dup UID Priority (2026-02-27)
+- [x] `MVP` Admin candidate de-dup now prioritizes UID-linked docs (`uid` present, `uid == docId`) to reduce duplicate-row mis-targeting.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for UID-priority de-dup scoring in Zenith candidates list.
+
+## Assigned Header Resolution Reliability (2026-02-27)
+- [x] `MVP` Candidate header now prefers profile-level assigned header values over conversation-level overrides to prevent stale chat metadata from masking recent Assigned Header saves.
+- [x] `Tech` Removed stale legacy `ProfileScreen.tsx` merge-conflict file that was breaking mobile typecheck.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for assigned-header resolution-order fix and merge-conflict cleanup.
+
+## Canonical Candidate Selection Hardening (2026-02-27)
+- [x] `MVP` Admin candidate de-dup now selects UID-canonical row (`uid == docId`) first in same-email groups before fallback scoring, improving Assigned Header target consistency.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for canonical candidate-row selection in duplicate data scenarios.
+
+## Appointment-to-Chat Summaries (2026-02-27)
+- [x] `MVP` Candidate appointment requests now generate chat summaries to Zenith Legal with candidate-name/date-time format and optional note text.
+- [x] `MVP` Zenith admin appointment request actions now auto-send admin-authored chat summaries for `Accept` and `Decline`.
+- [x] `MVP` Zenith admin appointment `Create` and `Modify` actions now auto-send candidate-facing chat summaries with formatted schedule details and optional note text.
+- [x] `Tech` Finalized request/cancel chat source to client-side sends and removed duplicate server-side request/cancel chat emitters.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for appointment create/request/accept/decline/modify chat summary synchronization.
+
+## Candidate/Zenith Cancel Chat Delivery (2026-02-27)
+- [x] `MVP` Candidate request submit now sends chat summary to Zenith Legal from candidate side.
+- [x] `MVP` Candidate cancel now sends chat summary to Zenith Legal from candidate side.
+- [x] `MVP` Zenith admin cancel now sends chat summary to candidate from admin side.
+- [x] `Tech` Removed exported request-chat trigger and removed chat write from candidate-cancel email trigger to prevent duplicate appointment summary chats.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for candidate request/cancel chat sends and Zenith admin cancel chat send with duplicate-trigger prevention.
+
+## Pending Cancel + Dashboard Copy + Header Logo (2026-02-27)
+- [x] `MVP` Candidate cancel of pending request (`requested`) no longer sends chat to Zenith Legal.
+- [x] `MVP` Candidate dashboard title/subtitle updated to requested copy and floating brand section removed.
+- [x] `MVP` Zenith logo now renders at top-right below the contact header on tab screens (including chat), without layout reflow.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for pending-request cancel chat suppression, dashboard copy cleanup, and shared top-right header logo placement.
+
+## Admin Chat Inbox Header Logo Exception (2026-02-27)
+- [x] `MVP` Zenith logo remains visible across tabs/screens except Zenith admin chat inbox view where the header `+` action appears.
+- [x] `MVP` Candidate chat tab keeps top-right Zenith logo.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for admin chat inbox logo exclusion while preserving logo on all other tabs/screens.
+
+## Dashboard Logo Size/Placement Polish (2026-02-27)
+- [x] `MVP` Candidate dashboard uses a larger right-side Zenith logo integrated into heading area without content/font shifts.
+- [x] `MVP` Zenith main dashboard tab (`Candidates`) uses the same larger right-side Zenith logo size/placement.
+- [x] `MVP` Candidate chat header keeps Zenith logo visible.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for larger matched dashboard logo placement and candidate-chat logo visibility.
+
+## Expanded Tab Logo Treatment (2026-02-27)
+- [x] `MVP` Dashboard logo size tuned down for cleaner integration while keeping high-resolution rendering.
+- [x] `MVP` Same right-side logo treatment applied to candidate `Appointments` tab and candidate `Profile` tab.
+- [x] `MVP` Same right-side logo treatment applied to Zenith `Appointments` tab.
+- [x] `MVP` UI-only change maintained (no typography or content layout shifts).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for reduced logo scale and expanded logo treatment across candidate/admin appointment/profile tabs.
+
+## Global Big Logo + Chat Exception (2026-02-27)
+- [x] `MVP` Big top-right Zenith logo now applies across all app screens/tabs by default.
+- [x] `MVP` Zenith admin chat inbox remains the single exception with no top-right logo (to avoid overlap with `+` action).
+- [x] `MVP` Candidate chat tab and admin chat conversation thread both show the big logo.
+- [x] `MVP` Top-right logo position moved slightly upward globally.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for global big-logo rollout, admin inbox exception, chat-view inclusion, and upward logo position adjustment.
+
+## Login Header Visibility (2026-02-27)
+- [x] `MVP` Login/signup screen no longer shows Zenith contact header.
+- [x] `MVP` Zenith contact header starts with authenticated app screens after login.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for removing header on auth page while preserving post-login header behavior.
+
+## Candidate Chat Header Alignment (2026-02-27)
+- [x] `MVP` Candidate chat heading (`Chat` + subtitle) is lowered to align with other tab heading spacing.
+- [x] `MVP` Admin chat conversation heading layout remains unchanged.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for candidate-only chat header vertical alignment adjustment.
+
+## Admin Chat Header Alignment (2026-02-27)
+- [x] `MVP` Admin chat inbox heading (`Chat` + subtitle) is vertically aligned with other tab headings.
+- [x] `MVP` Admin chat conversation heading receives matching vertical alignment adjustment.
+- [x] `Tech` `AppShell` now supports per-screen heading-wrap offset styling for targeted header alignment tweaks.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for admin chat heading vertical alignment in inbox + thread views.
+
+## Global Tab Header Text Alignment (2026-02-27)
+- [x] `MVP` Candidate/admin chat heading offsets were normalized to one baseline so chat does not sit lower than other tab headings.
+- [x] `MVP` Top-left tab title/subtitle positions are now consistent across dashboard/chat/appointments/profile/candidates tabs.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for full tab header text alignment pass.
+
+## Multi-Admin Recruiter Accounts + Admin Profile Tab (2026-02-27)
+- [x] `MVP` Admin access is role-based (`admin` claim/doc role), not Mason-email hardcoded in mobile auth session flow.
+- [x] `MVP` Admin tab set now includes `Profile` tab (Candidates, Chat, Appointment Requests, Profile).
+- [x] `MVP` Admin profile screen supports editable name + phone, secure email change flow (old/new/current password), logout, and delete account.
+- [x] `MVP` Candidates tab now shows `Recruiters` section above `Candidates` with shared search behavior.
+- [x] `MVP` Recruiter row opens recruiter detail; candidate row opens candidate detail.
+- [x] `MVP` Candidate detail now includes `Change role to Recruiter` action with destructive confirmation.
+- [x] `MVP` Recruiter detail now includes `Change role to Candidate` action with destructive confirmation.
+- [x] `MVP` Self role-change is blocked in callable and UI (`You cannot change your own role`).
+- [x] `MVP` Candidate -> recruiter promotion runs server-side candidate-data deletion before role/claim update.
+- [x] `MVP` Admin delete account is blocked when requester is the last remaining admin.
+- [x] `Tech` Added callable `changeUserRole({ targetUid, targetRole })` with admin-only guard + claim/doc sync.
+- [x] `Tech` Updated Firestore rules `isAdmin()` to role claim and removed Mason-only admin gate.
+- [x] `Tech` Added Mason owner backfill script with defaults (Mason Kalfus, mason@zenithlegal.com, +12024863535).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for multi-admin role model, recruiter management UX, admin profile tab, role-transition callable, and last-admin delete safety.
+
+## Role Picker + Data Preservation (2026-02-27)
+- [x] `MVP` Candidate -> recruiter promotion now preserves existing candidate data for future demotion back to candidate.
+- [x] `MVP` Role changing UI in admin `Recruiters` and `Candidates` sections now uses dropdown-style picker with current role checked.
+- [x] `MVP` Role changes are functional from dropdown picker and sync in realtime across admin lists.
+- [x] `MVP` Candidate/recruiter detail screens now use dropdown-style role control instead of role-change button.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for role-change data preservation and dropdown role controls with checked current role.
+
+## Role Field Placement + Role Change Error Fix (2026-02-27)
+- [x] `MVP` Role dropdown was moved from admin list rows back into detailed profile views as a role field.
+- [x] `MVP` Role change now works from detail role field without `not-found` error.
+- [x] `Tech` Mobile role updates now use direct admin Firestore path with rules support instead of missing callable endpoint.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for detail-only role dropdown placement and `not-found` role change fix.

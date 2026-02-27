@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import * as DocumentPicker from "expo-document-picker";
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
 import { AppShell, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
@@ -13,17 +13,52 @@ import {
 } from "../../services/userService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
+import { openProfilePhotoSourcePicker } from "../../utils/profilePhotoSourcePicker";
+
+function isIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime());
+}
+
+function formatIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseIsoDate(value: string) {
+  if (!isIsoDate(value)) {
+    return null;
+  }
+  const parsed = new Date(`${value}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDisplayDate(value: string) {
+  const parsed = parseIsoDate(value);
+  if (!parsed) {
+    return "Not set";
+  }
+  return parsed.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
 
 export function CandidateProfileScreen() {
   const { session, logout } = useAuth();
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [jdDegreeDate, setJdDegreeDate] = useState("");
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarPath, setAvatarPath] = useState("");
   const [saving, setSaving] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [activeDatePicker, setActiveDatePicker] = useState<"dob" | "jd" | null>(null);
 
   useEffect(() => {
     if (!session?.user.uid) {
@@ -35,6 +70,8 @@ export function CandidateProfileScreen() {
       (data) => {
         setFullName(String(data?.fullName ?? ""));
         setMobile(String(data?.mobile ?? ""));
+        setDateOfBirth(String(data?.dateOfBirth ?? ""));
+        setJdDegreeDate(String(data?.jdDegreeDate ?? ""));
         setAvatarUrl(String(data?.avatarUrl ?? ""));
         setAvatarPath(String(data?.avatarPath ?? ""));
         setPracticeArea(String(data?.preferences?.practiceArea ?? PRACTICE_AREAS[0]));
@@ -57,12 +94,22 @@ export function CandidateProfileScreen() {
       Alert.alert("Display name required", "Please enter your display name.");
       return;
     }
+    if (dateOfBirth.trim() && !isIsoDate(dateOfBirth.trim())) {
+      Alert.alert("Invalid date of birth", "Use YYYY-MM-DD format.");
+      return;
+    }
+    if (jdDegreeDate.trim() && !isIsoDate(jdDegreeDate.trim())) {
+      Alert.alert("Invalid JD date", "Use YYYY-MM-DD format.");
+      return;
+    }
 
     try {
       setSaving(true);
       await updateCandidateProfile(session.user.uid, {
         fullName: fullName.trim(),
         mobile: mobile.trim(),
+        dateOfBirth: dateOfBirth.trim() || undefined,
+        jdDegreeDate: jdDegreeDate.trim() || undefined,
         preferredCities,
         practiceArea
       });
@@ -74,35 +121,42 @@ export function CandidateProfileScreen() {
     }
   };
 
-  const pickPhoto = async () => {
+  const onDobChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!selectedDate) {
+      return;
+    }
+    setDateOfBirth(formatIsoDate(selectedDate));
+  };
+
+  const onJdChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (!selectedDate) {
+      return;
+    }
+    setJdDegreeDate(formatIsoDate(selectedDate));
+  };
+
+  const pickPhoto = () => {
     if (!session?.user.uid) {
       return;
     }
 
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: false,
-      type: "image/*"
-    });
-    if (result.canceled || !result.assets[0]) {
-      return;
-    }
-
-    const asset = result.assets[0];
-    try {
-      setPhotoBusy(true);
-      const uploaded = await uploadCandidateProfilePhoto(session.user.uid, {
-        uri: asset.uri,
-        fileName: asset.name ?? "profile-photo.jpg",
-        mimeType: asset.mimeType ?? "image/jpeg"
-      });
-      setAvatarUrl(uploaded.avatarUrl);
-      setAvatarPath(uploaded.avatarPath);
-    } catch (error: any) {
-      Alert.alert("Could not upload photo", error?.message ?? "Please try again.");
-    } finally {
-      setPhotoBusy(false);
-    }
+    openProfilePhotoSourcePicker(
+      async (selectedPhoto) => {
+        try {
+          setPhotoBusy(true);
+          const uploaded = await uploadCandidateProfilePhoto(session.user.uid, selectedPhoto);
+          setAvatarUrl(uploaded.avatarUrl);
+          setAvatarPath(uploaded.avatarPath);
+        } catch (error: any) {
+          Alert.alert("Could not upload photo", error?.message ?? "Please try again.");
+        } finally {
+          setPhotoBusy(false);
+        }
+      },
+      (error) => {
+        Alert.alert("Could not choose photo", error?.message ?? "Please try again.");
+      }
+    );
   };
 
   const removePhoto = async () => {
@@ -131,7 +185,7 @@ export function CandidateProfileScreen() {
         onPress: async () => {
           try {
             await deleteMyAccount();
-            Alert.alert("Deleted", "Your account and data were removed.");
+            await logout();
           } catch (error: any) {
             Alert.alert("Delete failed", error?.message ?? "Please contact support.");
           }
@@ -141,7 +195,13 @@ export function CandidateProfileScreen() {
   };
 
   return (
-    <AppShell title="Profile" subtitle="Manage your candidate details." showCandidateContactBar scroll>
+    <AppShell
+      title="Profile"
+      subtitle="Manage your candidate details."
+      showCandidateContactBar
+      topRightLogoStyle={styles.dashboardHeroLogo}
+      scroll
+    >
       <SurfaceCard>
         <Text style={styles.label}>Profile photo</Text>
         <View style={styles.photoRow}>
@@ -193,6 +253,51 @@ export function CandidateProfileScreen() {
           placeholderTextColor="#7f8b9d"
         />
 
+        <Text style={styles.label}>Date of birth</Text>
+        <Pressable
+          style={[styles.pickButton, activeDatePicker === "dob" && styles.pickButtonActive]}
+          onPress={() => setActiveDatePicker((current) => (current === "dob" ? null : "dob"))}
+        >
+          <Text style={styles.pickLabel}>Date of birth</Text>
+          <Text style={styles.pickValue}>{formatDisplayDate(dateOfBirth)}</Text>
+        </Pressable>
+        {activeDatePicker === "dob" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={parseIsoDate(dateOfBirth) ?? new Date(1998, 0, 1)}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "spinner"}
+              onChange={onDobChange}
+            />
+          </View>
+        ) : null}
+
+        <Text style={styles.label}>JD (Law) degree date (optional)</Text>
+        <View style={styles.optionalPickerRow}>
+          <Pressable
+            style={[styles.pickButton, styles.optionalPickerMain, activeDatePicker === "jd" && styles.pickButtonActive]}
+            onPress={() => setActiveDatePicker((current) => (current === "jd" ? null : "jd"))}
+          >
+            <Text style={styles.pickLabel}>JD degree date</Text>
+            <Text style={styles.pickValue}>{formatDisplayDate(jdDegreeDate)}</Text>
+          </Pressable>
+          {jdDegreeDate ? (
+            <Pressable style={styles.clearButton} onPress={() => setJdDegreeDate("")}>
+              <Text style={styles.clearButtonText}>Clear</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {activeDatePicker === "jd" ? (
+          <View style={styles.inlinePickerWrap}>
+            <DateTimePicker
+              value={parseIsoDate(jdDegreeDate) ?? new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "spinner"}
+              onChange={onJdChange}
+            />
+          </View>
+        ) : null}
+
         <Text style={styles.label}>Preferred cities</Text>
         <View style={styles.wrap}>
           {PREFERRED_CITIES.map((city) => {
@@ -227,6 +332,12 @@ export function CandidateProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  dashboardHeroLogo: {
+    width: 90,
+    height: 90,
+    top: -6,
+    right: 8
+  },
   label: {
     marginTop: 10,
     marginBottom: 6,
@@ -249,6 +360,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     backgroundColor: "#fff"
+  },
+  optionalPickerRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "stretch"
+  },
+  optionalPickerMain: {
+    flex: 1
+  },
+  pickButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    gap: 3
+  },
+  pickButtonActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft
+  },
+  pickLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  pickValue: {
+    color: theme.colors.textPrimary,
+    fontWeight: "700"
+  },
+  inlinePickerWrap: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden"
+  },
+  clearButton: {
+    borderWidth: 1,
+    borderColor: "#f1b6b6",
+    borderRadius: 10,
+    backgroundColor: "#fff3f3",
+    paddingHorizontal: 12,
+    justifyContent: "center"
+  },
+  clearButtonText: {
+    color: theme.colors.danger,
+    fontWeight: "700"
   },
   wrap: {
     flexDirection: "row",

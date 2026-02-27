@@ -1,0 +1,155 @@
+{
+  "batch": "Abstractions & Dependencies",
+  "batch_index": 3,
+  "assessments": {
+    "abstraction_fitness": 72.0,
+    "mid_level_elegance": 74.0,
+    "low_level_elegance": 78.0
+  },
+  "dimension_notes": {
+    "abstraction_fitness": {
+      "evidence": [
+        "Firebase client bootstrapping is implemented separately with different lifecycle behavior: admin uses lazy getters and guard flags in `apps/admin/src/lib/firebase.ts`, while mobile performs eager initialization and emulator wiring at import time in `apps/mobile/src/lib/firebase.ts`.",
+        "Two admin web pages (`apps/admin/app/app/page.tsx`, `apps/admin/app/dashboard/candidates/[candidateId]/page.tsx`) directly mix auth gating, Firestore subscriptions, and domain mutations in-page rather than through cohesive domain services.",
+        "App shell API carries two names for the same concept (`showCandidateContactBar` and `showZenithContactBar`) in `apps/mobile/src/components/AppShell.tsx`, which weakens interface honesty."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high",
+      "sub_axes": {
+        "abstraction_leverage": 68.0,
+        "indirection_cost": 74.0,
+        "interface_honesty": 70.0
+      }
+    },
+    "mid_level_elegance": {
+      "evidence": [
+        "Messaging read-state choreography is repeated at multiple seams: `MessagesScreen` marks read in two separate effects and `AdminInboxScreen` marks read before navigation, causing redundant cross-layer writes.",
+        "Candidate/admin appointment flows duplicate seam logic (date/time merge, status grouping, request/update orchestration) across `CandidateAppointmentsScreen` and `AdminAppointmentRequestsScreen` instead of a shared boundary helper.",
+        "Web admin pages each create multiple raw `onSnapshot` subscriptions inline and manual teardown arrays, creating fragile handoff code between auth state and data listeners."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "low_level_elegance": {
+      "evidence": [
+        "Several UI files rely on `any` and cast-based adaptation (`useNavigation<any>`, `setRows(next as ...)`, `messages: any[]`) in `MessagesScreen`, `AdminCandidateDetailScreen`, and `apps/admin/app/app/page.tsx`, reducing local precision and forcing defensive code.",
+        "Date parsing/formatting helpers are reimplemented with slight differences across candidate/admin screens (`AdminCandidatesScreen`, `AdminCandidateDetailScreen`, `CandidateProfileScreen`, `CandidateAppointmentsScreen`), increasing local inconsistency and maintenance burden.",
+        "Inline Firestore mutation blocks in large components are long and repetitive, making local control flow harder to reason about."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "split_firebase_bootstrap_contract",
+      "summary": "Firebase initialization abstractions are duplicated and behaviorally inconsistent across admin and mobile clients.",
+      "related_files": [
+        "apps/admin/src/lib/firebase.ts",
+        "apps/mobile/src/lib/firebase.ts",
+        "apps/admin/src/lib/auth.ts"
+      ],
+      "evidence": [
+        "Admin uses `getFirebase*()` lazy accessors with per-service emulator guard booleans, while mobile initializes app/auth/db/functions/storage eagerly at module load and connects emulators immediately.",
+        "Auth code in `apps/admin/src/lib/auth.ts` depends on admin-specific getter behavior, so shared client invariants are not explicit across platforms."
+      ],
+      "suggestion": "Create a shared Firebase client bootstrap contract (config validation + emulator policy + lazy/eager lifecycle decision) and provide thin platform adapters rather than independent implementations.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "missing_shared_frontend_infrastructure_boundary"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "page_level_firestore_god_objects",
+      "summary": "Admin web pages act as god components that bypass service abstractions and directly orchestrate many domain operations.",
+      "related_files": [
+        "apps/admin/app/app/page.tsx",
+        "apps/admin/app/dashboard/candidates/[candidateId]/page.tsx"
+      ],
+      "evidence": [
+        "Each page performs auth checks, opens many `onSnapshot` listeners, writes to multiple collections, and contains messaging/appointment/status update workflows in one file.",
+        "State is broadly untyped (`any[]`, `any`) while business workflows are embedded inline, indicating absent domain-level abstractions."
+      ],
+      "suggestion": "Extract domain services/hooks per capability (candidate profile, statuses, messaging, appointments) and keep pages as composition/orchestration shells with typed view models.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "missing_shared_frontend_infrastructure_boundary"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "messaging_readstate_write_churn",
+      "summary": "Read-state propagation is duplicated across seams, causing unnecessary writes and unclear ownership of message-read lifecycle.",
+      "related_files": [
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx",
+        "apps/mobile/src/services/messagingService.ts"
+      ],
+      "evidence": [
+        "`MessagesScreen` calls `markConversationRead` in two effects (focus change and message length change), then `AdminInboxScreen` also calls it before navigation.",
+        "The service boundary does not define a single authoritative trigger for read-state updates, so multiple callers perform the same side effect."
+      ],
+      "suggestion": "Centralize read-state transitions behind one seam (for example, a thread lifecycle hook that handles focus/open events once) and remove duplicate caller-side writes.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "duplicated_cross_screen_orchestration"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "appointment_flow_seam_duplication",
+      "summary": "Candidate and admin appointment screens duplicate scheduling seam logic instead of sharing boundary translators.",
+      "related_files": [
+        "apps/mobile/src/screens/candidate/CandidateAppointmentsScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminAppointmentRequestsScreen.tsx"
+      ],
+      "evidence": [
+        "Both screens implement similar date/time merge helpers, upcoming/overdue filtering, and status update orchestration with near-parallel structure.",
+        "Boundary logic to convert UI inputs into appointment payloads is repeated independently, increasing drift risk."
+      ],
+      "suggestion": "Extract shared appointment seam utilities (time merge/validation, derived list builders, payload mappers) and reuse them in role-specific screens.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "duplicated_cross_screen_orchestration"
+    },
+    {
+      "dimension": "low_level_elegance",
+      "identifier": "any_type_erosion_in_core_screens",
+      "summary": "Core screens rely on `any` and casts, which obscures intent and pushes complexity into defensive runtime checks.",
+      "related_files": [
+        "apps/mobile/src/screens/MessagesScreen.tsx",
+        "apps/mobile/src/screens/admin/AdminCandidateDetailScreen.tsx",
+        "apps/admin/app/app/page.tsx",
+        "apps/mobile/src/screens/AdminInboxScreen.tsx"
+      ],
+      "evidence": [
+        "`messages` and several collection states are typed as `any[]`; navigation types are often `useNavigation<any>()`; and snapshot rows are cast (`setRows(next as ...)`) instead of validated.",
+        "These patterns force repeated `String(...)`, optional chaining fallbacks, and ad-hoc object shape assumptions in render paths."
+      ],
+      "suggestion": "Define shared DTO/view-model types for messaging/candidate/status entities and type screen/service boundaries end-to-end to eliminate cast-based flow.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "weak_type_contracts_between_ui_and_data_layers"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Missing shared frontend boundary for Firebase/data-access concerns across admin web and mobile clients.",
+      "Role-specific screens evolved by copy-adapting flows instead of extracting shared seam utilities.",
+      "Type contracts between services and screens are incomplete, encouraging cast-based integration."
+    ],
+    "likely_symptoms": [
+      "messaging_readstate_write_churn",
+      "appointment_flow_seam_duplication",
+      "any_type_erosion_in_core_screens"
+    ],
+    "possible_false_positives": []
+  }
+}

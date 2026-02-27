@@ -19,7 +19,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.zenithlegal.candidateportal",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "Zenith Legal uses notifications for messages and appointment reminders."
+        "NSUserNotificationsUsageDescription": "Zenith Legal uses notifications for messages and appointment reminders.",
+        "NSCameraUsageDescription": "Zenith Legal uses your camera so you can take a profile photo.",
+        "NSPhotoLibraryUsageDescription": "Zenith Legal uses your photo library so you can choose a profile photo.",
+        "NSPhotoLibraryAddUsageDescription": "Zenith Legal saves selected photos to support profile photo uploads.",
+        "NSCalendarsUsageDescription": "Zenith Legal uses calendar access so you can add appointments to your phone calendar.",
+        "NSCalendarsFullAccessUsageDescription": "Zenith Legal uses calendar access so you can add appointments to your phone calendar."
       }
     },
     "android": {
@@ -30,7 +35,20 @@
       "package": "com.zenithlegal.candidateportal"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Zenith Legal uses your photos so you can choose a profile photo.",
+          "cameraPermission": "Zenith Legal uses your camera so you can take a profile photo."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Zenith Legal uses your calendar so you can add appointments."
+        }
+      ]
     ],
     "extra": {
       "firebaseApiKey": "${EXPO_PUBLIC_FIREBASE_API_KEY}",

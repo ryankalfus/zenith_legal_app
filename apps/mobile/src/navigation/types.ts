@@ -16,6 +16,7 @@ export type AdminTabParamList = {
   Candidates: undefined;
   Chat: undefined;
   AppointmentRequests: undefined;
+  Profile: undefined;
 };
 
 export type MessageThreadParams = { candidateId?: string; title?: string } | undefined;
@@ -39,6 +40,7 @@ export type CandidateProfileStackParamList = {
 export type AdminCandidatesStackParamList = {
   CandidatesList: undefined;
   CandidateDetail: { candidateId: string };
+  RecruiterDetail: { recruiterId: string };
 };
 
 export type AdminChatStackParamList = {
@@ -49,4 +51,8 @@ export type AdminChatStackParamList = {
 
 export type AdminAppointmentsStackParamList = {
   AppointmentRequestsHome: undefined;
+};
+
+export type AdminProfileStackParamList = {
+  AdminProfileHome: undefined;
 };

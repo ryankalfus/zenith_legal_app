@@ -1,0 +1,47 @@
+{
+  "batch": "AI Debt & Migrations",
+  "batch_index": 5,
+  "assessments": {
+    "ai_generated_debt": 97.0,
+    "incomplete_migration": 98.0,
+    "low_level_elegance": 96.0
+  },
+  "dimension_notes": {
+    "ai_generated_debt": {
+      "evidence": [
+        "apps/admin/next-env.d.ts contains only standard Next.js triple-slash references and the default framework note.",
+        "No verbose restating comments, defensive wrappers, debug logging, or generic placeholder logic are present."
+      ],
+      "impact_scope": "local",
+      "fix_scope": "single_edit",
+      "confidence": "high",
+      "issues_preventing_higher_score": "File is generated boilerplate with minimal logic, so there is limited evidence to prove exemplary craftsmanship beyond being clean."
+    },
+    "incomplete_migration": {
+      "evidence": [
+        "File references current Next.js type entries (`next` and `next/image-types/global`) without legacy alternative paths.",
+        "No TODO/FIXME/deprecation markers or dual old/new API traces appear in this file."
+      ],
+      "impact_scope": "local",
+      "fix_scope": "single_edit",
+      "confidence": "high",
+      "issues_preventing_higher_score": "Single generated type stub provides narrow migration visibility; broader migration completeness cannot be validated from this file alone."
+    },
+    "low_level_elegance": {
+      "evidence": [
+        "The file is concise and purpose-specific: two reference directives and one explanatory framework comment block.",
+        "No unnecessary branching, helper indirection, or defensive sprawl exists in the assigned scope."
+      ],
+      "impact_scope": "local",
+      "fix_scope": "single_edit",
+      "confidence": "high",
+      "issues_preventing_higher_score": "Because this is framework-generated metadata rather than handcrafted implementation code, there is limited opportunity to demonstrate exceptional low-level elegance."
+    }
+  },
+  "findings": [],
+  "retrospective": {
+    "root_causes": [],
+    "likely_symptoms": [],
+    "possible_false_positives": []
+  }
+}

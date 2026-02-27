@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -28,6 +29,81 @@ import { watchUser } from "../services/userService";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ZENITH_LOGO = require("../../assets/zenith-legal-logo.png");
+
+type TimelineItem =
+  | { type: "divider"; id: string; label: string }
+  | { type: "message"; id: string; message: any; timeLabel: string };
+
+function asDate(input: unknown) {
+  if (!input) {
+    return null;
+  }
+  if (typeof input === "object" && input && "toDate" in input && typeof (input as any).toDate === "function") {
+    try {
+      return (input as any).toDate() as Date;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof input === "string" || typeof input === "number") {
+    const parsed = new Date(input);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function dayKey(value: Date | null) {
+  if (!value) {
+    return "unknown";
+  }
+  return `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDividerDate(value: Date | null) {
+  if (!value) {
+    return "Unknown date";
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+
+  if (isSameDay(value, today)) {
+    return "Today";
+  }
+  if (isSameDay(value, yesterday)) {
+    return "Yesterday";
+  }
+  if (value >= weekStart && value < today) {
+    return value.toLocaleDateString("en-US", { weekday: "long" });
+  }
+  if (value.getFullYear() === now.getFullYear()) {
+    return value.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+  return value.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatMessageTime(value: Date | null) {
+  if (!value) {
+    return "";
+  }
+  return value.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
+}
 
 export function MessagesScreen() {
   const { session } = useAuth();
@@ -193,6 +269,33 @@ export function MessagesScreen() {
     return !Boolean(item.hiddenForCandidate);
   });
 
+  const timelineItems = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [];
+    let prevKey = "";
+
+    visibleMessages.forEach((message) => {
+      const createdDate = asDate(message.createdAt);
+      const key = dayKey(createdDate);
+      if (key !== prevKey) {
+        items.push({
+          type: "divider",
+          id: `divider-${key}-${message.id}`,
+          label: formatDividerDate(createdDate)
+        });
+        prevKey = key;
+      }
+
+      items.push({
+        type: "message",
+        id: `message-${message.id}`,
+        message,
+        timeLabel: formatMessageTime(createdDate)
+      });
+    });
+
+    return items;
+  }, [visibleMessages]);
+
   if (session?.role === "admin" && !candidateId) {
     return (
       <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
@@ -212,22 +315,32 @@ export function MessagesScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.select({ ios: "padding", android: undefined })}
-        keyboardVerticalOffset={96}
+        keyboardVerticalOffset={0}
       >
         <View style={styles.headerWrap}>
+          <Image source={ZENITH_LOGO} style={styles.headerLogo} resizeMode="contain" />
           <Text style={styles.title}>{session?.role === "admin" ? candidateProfile.name : "Chat"}</Text>
           <Text style={styles.subtitle}>
             {session?.role === "admin" ? "Direct message thread" : "Direct message with Zenith Legal"}
           </Text>
         </View>
 
-        <ScrollView ref={listRef} contentContainerStyle={styles.list}>
-          {visibleMessages.map((item) => {
+        <ScrollView ref={listRef} style={styles.listScroll} contentContainerStyle={styles.list}>
+          {timelineItems.map((entry) => {
+            if (entry.type === "divider") {
+              return (
+                <View key={entry.id} style={styles.dividerWrap}>
+                  <Text style={styles.dividerText}>{entry.label}</Text>
+                </View>
+              );
+            }
+
+            const item = entry.message;
             const mine = item.senderId === session?.user.uid;
             const otherIsZenith = session?.role === "candidate";
             const mineIsZenith = session?.role === "admin";
             return (
-              <View key={item.id} style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}>
+              <View key={entry.id} style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}>
                 {!mine ? (
                   <Avatar
                     uri={otherIsZenith ? undefined : candidateProfile.avatarUrl}
@@ -245,6 +358,11 @@ export function MessagesScreen() {
                   <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
                   {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
                     <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
+                  ) : null}
+                  {entry.timeLabel ? (
+                    <Text style={[styles.messageTime, mine ? styles.messageTimeMine : styles.messageTimeTheirs]}>
+                      {entry.timeLabel}
+                    </Text>
                   ) : null}
                 </Pressable>
 
@@ -295,9 +413,17 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background
   },
   headerWrap: {
+    position: "relative",
     paddingHorizontal: 14,
-    paddingTop: 10,
+    paddingTop: 14,
     paddingBottom: 8
+  },
+  headerLogo: {
+    position: "absolute",
+    right: 8,
+    top: -6,
+    width: 90,
+    height: 90
   },
   title: {
     fontSize: 24,
@@ -312,6 +438,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 10,
     paddingBottom: 10
+  },
+  listScroll: {
+    flex: 1
+  },
+  dividerWrap: {
+    alignItems: "center",
+    marginVertical: 4
+  },
+  dividerText: {
+    fontSize: 12,
+    color: "#7f8b9d",
+    fontWeight: "700"
   },
   messageRow: {
     flexDirection: "row",
@@ -350,6 +488,19 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: "#61708a"
+  },
+  messageTime: {
+    marginTop: 6,
+    fontSize: 11,
+    fontWeight: "600"
+  },
+  messageTimeMine: {
+    color: "#dce8ff",
+    textAlign: "right"
+  },
+  messageTimeTheirs: {
+    color: "#8391a6",
+    textAlign: "left"
   },
   composerWrap: {
     paddingHorizontal: 10,

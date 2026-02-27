@@ -49,23 +49,6 @@ exports.notifyOnCandidateAppointmentCancel = (0, firestore_1.onDocumentWritten)(
     const candidateName = String(candidate.fullName ?? "Candidate");
     const candidateEmail = String(candidate.email ?? "");
     const messageText = formatCanceledMessage(after.startsAt, after.phoneNumber);
-    const conversationRef = db.collection("conversations").doc(candidateId);
-    await conversationRef.set({
-        candidateId,
-        participantIds: [candidateId, "zenith-team"],
-        lastMessageText: messageText,
-        lastMessageAt: firestore_2.FieldValue.serverTimestamp(),
-        updatedAt: firestore_2.FieldValue.serverTimestamp(),
-        createdAt: firestore_2.FieldValue.serverTimestamp()
-    }, { merge: true });
-    await conversationRef.collection("messages").add({
-        candidateId,
-        senderId: candidateId,
-        senderRole: "candidate",
-        text: messageText,
-        attachments: [],
-        createdAt: firestore_2.FieldValue.serverTimestamp()
-    });
     const { apiKey, from, to } = (0, env_1.getSignupAlertConfig)();
     if (!apiKey) {
         firebase_functions_1.logger.warn("Appointment cancellation email skipped: RESEND_API_KEY missing.", {
@@ -82,7 +65,7 @@ exports.notifyOnCandidateAppointmentCancel = (0, firestore_1.onDocumentWritten)(
         `Date/Time: ${String(after.startsAt ?? "n/a")}`,
         `Phone: ${String(after.phoneNumber ?? "n/a")}`,
         `Appointment ID: ${event.params.appointmentId}`,
-        `Auto chat text: ${messageText}`
+        `Candidate chat summary: ${messageText}`
     ].join("\n");
     try {
         const response = await fetch("https://api.resend.com/emails", {

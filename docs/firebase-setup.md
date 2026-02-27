@@ -81,23 +81,21 @@ npm run build --workspace @zenith/functions
 firebase deploy --only functions
 ```
 
-## 7) Admin Claim Bootstrap + Enforcement
-- Zenith admin identity is locked to `mason@zenithlegal.com`.
-- In Firebase Auth, set temporary credentials for the Zenith admin account:
-  - Email: `mason@zenithlegal.com`
-  - Password: `coal1828`
-  - Display name: `Zenith Legal`
-- Do not store that password in source control, `.env`, or logs.
-- Use callable `ensureZenithAdminClaim` while signed in as Zenith admin account.
-- Optional one-time cleanup:
+## 7) Admin Claim Bootstrap + Multi-Admin Management
+- Admin access is role-based (`role=admin` custom claim + user doc role).
+- `mason@zenithlegal.com` remains the owner bootstrap account.
+- Use callable `ensureZenithAdminClaim` while signed in as Mason to guarantee owner admin claim/doc.
+- Optional one-time owner backfill:
 ```bash
-npm run enforce:single-admin
+npm run ts-node --workspace @zenith/functions src/scripts/backfillMasonAdminProfile.ts
 ```
+- Use callable `changeUserRole` (from admin UI) to promote/demote users.
+- New users default to candidate until promoted.
 
 Expected result:
-- Zenith account gets custom claim `role=admin`
-- Non-Zenith users are not eligible for admin access
-- User document role is aligned with claim
+- Any promoted recruiter with `role=admin` can use admin mobile tabs
+- User document role is aligned with custom claim
+- Last-admin delete is blocked
 
 ## 8) Seed Firms
 ```bash

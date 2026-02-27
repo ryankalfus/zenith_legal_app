@@ -1,0 +1,130 @@
+{
+  "batch": "Governance & Contracts",
+  "batch_index": 7,
+  "assessments": {
+    "cross_module_architecture": 74.0,
+    "high_level_elegance": 77.0,
+    "package_organization": 73.0
+  },
+  "dimension_notes": {
+    "cross_module_architecture": {
+      "evidence": [
+        "apps/mobile/src/state/AuthContext.tsx mixes auth session lifecycle with Firestore profile provisioning, admin-claim callable invocation, role reconciliation, and push-token registration in one provider path.",
+        "AuthContext computes admin authority from both token claims and Firestore role fields, then writes role corrections from client code, which blurs server-vs-client trust boundaries.",
+        "README.md states admin role enforcement is server-side, but AuthContext still performs role correction writes and fallback role inference client-side."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "confidence": "high"
+    },
+    "high_level_elegance": {
+      "evidence": [
+        "apps/mobile/src/components/AppShell.tsx combines shell layout, candidate contact policy, and generic primitives (SurfaceCard, EmptyState) in one shared component file.",
+        "AppShell keeps two policy flags (showCandidateContactBar and showZenithContactBar) and nullish fallback chaining, indicating unresolved ownership and compatibility layering in the top-level UI shell contract.",
+        "apps/mobile/src/state/AuthContext.tsx centralizes unrelated top-level responsibilities (identity bootstrap, role governance, profile persistence, push registration), reducing clarity of module ownership."
+      ],
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    },
+    "package_organization": {
+      "evidence": [
+        "holistic_context.structure marks apps/mobile/src/ui/theme.ts as a high fan-in hub (14 importers) while it contains both global design tokens and domain-specific status mapping keyed by CandidateFirmStatus.",
+        "apps/mobile/src/components/ has avg_fan_in 7.0 and broad consumers across screens/admin/candidate; keeping feature-policy contact behavior inside AppShell increases coupling in a high-reuse package.",
+        "apps/mobile/src/components/AppShell.tsx imports contact behavior from lib while also serving as a generic shell, showing placement mismatch between reusable UI shell and feature-specific contact policy."
+      ],
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "confidence": "high"
+    }
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "client_owns_server_role_contract",
+      "summary": "Auth provider enforces admin role contracts client-side, blurring trust boundaries.",
+      "related_files": [
+        "apps/mobile/src/state/AuthContext.tsx",
+        "README.md",
+        "apps/mobile/src/lib/firebase.ts"
+      ],
+      "evidence": [
+        "AuthContext calls ensureZenithAdminClaim, then still infers/overrides role using Firestore doc role and local email checks.",
+        "For non-whitelisted emails with admin doc role, AuthContext writes role back to candidate from client code.",
+        "README documents server-side admin enforcement, but runtime role governance is partially duplicated in client state orchestration."
+      ],
+      "suggestion": "Move role authority to server-only contract: expose a single read-only session bootstrap response (claims + normalized profile role), remove client-side role mutation paths from AuthContext, and keep AuthContext as consumer-only state mapping.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "architectural_change",
+      "root_cause_cluster": "unclear_authority_boundaries"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "appshell_mixed_ownership_surface",
+      "summary": "AppShell file mixes layout primitives with feature policy behavior.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "README.md"
+      ],
+      "evidence": [
+        "AppShell exports shell container plus unrelated primitives (SurfaceCard, EmptyState) and a feature policy contact bar in one module.",
+        "Dual props showCandidateContactBar/showZenithContactBar with fallback chaining indicate a compatibility bridge embedded in a core shell contract."
+      ],
+      "suggestion": "Split AppShell into focused modules: keep shell layout in AppShell, move contact policy to a dedicated feature component, and move generic primitives to a separate surface primitives module; then expose a small explicit public API from components/index.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "unclear_module_ownership"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "theme_hub_contains_domain_policy",
+      "summary": "UI theme hub contains domain status policy, creating package boundary mismatch.",
+      "related_files": [
+        "apps/mobile/src/ui/theme.ts",
+        "apps/mobile/src/components/Avatar.tsx",
+        "apps/mobile/src/components/AppShell.tsx"
+      ],
+      "evidence": [
+        "theme.ts has very high fan-in (14 importers) and should be stable design-token infrastructure, but it also includes CandidateFirmStatus-driven statusColors policy.",
+        "Shared components consume theme for visual tokens, so domain status mapping in the same module expands change blast radius for unrelated UI imports."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/ui/tokens/theme.ts` for pure tokens and `apps/mobile/src/features/status/ui/statusColors.ts` for CandidateFirmStatus mapping; (2) move `statusColors` first, keep temporary re-export from old path; (3) update imports with `rg \"statusColors|theme\" apps/mobile/src -n` and replace old references; (4) remove re-export after migration; (5) validate with `npm run dev:mobile` and `npx tsc -p apps/mobile/tsconfig.json --noEmit`.",
+      "confidence": "high",
+      "impact_scope": "subsystem",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "package_boundary_drift"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "shared_components_embed_contact_policy",
+      "summary": "High-reuse components package contains feature-specific contact policy logic.",
+      "related_files": [
+        "apps/mobile/src/components/AppShell.tsx",
+        "README.md"
+      ],
+      "evidence": [
+        "components directory has avg_fan_in 7.0 with many consumers, but AppShell imports contact-specific behavior and defaults it on for all consumers.",
+        "This placement couples generic shell usage to Zenith contact policy and forces opt-out behavior via policy flags."
+      ],
+      "suggestion": "Staged reorg plan: (1) create `apps/mobile/src/features/support/components/CandidateContactBar.tsx`; (2) move contact bar code and link logic there; (3) keep `AppShell` policy-neutral and accept an optional `topInsetComponent`; (4) update imports using `rg \"CandidateContactBar|showZenithContactBar|showCandidateContactBar\" apps/mobile/src -n`; (5) run `npx tsc -p apps/mobile/tsconfig.json --noEmit` and smoke test via `npm run dev:mobile`.",
+      "confidence": "high",
+      "impact_scope": "module",
+      "fix_scope": "multi_file_refactor",
+      "root_cause_cluster": "package_boundary_drift"
+    }
+  ],
+  "retrospective": {
+    "root_causes": [
+      "Authority boundaries between client state and server governance are not strictly separated.",
+      "High-fan-in shared modules accumulate policy logic because package boundaries are defined by technical layer, not ownership."
+    ],
+    "likely_symptoms": [
+      "appshell_mixed_ownership_surface",
+      "theme_hub_contains_domain_policy",
+      "shared_components_embed_contact_policy"
+    ],
+    "possible_false_positives": []
+  }
+}

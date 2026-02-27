@@ -9,6 +9,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   CANDIDATE_STATUS_LABELS,
   CANDIDATE_VISIBLE_STATUSES,
@@ -18,7 +19,13 @@ import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import { StatusChip } from "../../components/StatusChip";
-import { watchCandidateById, watchFirms, FirmRow } from "../../services/adminService";
+import {
+  changeUserRoleByAdmin,
+  updateCandidateAssignedHeader,
+  watchCandidateById,
+  watchFirms,
+  FirmRow
+} from "../../services/adminService";
 import {
   removeCandidateFirmStatus,
   saveCandidateFirmStatus,
@@ -29,6 +36,64 @@ import {
 import { useAuth } from "../../state/AuthContext";
 import { AdminCandidatesStackParamList } from "../../navigation/types";
 import { theme } from "../../ui/theme";
+import { ZENITH_EMAIL, ZENITH_PHONE } from "../../lib/zenithContact";
+
+function parseIsoDate(input?: string) {
+  if (!input || !/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    return null;
+  }
+  const parsed = new Date(`${input}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatShortDate(input?: string) {
+  const parsed = parseIsoDate(input);
+  if (!parsed) {
+    return "Not set";
+  }
+  return parsed.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
+function getAge(input?: string) {
+  const dob = parseIsoDate(input);
+  if (!dob) {
+    return "Not set";
+  }
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const monthDiff = today.getMonth() - dob.getMonth();
+  const dayDiff = today.getDate() - dob.getDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age -= 1;
+  }
+  return age >= 0 ? String(age) : "Not set";
+}
+
+function formatStatusUpdatedDate(input: unknown) {
+  if (!input) {
+    return "Not set";
+  }
+  if (typeof input === "object" && input && "toDate" in input && typeof (input as any).toDate === "function") {
+    try {
+      return (input as any).toDate().toLocaleDateString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric"
+      });
+    } catch {
+      return "Not set";
+    }
+  }
+  const parsed = new Date(String(input));
+  if (Number.isNaN(parsed.getTime())) {
+    return "Not set";
+  }
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric"
+  });
+}
 
 export function AdminCandidateDetailScreen() {
   const navigation = useNavigation<any>();
@@ -47,6 +112,11 @@ export function AdminCandidateDetailScreen() {
   const [assignStatus, setAssignStatus] = useState<CandidateFirmStatus>("authorization_pending");
 
   const [editingStatusRow, setEditingStatusRow] = useState<CandidateFirmStatusRow | null>(null);
+  const [assignedHeaderEmail, setAssignedHeaderEmail] = useState(ZENITH_EMAIL);
+  const [assignedHeaderPhone, setAssignedHeaderPhone] = useState(ZENITH_PHONE);
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubCandidate = watchCandidateById(candidateId, setCandidate, () => setCandidate(null));
@@ -75,6 +145,15 @@ export function AdminCandidateDetailScreen() {
     });
     return map;
   }, [firms]);
+
+  const preferredCities = Array.isArray(candidate?.preferences?.preferredCities)
+    ? candidate.preferences.preferredCities.join(", ")
+    : "";
+
+  useEffect(() => {
+    setAssignedHeaderEmail(String(candidate?.assignedHeaderEmail ?? ZENITH_EMAIL));
+    setAssignedHeaderPhone(String(candidate?.assignedHeaderPhone ?? ZENITH_PHONE));
+  }, [candidate?.assignedHeaderEmail, candidate?.assignedHeaderPhone]);
 
   const openAssignFlow = () => {
     setAssignModalOpen(true);
@@ -141,8 +220,61 @@ export function AdminCandidateDetailScreen() {
     );
   };
 
+  const saveAssignedHeader = async () => {
+    const nextEmail = assignedHeaderEmail.trim() || ZENITH_EMAIL;
+    const nextPhone = assignedHeaderPhone.trim() || ZENITH_PHONE;
+    if (!nextEmail.includes("@")) {
+      Alert.alert("Invalid email", "Please enter a valid email link value.");
+      return;
+    }
+
+    try {
+      setSavingHeader(true);
+      await updateCandidateAssignedHeader(candidateId, {
+        assignedHeaderEmail: nextEmail,
+        assignedHeaderPhone: nextPhone
+      });
+      Alert.alert("Saved", "Assigned header links updated for this candidate.");
+    } catch (error: any) {
+      Alert.alert("Could not save header", error?.message ?? "Please try again.");
+    } finally {
+      setSavingHeader(false);
+    }
+  };
+
+  const promoteToRecruiter = () => {
+    const targetUid = String(candidate?.uid ?? candidateId).trim();
+    Alert.alert(
+      "Change role to Recruiter",
+      "This will promote this candidate to recruiter access. Candidate data is kept and will return if demoted back.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSavingRole(true);
+              await changeUserRoleByAdmin({
+                targetUid,
+                targetRole: "admin"
+              });
+              setRoleModalOpen(false);
+              Alert.alert("Updated", "Candidate is now a recruiter.");
+              navigation.goBack();
+            } catch (error: any) {
+              Alert.alert("Could not change role", error?.message ?? "Please try again.");
+            } finally {
+              setSavingRole(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
-    <AppShell title="Candidate Detail" subtitle="Manage firms and statuses.">
+    <AppShell title="Candidate Detail" subtitle="Full profile + firm management.">
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <SurfaceCard>
           <Pressable onPress={() => navigation.goBack()}>
@@ -154,11 +286,70 @@ export function AdminCandidateDetailScreen() {
               <Text style={styles.candidateName}>{candidate?.fullName || "Candidate"}</Text>
               <Text style={styles.meta}>{candidate?.email || "No email"}</Text>
               <Text style={styles.meta}>{candidate?.mobile || "No phone"}</Text>
-              <Text style={styles.meta}>Work: {candidate?.preferences?.practiceArea || "Not set"}</Text>
-              <Text style={styles.meta}>
-                Cities: {(candidate?.preferences?.preferredCities ?? []).join(", ") || "None"}
-              </Text>
             </View>
+          </View>
+
+          <View style={styles.profileDetails}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Practice</Text>
+              <Text style={styles.detailValue}>{candidate?.preferences?.practiceArea || "Not set"}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Preferred cities</Text>
+              <Text style={styles.detailValue}>{preferredCities || "None"}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Date of birth</Text>
+              <Text style={styles.detailValue}>{formatShortDate(String(candidate?.dateOfBirth ?? ""))}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Age</Text>
+              <Text style={styles.detailValue}>{getAge(String(candidate?.dateOfBirth ?? ""))}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>JD degree received</Text>
+              <Text style={styles.detailValue}>{formatShortDate(String(candidate?.jdDegreeDate ?? ""))}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Role</Text>
+              <Pressable
+                style={[styles.roleFieldButton, savingRole && styles.disabled]}
+                onPress={() => setRoleModalOpen(true)}
+                disabled={savingRole}
+              >
+                <Text style={styles.roleFieldText}>candidate</Text>
+                <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.assignedHeaderSection}>
+            <Text style={styles.assignedHeaderTitle}>Assigned Header</Text>
+            <Text style={styles.assignedHeaderSubtitle}>
+              Candidate app header links shown at the top of their screens.
+            </Text>
+            <Text style={styles.inputLabel}>Email hyperlink</Text>
+            <TextInput
+              style={styles.input}
+              value={assignedHeaderEmail}
+              onChangeText={setAssignedHeaderEmail}
+              placeholder={ZENITH_EMAIL}
+              placeholderTextColor="#7f8b9d"
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Text style={styles.inputLabel}>Phone hyperlink</Text>
+            <TextInput
+              style={styles.input}
+              value={assignedHeaderPhone}
+              onChangeText={setAssignedHeaderPhone}
+              placeholder={ZENITH_PHONE}
+              placeholderTextColor="#7f8b9d"
+              keyboardType="phone-pad"
+            />
+            <Pressable style={styles.saveHeaderButton} onPress={saveAssignedHeader} disabled={savingHeader}>
+              <Text style={styles.saveHeaderButtonText}>{savingHeader ? "Saving..." : "Save Assigned Header"}</Text>
+            </Pressable>
           </View>
 
           <Pressable style={styles.assignButton} onPress={openAssignFlow}>
@@ -173,6 +364,7 @@ export function AdminCandidateDetailScreen() {
             <View key={statusRow.id} style={styles.statusRow}>
               <Text style={styles.firmName}>{firmMap[statusRow.firmId] ?? statusRow.firmId}</Text>
               <StatusChip status={statusRow.status} />
+              <Text style={styles.statusDate}>Status updated: {formatStatusUpdatedDate(statusRow.updatedAt)}</Text>
               <View style={styles.statusActionsRow}>
                 <Pressable style={styles.changeButton} onPress={() => setEditingStatusRow(statusRow)}>
                   <Text style={styles.changeButtonText}>Change status</Text>
@@ -270,6 +462,31 @@ export function AdminCandidateDetailScreen() {
       </Modal>
 
       <Modal
+        visible={roleModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRoleModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Change Role</Text>
+            <Text style={styles.modalSubtitle}>{candidate?.fullName || "Candidate"}</Text>
+
+            <Pressable style={[styles.choice, styles.choiceSelected]} onPress={() => setRoleModalOpen(false)}>
+              <Text style={[styles.choiceText, styles.choiceTextSelected]}>candidate</Text>
+            </Pressable>
+            <Pressable style={styles.choice} onPress={promoteToRecruiter} disabled={savingRole}>
+              <Text style={styles.choiceText}>{savingRole ? "Saving..." : "recruiter"}</Text>
+            </Pressable>
+
+            <Pressable style={styles.cancelModalButton} onPress={() => setRoleModalOpen(false)}>
+              <Text style={styles.cancelModalText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={Boolean(editingStatusRow)}
         transparent
         animationType="fade"
@@ -315,16 +532,57 @@ const styles = StyleSheet.create({
   profileBody: {
     flex: 1
   },
+  profileDetails: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden"
+  },
+  detailRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: "600"
+  },
+  detailValue: {
+    marginTop: 3,
+    color: theme.colors.textPrimary,
+    fontWeight: "700"
+  },
   meta: {
     marginTop: 3,
     color: theme.colors.textSecondary
   },
   assignButton: {
-    marginTop: 12,
+    marginTop: 8,
     borderRadius: 12,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
     paddingVertical: 11
+  },
+  roleFieldButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    marginTop: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
+  },
+  roleFieldText: {
+    color: theme.colors.textSecondary,
+    fontWeight: "700"
   },
   assignButtonText: {
     color: "#fff",
@@ -347,6 +605,11 @@ const styles = StyleSheet.create({
   firmName: {
     color: theme.colors.textPrimary,
     fontWeight: "700"
+  },
+  statusDate: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
   },
   changeButton: {
     borderWidth: 1,
@@ -433,6 +696,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: "#fff"
+  },
+  assignedHeaderSection: {
+    marginTop: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    padding: 12,
+    gap: 8
+  },
+  assignedHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary
+  },
+  assignedHeaderSubtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 12
+  },
+  inputLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  saveHeaderButton: {
+    marginTop: 4,
+    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    paddingVertical: 10
+  },
+  saveHeaderButtonText: {
+    color: "#fff",
+    fontWeight: "700"
   },
   statusChoices: {
     gap: 6

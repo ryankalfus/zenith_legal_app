@@ -1,8 +1,19 @@
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Image, ImageStyle, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { openExternalUrl, ZENITH_EMAIL, ZENITH_PHONE } from "../lib/zenithContact";
+import {
+  buildEmailHref,
+  buildPhoneHref,
+  normalizeAssignedEmail,
+  normalizeAssignedPhone,
+  openExternalUrl,
+  ZENITH_EMAIL,
+  ZENITH_PHONE
+} from "../lib/zenithContact";
 import { theme } from "../ui/theme";
+import { useAuth } from "../state/AuthContext";
+import { watchUser } from "../services/userService";
+import { watchConversationHeaderOverride } from "../services/messagingService";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -11,10 +22,14 @@ type AppShellProps = {
   headerRight?: React.ReactNode;
   showCandidateContactBar?: boolean;
   showZenithContactBar?: boolean;
+  showTopRightLogo?: boolean;
+  topRightLogoStyle?: StyleProp<ImageStyle>;
+  headingWrapStyle?: StyleProp<ViewStyle>;
   scroll?: boolean;
 };
 
 export const CONTACT_BAR_CONTENT_HEIGHT = 44;
+const ZENITH_LOGO = require("../../assets/zenith-legal-logo.png");
 
 export function AppShell({
   children,
@@ -23,13 +38,19 @@ export function AppShell({
   headerRight,
   showCandidateContactBar,
   showZenithContactBar,
+  showTopRightLogo = true,
+  topRightLogoStyle,
+  headingWrapStyle,
   scroll = false
 }: AppShellProps) {
   const shouldShowContactBar = showZenithContactBar ?? showCandidateContactBar ?? true;
   const content = (
     <View style={styles.contentArea}>
+      {showTopRightLogo ? (
+        <Image source={ZENITH_LOGO} style={[styles.topRightLogo, topRightLogoStyle]} resizeMode="contain" />
+      ) : null}
       {title ? (
-        <View style={styles.headingWrap}>
+        <View style={[styles.headingWrap, headingWrapStyle]}>
           <View style={styles.headingRow}>
             <Text style={styles.title}>{title}</Text>
             {headerRight ? <View style={styles.headingRight}>{headerRight}</View> : null}
@@ -50,13 +71,66 @@ export function AppShell({
 }
 
 export function CandidateContactBar() {
+  const { session } = useAuth();
+  const [profileAssignedEmail, setProfileAssignedEmail] = useState("");
+  const [profileAssignedPhone, setProfileAssignedPhone] = useState("");
+  const [conversationAssignedEmail, setConversationAssignedEmail] = useState("");
+  const [conversationAssignedPhone, setConversationAssignedPhone] = useState("");
+
+  useEffect(() => {
+    if (session?.role !== "candidate" || !session?.user.uid) {
+      setProfileAssignedEmail("");
+      setProfileAssignedPhone("");
+      return;
+    }
+
+    return watchUser(
+      session.user.uid,
+      (data) => {
+        const email = normalizeAssignedEmail(data?.assignedHeaderEmail);
+        const phone = normalizeAssignedPhone(data?.assignedHeaderPhone);
+        setProfileAssignedEmail(email);
+        setProfileAssignedPhone(phone);
+      },
+      () => {
+        setProfileAssignedEmail("");
+        setProfileAssignedPhone("");
+      }
+    );
+  }, [session?.role, session?.user.uid]);
+
+  useEffect(() => {
+    if (session?.role !== "candidate" || !session?.user.uid) {
+      setConversationAssignedEmail("");
+      setConversationAssignedPhone("");
+      return;
+    }
+
+    return watchConversationHeaderOverride(
+      session.user.uid,
+      (data) => {
+        const email = normalizeAssignedEmail(data.assignedHeaderEmail);
+        const phone = normalizeAssignedPhone(data.assignedHeaderPhone);
+        setConversationAssignedEmail(email);
+        setConversationAssignedPhone(phone);
+      },
+      () => {
+        setConversationAssignedEmail("");
+        setConversationAssignedPhone("");
+      }
+    );
+  }, [session?.role, session?.user.uid]);
+
+  const resolvedEmail = profileAssignedEmail || conversationAssignedEmail || ZENITH_EMAIL;
+  const resolvedPhone = profileAssignedPhone || conversationAssignedPhone || ZENITH_PHONE;
+
   return (
     <View style={styles.contactBar}>
-      <Pressable onPress={() => openExternalUrl(`mailto:${ZENITH_EMAIL}`)}>
-        <Text style={styles.contactText}>{ZENITH_EMAIL}</Text>
+      <Pressable onPress={() => openExternalUrl(buildEmailHref(resolvedEmail))}>
+        <Text style={styles.contactText}>{resolvedEmail}</Text>
       </Pressable>
-      <Pressable onPress={() => openExternalUrl(`tel:${ZENITH_PHONE}`)}>
-        <Text style={styles.contactText}>{ZENITH_PHONE}</Text>
+      <Pressable onPress={() => openExternalUrl(buildPhoneHref(resolvedPhone))}>
+        <Text style={styles.contactText}>{resolvedPhone}</Text>
       </Pressable>
     </View>
   );
@@ -82,7 +156,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 14,
     paddingTop: 10,
-    gap: 10
+    gap: 10,
+    position: "relative"
   },
   headingWrap: {
     gap: 3,
@@ -137,5 +212,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: theme.colors.textSecondary,
     marginTop: 22
+  },
+  topRightLogo: {
+    position: "absolute",
+    right: 8,
+    top: -6,
+    width: 90,
+    height: 90
   }
 });

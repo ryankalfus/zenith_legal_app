@@ -8,8 +8,8 @@
 - [ ] Candidate sets preferred cities and practice area.
 
 ## Admin Auth + Access
-- [ ] Only `mason@zenithlegal.com` can access admin dashboard/tools.
-- [ ] Non-Zenith users are blocked from admin data even if role claim is spoofed.
+- [ ] Any user with role `admin` claim can access admin dashboard/tools.
+- [ ] Non-admin users are blocked from admin data.
 - [ ] Zenith admin can access mobile inbox and reply to candidate chats.
 
 ## Messaging

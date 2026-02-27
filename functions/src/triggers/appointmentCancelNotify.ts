@@ -1,7 +1,7 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { getSignupAlertConfig } from "../config/env";
 
 if (!getApps().length) {
@@ -59,28 +59,6 @@ export const notifyOnCandidateAppointmentCancel = onDocumentWritten(
     const candidateEmail = String(candidate.email ?? "");
     const messageText = formatCanceledMessage(after.startsAt, after.phoneNumber);
 
-    const conversationRef = db.collection("conversations").doc(candidateId);
-    await conversationRef.set(
-      {
-        candidateId,
-        participantIds: [candidateId, "zenith-team"],
-        lastMessageText: messageText,
-        lastMessageAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        createdAt: FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
-
-    await conversationRef.collection("messages").add({
-      candidateId,
-      senderId: candidateId,
-      senderRole: "candidate",
-      text: messageText,
-      attachments: [],
-      createdAt: FieldValue.serverTimestamp()
-    });
-
     const { apiKey, from, to } = getSignupAlertConfig();
     if (!apiKey) {
       logger.warn("Appointment cancellation email skipped: RESEND_API_KEY missing.", {
@@ -98,7 +76,7 @@ export const notifyOnCandidateAppointmentCancel = onDocumentWritten(
       `Date/Time: ${String(after.startsAt ?? "n/a")}`,
       `Phone: ${String(after.phoneNumber ?? "n/a")}`,
       `Appointment ID: ${event.params.appointmentId}`,
-      `Auto chat text: ${messageText}`
+      `Candidate chat summary: ${messageText}`
     ].join("\n");
 
     try {

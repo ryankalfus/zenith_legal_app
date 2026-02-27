@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,12 @@ import { APPOINTMENT_STATUS_LABELS, AppointmentStatus } from "@zenith/shared";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import {
+  formatAdminAppointmentCanceledChat,
+  formatAdminAppointmentCreatedChat,
+  formatAdminAppointmentDecisionChat,
+  formatAdminAppointmentModifiedChat
+} from "../../lib/appointmentChat";
+import {
   AppointmentRow,
   createAdminAppointment,
   deleteAppointment,
@@ -24,7 +31,9 @@ import {
   watchAdminAppointmentRequests,
   watchAdminUnattendedRequests
 } from "../../services/appointmentService";
+import { addAppointmentToDeviceCalendar } from "../../services/calendarService";
 import { watchCandidates } from "../../services/adminService";
+import { sendMessage } from "../../services/messagingService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
 
@@ -77,8 +86,7 @@ export function AdminAppointmentRequestsScreen() {
   const [createTime, setCreateTime] = useState<Date>(new Date());
   const [createPhone, setCreatePhone] = useState("");
   const [createNote, setCreateNote] = useState("");
-  const [showCreateDatePicker, setShowCreateDatePicker] = useState(false);
-  const [showCreateTimePicker, setShowCreateTimePicker] = useState(false);
+  const [activeCreatePicker, setActiveCreatePicker] = useState<"date" | "time" | null>(null);
   const [creating, setCreating] = useState(false);
 
   const [editingRow, setEditingRow] = useState<AppointmentRow | null>(null);
@@ -86,9 +94,7 @@ export function AdminAppointmentRequestsScreen() {
   const [editTime, setEditTime] = useState<Date>(new Date());
   const [editPhone, setEditPhone] = useState("");
   const [editNote, setEditNote] = useState("");
-  const [promoteToScheduledAfterEdit, setPromoteToScheduledAfterEdit] = useState(false);
-  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
-  const [showEditTimePicker, setShowEditTimePicker] = useState(false);
+  const [activeEditPicker, setActiveEditPicker] = useState<"date" | "time" | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
@@ -144,13 +150,15 @@ export function AdminAppointmentRequestsScreen() {
   }, [candidates]);
 
   const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  }, [rows]);
+    const activeRows = rows.filter((row) => Boolean(candidateMap[row.candidateId]));
+    return [...activeRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [rows, candidateMap]);
 
   const now = Date.now();
   const unattendedRequests = useMemo(() => {
-    return [...unattendedRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  }, [unattendedRows]);
+    const activeRows = unattendedRows.filter((row) => Boolean(candidateMap[row.candidateId]));
+    return [...activeRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [unattendedRows, candidateMap]);
 
   const overdueScheduled = sortedRows.filter((row) => {
     if (row.status !== "scheduled") {
@@ -186,13 +194,65 @@ export function AdminAppointmentRequestsScreen() {
   };
 
   const handleAcceptRequest = async (row: AppointmentRow) => {
-    const starts = parseDate(row.startsAt);
-    if (!starts || starts.getTime() <= Date.now()) {
-      Alert.alert("Pick a new time", "This request time has passed. Modify it to a future time before accepting.");
-      openModifyModal(row, true);
+    if (!session?.user.uid) {
       return;
     }
     await setStatus(row.id, "scheduled");
+    try {
+      await sendMessage({
+        candidateId: row.candidateId,
+        senderId: session.user.uid,
+        senderRole: "admin",
+        text: formatAdminAppointmentDecisionChat({
+          action: "accepted",
+          startsAt: row.startsAt,
+          notes: row.notes
+        })
+      });
+    } catch {
+      // Keep status update successful even if chat send fails.
+    }
+  };
+
+  const handleDeclineRequest = async (row: AppointmentRow) => {
+    if (!session?.user.uid) {
+      return;
+    }
+    await setStatus(row.id, "canceled");
+    try {
+      await sendMessage({
+        candidateId: row.candidateId,
+        senderId: session.user.uid,
+        senderRole: "admin",
+        text: formatAdminAppointmentDecisionChat({
+          action: "declined",
+          startsAt: row.startsAt,
+          notes: row.notes
+        })
+      });
+    } catch {
+      // Keep status update successful even if chat send fails.
+    }
+  };
+
+  const handleCancelScheduled = async (row: AppointmentRow) => {
+    if (!session?.user.uid) {
+      return;
+    }
+    await setStatus(row.id, "canceled");
+    try {
+      await sendMessage({
+        candidateId: row.candidateId,
+        senderId: session.user.uid,
+        senderRole: "admin",
+        text: formatAdminAppointmentCanceledChat({
+          startsAt: row.startsAt,
+          notes: row.notes
+        })
+      });
+    } catch {
+      // Keep status update successful even if chat send fails.
+    }
   };
 
   const confirmIgnoreOverdue = (row: AppointmentRow) => {
@@ -216,29 +276,39 @@ export function AdminAppointmentRequestsScreen() {
     );
   };
 
+  const addToCalendar = async (row: AppointmentRow, candidateName: string) => {
+    try {
+      await addAppointmentToDeviceCalendar({
+        title: `Call with ${candidateName}`,
+        notes: row.notes,
+        startsAt: row.startsAt,
+        endsAt: row.endsAt
+      });
+      Alert.alert("Added", "Appointment added to your phone calendar.");
+    } catch (error: any) {
+      Alert.alert("Could not add to calendar", error?.message ?? "Please try again.");
+    }
+  };
+
   const onCreateDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    setShowCreateDatePicker(false);
     if (selected) {
       setCreateDate(selected);
     }
   };
 
   const onCreateTimeChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    setShowCreateTimePicker(false);
     if (selected) {
       setCreateTime(selected);
     }
   };
 
   const onEditDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    setShowEditDatePicker(false);
     if (selected) {
       setEditDate(selected);
     }
   };
 
   const onEditTimeChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    setShowEditTimePicker(false);
     if (selected) {
       setEditTime(selected);
     }
@@ -274,6 +344,19 @@ export function AdminAppointmentRequestsScreen() {
         phoneNumber: createPhone.trim(),
         notes: createNote.trim()
       });
+      try {
+        await sendMessage({
+          candidateId: createCandidateId,
+          senderId: session.user.uid,
+          senderRole: "admin",
+          text: formatAdminAppointmentCreatedChat({
+            startsAt,
+            notes: createNote.trim()
+          })
+        });
+      } catch {
+        // Keep appointment creation successful even if chat send fails.
+      }
       setCreateNote("");
       Alert.alert("Saved", "Appointment created and synced.");
     } catch (error: any) {
@@ -283,14 +366,14 @@ export function AdminAppointmentRequestsScreen() {
     }
   };
 
-  const openModifyModal = (row: AppointmentRow, promoteToScheduled: boolean) => {
+  const openModifyModal = (row: AppointmentRow) => {
     const starts = new Date(row.startsAt);
     setEditingRow(row);
     setEditDate(starts);
     setEditTime(starts);
     setEditPhone(String(row.phoneNumber ?? ""));
     setEditNote(String(row.notes ?? ""));
-    setPromoteToScheduledAfterEdit(promoteToScheduled);
+    setActiveEditPicker(null);
   };
 
   const saveModifiedAppointment = async () => {
@@ -311,6 +394,7 @@ export function AdminAppointmentRequestsScreen() {
 
     try {
       setSavingEdit(true);
+      const previousStartsAt = editingRow.startsAt;
       await updateAppointmentDetails({
         appointmentId: editingRow.id,
         startsAt,
@@ -319,7 +403,7 @@ export function AdminAppointmentRequestsScreen() {
         updatedBy: session.user.uid,
         updatedByRole: "admin"
       });
-      if (promoteToScheduledAfterEdit || editingRow.status === "requested") {
+      if (editingRow.status === "requested") {
         await updateAppointmentStatus({
           appointmentId: editingRow.id,
           status: "scheduled",
@@ -327,8 +411,21 @@ export function AdminAppointmentRequestsScreen() {
           updatedByRole: "admin"
         });
       }
+      try {
+        await sendMessage({
+          candidateId: editingRow.candidateId,
+          senderId: session.user.uid,
+          senderRole: "admin",
+          text: formatAdminAppointmentModifiedChat({
+            previousStartsAt,
+            nextStartsAt: startsAt,
+            notes: editNote.trim()
+          })
+        });
+      } catch {
+        // Keep appointment update successful even if chat send fails.
+      }
       setEditingRow(null);
-      setPromoteToScheduledAfterEdit(false);
       Alert.alert("Updated", "Appointment changes synced.");
     } catch (error: any) {
       Alert.alert("Could not update", error?.message ?? "Please try again.");
@@ -340,7 +437,11 @@ export function AdminAppointmentRequestsScreen() {
   const selectedCandidate = candidateMap[createCandidateId];
 
   return (
-    <AppShell title="Appointments" subtitle="Create and manage appointments.">
+    <AppShell
+      title="Appointments"
+      subtitle="Create and manage appointments."
+      topRightLogoStyle={styles.dashboardHeroLogo}
+    >
       <View style={styles.screenBody}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <SurfaceCard>
@@ -362,15 +463,42 @@ export function AdminAppointmentRequestsScreen() {
             </Pressable>
 
             <View style={styles.rowButtons}>
-              <Pressable style={styles.pickButton} onPress={() => setShowCreateDatePicker(true)}>
+              <Pressable
+                style={[styles.pickButton, activeCreatePicker === "date" && styles.pickButtonActive]}
+                onPress={() => setActiveCreatePicker((current) => (current === "date" ? null : "date"))}
+              >
                 <Text style={styles.pickLabel}>Date</Text>
                 <Text style={styles.pickValue}>{formatDate(createDate)}</Text>
               </Pressable>
-              <Pressable style={styles.pickButton} onPress={() => setShowCreateTimePicker(true)}>
+              <Pressable
+                style={[styles.pickButton, activeCreatePicker === "time" && styles.pickButtonActive]}
+                onPress={() => setActiveCreatePicker((current) => (current === "time" ? null : "time"))}
+              >
                 <Text style={styles.pickLabel}>Time</Text>
                 <Text style={styles.pickValue}>{formatTime(createTime)}</Text>
               </Pressable>
             </View>
+
+            {activeCreatePicker === "date" ? (
+              <View style={styles.inlinePickerWrap}>
+                <DateTimePicker
+                  value={createDate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "inline" : "spinner"}
+                  onChange={onCreateDateChange}
+                />
+              </View>
+            ) : null}
+            {activeCreatePicker === "time" ? (
+              <View style={styles.inlinePickerWrap}>
+                <DateTimePicker
+                  value={createTime}
+                  mode="time"
+                  display={Platform.OS === "ios" ? "spinner" : "spinner"}
+                  onChange={onCreateTimeChange}
+                />
+              </View>
+            ) : null}
 
             <TextInput
               style={styles.input}
@@ -468,11 +596,17 @@ export function AdminAppointmentRequestsScreen() {
                           {expanded ? <Text style={styles.noteText}>{row.notes}</Text> : null}
                         </>
                       ) : null}
+                      <Pressable
+                        style={styles.calendarButton}
+                        onPress={() => addToCalendar(row, candidate?.name || "Candidate")}
+                      >
+                        <Text style={styles.calendarButtonText}>Add to Calendar</Text>
+                      </Pressable>
                       <View style={styles.actionRow}>
-                        <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>
+                        <Pressable style={styles.cancelButton} onPress={() => handleCancelScheduled(row)}>
                           <Text style={styles.cancelButtonText}>Cancel</Text>
                         </Pressable>
-                        <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row, false)}>
+                        <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row)}>
                           <Text style={styles.modifyButtonText}>Modify</Text>
                         </Pressable>
                       </View>
@@ -537,11 +671,8 @@ export function AdminAppointmentRequestsScreen() {
                         <Pressable style={styles.actionButton} onPress={() => handleAcceptRequest(row)}>
                           <Text style={styles.actionButtonText}>Accept</Text>
                         </Pressable>
-                        <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>
+                        <Pressable style={styles.cancelButton} onPress={() => handleDeclineRequest(row)}>
                           <Text style={styles.cancelButtonText}>Decline</Text>
-                        </Pressable>
-                        <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row, true)}>
-                          <Text style={styles.modifyButtonText}>Modify</Text>
                         </Pressable>
                       </View>
                     </View>
@@ -600,15 +731,42 @@ export function AdminAppointmentRequestsScreen() {
             <Text style={styles.modalTitle}>Modify appointment</Text>
 
             <View style={styles.rowButtons}>
-              <Pressable style={styles.pickButton} onPress={() => setShowEditDatePicker(true)}>
+              <Pressable
+                style={[styles.pickButton, activeEditPicker === "date" && styles.pickButtonActive]}
+                onPress={() => setActiveEditPicker((current) => (current === "date" ? null : "date"))}
+              >
                 <Text style={styles.pickLabel}>Date</Text>
                 <Text style={styles.pickValue}>{formatDate(editDate)}</Text>
               </Pressable>
-              <Pressable style={styles.pickButton} onPress={() => setShowEditTimePicker(true)}>
+              <Pressable
+                style={[styles.pickButton, activeEditPicker === "time" && styles.pickButtonActive]}
+                onPress={() => setActiveEditPicker((current) => (current === "time" ? null : "time"))}
+              >
                 <Text style={styles.pickLabel}>Time</Text>
                 <Text style={styles.pickValue}>{formatTime(editTime)}</Text>
               </Pressable>
             </View>
+
+            {activeEditPicker === "date" ? (
+              <View style={styles.inlinePickerWrap}>
+                <DateTimePicker
+                  value={editDate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "inline" : "spinner"}
+                  onChange={onEditDateChange}
+                />
+              </View>
+            ) : null}
+            {activeEditPicker === "time" ? (
+              <View style={styles.inlinePickerWrap}>
+                <DateTimePicker
+                  value={editTime}
+                  mode="time"
+                  display={Platform.OS === "ios" ? "spinner" : "spinner"}
+                  onChange={onEditTimeChange}
+                />
+              </View>
+            ) : null}
 
             <TextInput
               style={styles.input}
@@ -628,7 +786,13 @@ export function AdminAppointmentRequestsScreen() {
             />
 
             <View style={styles.modalActions}>
-              <Pressable style={styles.cancelModalButton} onPress={() => setEditingRow(null)}>
+              <Pressable
+                style={styles.cancelModalButton}
+                onPress={() => {
+                  setEditingRow(null);
+                  setActiveEditPicker(null);
+                }}
+              >
                 <Text style={styles.cancelModalText}>Close</Text>
               </Pressable>
               <Pressable style={styles.createButton} onPress={saveModifiedAppointment} disabled={savingEdit}>
@@ -638,24 +802,17 @@ export function AdminAppointmentRequestsScreen() {
           </View>
         </View>
       </Modal>
-
-      {showCreateDatePicker ? (
-        <DateTimePicker value={createDate} mode="date" display="default" onChange={onCreateDateChange} />
-      ) : null}
-      {showCreateTimePicker ? (
-        <DateTimePicker value={createTime} mode="time" display="default" onChange={onCreateTimeChange} />
-      ) : null}
-      {showEditDatePicker ? (
-        <DateTimePicker value={editDate} mode="date" display="default" onChange={onEditDateChange} />
-      ) : null}
-      {showEditTimePicker ? (
-        <DateTimePicker value={editTime} mode="time" display="default" onChange={onEditTimeChange} />
-      ) : null}
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
+  dashboardHeroLogo: {
+    width: 90,
+    height: 90,
+    top: -6,
+    right: 8
+  },
   screenBody: {
     flex: 1
   },
@@ -719,6 +876,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10
   },
+  pickButtonActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: "#eef4ff"
+  },
   pickLabel: {
     color: theme.colors.textSecondary,
     fontSize: 12,
@@ -728,6 +889,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: theme.colors.textPrimary,
     fontWeight: "700"
+  },
+  inlinePickerWrap: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    overflow: "hidden"
   },
   input: {
     borderWidth: 1,
@@ -798,6 +967,20 @@ const styles = StyleSheet.create({
   noteText: {
     marginTop: 6,
     color: theme.colors.textPrimary
+  },
+  calendarButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#9dc2ff",
+    backgroundColor: "#eef5ff",
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12
+  },
+  calendarButtonText: {
+    color: theme.colors.primary,
+    fontWeight: "700"
   },
   ignoreButton: {
     marginTop: 10,
