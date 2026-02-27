@@ -68,7 +68,9 @@ service cloud.firestore {
           request.auth.uid == resource.data.candidateId &&
           request.resource.data.candidateId == resource.data.candidateId &&
           request.resource.data.firmId == resource.data.firmId &&
-          request.resource.data.status == resource.data.status
+          request.resource.data.updatedBy == request.auth.uid &&
+          resource.data.status == 'authorization_pending' &&
+          request.resource.data.status in ['waiting_for_submission', 'canceled']
         )
       );
     }

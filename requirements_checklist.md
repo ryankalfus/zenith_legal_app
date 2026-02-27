@@ -137,3 +137,13 @@ Legend:
 - [x] `MVP` Zenith admin can remove assigned firms with a red destructive action + confirmation.
 - [x] `MVP` Requested appointments remain visible until attended/canceled, improving end-to-end request reliability.
 - [x] `MVP` Added conversation metadata backfill command (`npm run backfill:conversations`) for older chat docs missing unread/snapshot fields.
+
+## Candidate Decision + Badge Update (2026-02-27)
+- [x] `MVP` Candidate waiting-state action labels updated to `Authorize` (green) and `Cancel` (red) with immediate persistence.
+- [x] `MVP` Candidate authorization decision now writes real shared firm statuses (`waiting_for_submission`, `canceled`) visible to both candidate and admin.
+- [x] `MVP` Candidate decision auto-sends direct DM detail text to Zenith Legal using candidate + firm names.
+- [x] `MVP` Chat tab badge logic updated to message-count semantics (`total unread messages`, `9+` cap) for admin-side tab indicator.
+- [x] `MVP` Admin inbox unread styling updated to blue-dot + bold preview behavior for unread conversations.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for direct candidate authorize/cancel status transitions, shared status-model expansion, and message-count-based chat badge behavior.

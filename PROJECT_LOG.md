@@ -132,3 +132,9 @@
 - 02.27.2026: Added admin firm removal flow in candidate detail (`Remove firm` red action with confirmation) and wired service-level delete path for `candidateFirmStatuses`.
 - 02.27.2026: Added conversation metadata backfill script (`npm run backfill:conversations`) and refreshed conversation trigger timestamp behavior for stable iMessage-style preview ordering/unread metadata.
 - 02.27.2026: Re-ran validation after stabilization pass: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
+- 02.27.2026: Updated shared candidate firm status model with real candidate decision statuses (`waiting_for_submission`, `canceled`) and applied labels/color chips across mobile/admin status UIs.
+- 02.27.2026: Replaced candidate dashboard waiting-state popup actions with direct `Authorize` (green) and `Cancel` (red) actions that immediately update firm status and auto-send candidate DM detail to Zenith Legal.
+- 02.27.2026: Updated Firestore rules to allow tightly scoped candidate status transitions only from `authorization_pending` -> `waiting_for_submission`/`canceled` and added RBAC smoke coverage for this path.
+- 02.27.2026: Changed admin chat tab badge logic to count total unread messages (not unread threads), capped at `9+`, and updated admin inbox unread indicator to blue-dot styling with bold preview text.
+- 02.27.2026: Increased/normalized contact header height so the Zenith contact bar sits safely below iPhone status hardware area and remains consistent across screens.
+- 02.27.2026: Re-ran full validation after status/notification updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`12 passed, 0 failed`).

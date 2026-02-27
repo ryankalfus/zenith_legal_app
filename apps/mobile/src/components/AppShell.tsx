@@ -13,7 +13,7 @@ type AppShellProps = {
   scroll?: boolean;
 };
 
-export const CONTACT_BAR_CONTENT_HEIGHT = 32;
+export const CONTACT_BAR_CONTENT_HEIGHT = 44;
 
 export function AppShell({
   children,
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
   },
   contactBar: {
     paddingHorizontal: 14,
-    minHeight: CONTACT_BAR_CONTENT_HEIGHT + 10,
-    paddingTop: 10,
-    paddingBottom: 6,
+    minHeight: CONTACT_BAR_CONTENT_HEIGHT,
+    paddingTop: 8,
+    paddingBottom: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

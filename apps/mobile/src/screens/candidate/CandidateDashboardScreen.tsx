@@ -15,11 +15,12 @@ import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { StatusChip } from "../../components/StatusChip";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../state/AuthContext";
+import { sendMessage } from "../../services/messagingService";
 import {
-  createCandidateStatusRequest,
-  watchPendingCandidateStatusRequests
-} from "../../services/candidateStatusRequestService";
-import { watchCandidateStatuses } from "../../services/statusService";
+  updateCandidateFirmStatusByCandidate,
+  watchCandidateStatuses
+} from "../../services/statusService";
+import { watchUser } from "../../services/userService";
 import { theme } from "../../ui/theme";
 
 const LOGO = require("../../../assets/zenith-legal-logo.png");
@@ -34,11 +35,11 @@ type DashboardRow = {
 export function CandidateDashboardScreen() {
   const { session } = useAuth();
   const [rows, setRows] = useState<DashboardRow[]>([]);
-  const [pendingRows, setPendingRows] = useState<Array<{ id: string; firmId: string }>>([]);
   const [firmMap, setFirmMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFirmId, setSelectedFirmId] = useState<string | null>(null);
+  const [candidateName, setCandidateName] = useState("Candidate");
+  const [selectedRow, setSelectedRow] = useState<DashboardRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -58,10 +59,10 @@ export function CandidateDashboardScreen() {
       }
     );
 
-    const unsubscribePending = watchPendingCandidateStatusRequests(
+    const unsubscribeUser = watchUser(
       session.user.uid,
-      (next) => setPendingRows(next.map((entry) => ({ id: entry.id, firmId: entry.firmId }))),
-      () => setPendingRows([])
+      (profile) => setCandidateName(String(profile?.fullName ?? "Candidate")),
+      () => setCandidateName("Candidate")
     );
 
     const unsubscribeFirms = onSnapshot(
@@ -78,35 +79,46 @@ export function CandidateDashboardScreen() {
 
     return () => {
       unsubscribeStatus();
-      unsubscribePending();
+      unsubscribeUser();
       unsubscribeFirms();
     };
   }, [session?.user.uid]);
 
-  const pendingByFirm = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    pendingRows.forEach((entry) => {
-      map[entry.firmId] = true;
-    });
-    return map;
-  }, [pendingRows]);
+  const selectedFirmName = useMemo(() => {
+    if (!selectedRow) {
+      return "";
+    }
+    return firmMap[selectedRow.firmId] ?? selectedRow.firmId;
+  }, [firmMap, selectedRow]);
 
-  const submitRequest = async (requestType: "authorization" | "cancellation") => {
-    if (!session?.user.uid || !selectedFirmId) {
+  const submitDecision = async (decision: "authorize" | "cancel") => {
+    if (!session?.user.uid || !selectedRow) {
       return;
     }
 
+    const nextStatus = decision === "authorize" ? "waiting_for_submission" : "canceled";
+    const detailText =
+      decision === "authorize"
+        ? `Candidate ${candidateName} has authorized submission for ${selectedFirmName}`
+        : `Candidate ${candidateName} has canceled assignment to ${selectedFirmName}`;
+
     try {
       setSubmitting(true);
-      await createCandidateStatusRequest({
-        candidateId: session.user.uid,
-        firmId: selectedFirmId,
-        requestType
+      await updateCandidateFirmStatusByCandidate({
+        statusRecordId: selectedRow.id,
+        status: nextStatus,
+        candidateUid: session.user.uid
       });
-      setSelectedFirmId(null);
-      Alert.alert("Sent", "Zenith Legal has been notified.");
+      await sendMessage({
+        candidateId: session.user.uid,
+        senderId: session.user.uid,
+        senderRole: "candidate",
+        text: detailText
+      });
+      setSelectedRow(null);
+      Alert.alert("Saved", "Your choice was sent to Zenith Legal.");
     } catch (err: any) {
-      Alert.alert("Request failed", err?.message ?? "Please try again.");
+      Alert.alert("Could not save", err?.message ?? "Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -151,54 +163,45 @@ export function CandidateDashboardScreen() {
       {!loading &&
         rows.map((row) => {
           const isWaiting = row.status === "authorization_pending";
-          const hasPending = Boolean(pendingByFirm[row.firmId]);
 
           return (
             <SurfaceCard key={row.id}>
               <View style={styles.rowHeader}>
                 <Text style={styles.firmName}>{firmMap[row.firmId] ?? row.firmId}</Text>
-                {hasPending ? (
-                  <View style={styles.pendingBadge}>
-                    <Text style={styles.pendingBadgeText}>Pending request</Text>
-                  </View>
-                ) : null}
               </View>
               <StatusChip status={row.status} />
               {isWaiting ? (
                 <Pressable
-                  style={[styles.requestButton, hasPending && styles.disabled]}
-                  disabled={hasPending}
-                  onPress={() => setSelectedFirmId(row.firmId)}
+                  style={styles.requestButton}
+                  onPress={() => setSelectedRow(row)}
                 >
-                  <Text style={styles.requestButtonText}>
-                    {hasPending ? "Awaiting Zenith action" : "Open request actions"}
-                  </Text>
+                  <Text style={styles.requestButtonText}>Choose authorize/cancel</Text>
                 </Pressable>
               ) : null}
             </SurfaceCard>
           );
         })}
 
-      <Modal visible={Boolean(selectedFirmId)} transparent animationType="fade" onRequestClose={() => setSelectedFirmId(null)}>
+      <Modal visible={Boolean(selectedRow)} transparent animationType="fade" onRequestClose={() => setSelectedRow(null)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{firmMap[selectedFirmId ?? ""] ?? "Selected firm"}</Text>
-            <Text style={styles.modalSubtitle}>Choose one action to notify Zenith Legal.</Text>
+            <Text style={styles.modalTitle}>{selectedFirmName || "Selected firm"}</Text>
+            <Text style={styles.modalSubtitle}>Choose one action.</Text>
             <Pressable
-              style={styles.primaryAction}
-              onPress={() => submitRequest("authorization")}
+              style={styles.authorizeAction}
+              onPress={() => submitDecision("authorize")}
               disabled={submitting}
             >
-              <Text style={styles.primaryActionText}>Request authorization</Text>
+              <Text style={styles.authorizeActionText}>Authorize</Text>
             </Pressable>
             <Pressable
-              style={styles.secondaryAction}
-              onPress={() => submitRequest("cancellation")}
+              style={styles.cancelAction}
+              onPress={() => submitDecision("cancel")}
               disabled={submitting}
             >
-              <Text style={styles.secondaryActionText}>Request cancellation</Text>
+              <Text style={styles.cancelActionText}>Cancel</Text>
             </Pressable>
-            <Pressable style={styles.closeAction} onPress={() => setSelectedFirmId(null)}>
+            <Pressable style={styles.closeAction} onPress={() => setSelectedRow(null)}>
               <Text style={styles.closeActionText}>Close</Text>
             </Pressable>
           </View>
@@ -249,19 +252,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary
   },
-  pendingBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: theme.colors.primarySoft,
-    borderWidth: 1,
-    borderColor: "#bcd1ff"
-  },
-  pendingBadgeText: {
-    color: theme.colors.primary,
-    fontSize: 11,
-    fontWeight: "700"
-  },
   requestButton: {
     marginTop: 10,
     borderRadius: 10,
@@ -299,26 +289,26 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginBottom: 4
   },
-  primaryAction: {
+  authorizeAction: {
     borderRadius: 10,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.success,
     alignItems: "center",
     paddingVertical: 11
   },
-  primaryActionText: {
+  authorizeActionText: {
     color: "#fff",
     fontWeight: "700"
   },
-  secondaryAction: {
+  cancelAction: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primarySoft,
+    borderColor: "#ef9c9c",
+    backgroundColor: "#fff2f2",
     alignItems: "center",
     paddingVertical: 11
   },
-  secondaryActionText: {
-    color: theme.colors.primary,
+  cancelActionText: {
+    color: theme.colors.danger,
     fontWeight: "700"
   },
   closeAction: {

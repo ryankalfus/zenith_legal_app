@@ -99,7 +99,12 @@ export function watchAdminUnreadChatsCount(
   const q = query(collection(db, "conversations"), where("unreadByAdminCount", ">", 0));
   return onSnapshot(
     q,
-    (snapshot) => onData(snapshot.size),
+    (snapshot) => {
+      const totalUnread = snapshot.docs.reduce((sum, entry) => {
+        return sum + Number(entry.data().unreadByAdminCount ?? 0);
+      }, 0);
+      onData(totalUnread);
+    },
     (err) => onError(err as Error)
   );
 }

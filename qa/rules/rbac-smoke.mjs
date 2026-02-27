@@ -228,9 +228,19 @@ async function run() {
   );
 
   results.push(
-    await assertFails("candidate cannot edit firm status", () =>
+    await assertSucceeds("candidate can set waiting_for_submission from authorization_pending", () =>
       updateDoc(doc(candidateA.db, "candidateFirmStatuses", "statusA"), {
-        status: "offer"
+        status: "waiting_for_submission",
+        updatedBy: "candidateA"
+      })
+    )
+  );
+
+  results.push(
+    await assertFails("candidate cannot edit firm status arbitrarily", () =>
+      updateDoc(doc(candidateA.db, "candidateFirmStatuses", "statusA"), {
+        status: "offer",
+        updatedBy: "candidateA"
       })
     )
   );

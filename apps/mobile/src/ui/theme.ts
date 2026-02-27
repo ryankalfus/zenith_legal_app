@@ -35,6 +35,11 @@ export const statusColors: Record<CandidateFirmStatus, { background: string; tex
     text: "#8a5b00",
     border: "#f3d79f"
   },
+  waiting_for_submission: {
+    background: "#fff9dc",
+    text: "#8d6500",
+    border: "#f0dd94"
+  },
   submitted_waiting: {
     background: "#edf4ff",
     text: "#1f4b9a",
@@ -44,6 +49,11 @@ export const statusColors: Record<CandidateFirmStatus, { background: string; tex
     background: "#eef8ef",
     text: "#1f7a45",
     border: "#b7e5c8"
+  },
+  canceled: {
+    background: "#ecfaef",
+    text: "#1f7a45",
+    border: "#b8e8c1"
   },
   rejected: {
     background: "#ffecec",

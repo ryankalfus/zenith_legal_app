@@ -554,3 +554,33 @@
     - admin clears per-thread when opening that thread
   - Confirm admin can remove assigned firms and candidate dashboard updates immediately.
   - Confirm requested appointments stay visible on admin unattended queue until attended/canceled.
+
+## Step 34 - Candidate Authorize/Cancel + Message-Count Badges
+- What changed:
+  - Added new real shared candidate-firm statuses:
+    - `waiting_for_submission`
+    - `canceled`
+  - Updated shared status labels/types/theme palettes so these statuses are color-coded everywhere status chips render.
+  - Replaced candidate dashboard waiting-state actions:
+    - `Authorize` (green)
+    - `Cancel` (red)
+  - Candidate actions now directly update the assigned firm status document (no pending placeholder state) and auto-send a candidate DM to Zenith Legal:
+    - `Candidate xxx has authorized submission for x firm`
+    - `Candidate xxx has canceled assignment to x firm`
+  - Updated Firestore rule logic so candidates can only perform this narrow transition:
+    - from `authorization_pending`
+    - to `waiting_for_submission` or `canceled`
+    - only on their own assignment docs.
+  - Updated RBAC smoke test to validate this allowed transition while keeping arbitrary candidate status edits blocked.
+  - Updated admin chat badge source to total unread message count (sum of `unreadByAdminCount`) instead of unread-thread count.
+  - Updated admin inbox unread indicator to blue dot styling with bold preview text retained for unread rows.
+  - Increased shared contact header height to keep contact info clear of iPhone status hardware area while preserving consistency across screens.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Candidate waiting-status modal shows `Authorize`/`Cancel` with required colors and immediate status update.
+  - Auto DM text after candidate decision includes candidate name + firm name with exact wording.
+  - Admin chat tab badge reflects unread message totals (`9+` cap), not thread count.
+  - Admin inbox unread row uses blue dot + bold preview and clears when opening the thread.

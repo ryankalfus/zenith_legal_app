@@ -2,8 +2,10 @@ export type UserRole = "candidate" | "admin";
 
 export type CandidateFirmStatus =
   | "authorization_pending"
+  | "waiting_for_submission"
   | "submitted_waiting"
   | "interview"
+  | "canceled"
   | "rejected"
   | "offer";
 

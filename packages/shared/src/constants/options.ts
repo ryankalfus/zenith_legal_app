@@ -28,16 +28,20 @@ export const PRACTICE_AREAS = [
 
 export const CANDIDATE_VISIBLE_STATUSES = [
   "authorization_pending",
+  "waiting_for_submission",
   "submitted_waiting",
   "interview",
+  "canceled",
   "rejected",
   "offer"
 ] as const;
 
 export const CANDIDATE_STATUS_LABELS: Record<(typeof CANDIDATE_VISIBLE_STATUSES)[number], string> = {
   authorization_pending: "Waiting on your authorization to contact/submit",
+  waiting_for_submission: "Waiting for submission",
   submitted_waiting: "Submitted, waiting to hear from firm",
   interview: "Interview Stage",
+  canceled: "Canceled",
   rejected: "Rejected by firm",
   offer: "Offer received!"
 };

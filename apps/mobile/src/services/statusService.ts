@@ -128,6 +128,23 @@ export async function updateCandidateFirmStatus(input: {
   });
 }
 
+export async function updateCandidateFirmStatusByCandidate(input: {
+  statusRecordId: string;
+  status: CandidateFirmStatus;
+  candidateUid: string;
+}) {
+  await updateDoc(doc(db, "candidateFirmStatuses", input.statusRecordId), {
+    status: input.status,
+    updatedBy: input.candidateUid,
+    updatedAt: serverTimestamp(),
+    history: arrayUnion({
+      status: input.status,
+      updatedBy: input.candidateUid,
+      updatedAt: new Date().toISOString()
+    })
+  });
+}
+
 export async function removeCandidateFirmStatus(statusRecordId: string) {
   await deleteDoc(doc(db, "candidateFirmStatuses", statusRecordId));
 }

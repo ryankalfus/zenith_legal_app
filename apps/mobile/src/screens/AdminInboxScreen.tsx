@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: "#d32121",
+    backgroundColor: "#0a66ff",
     position: "absolute",
     left: 4,
     top: 18
