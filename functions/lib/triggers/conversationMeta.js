@@ -18,13 +18,14 @@ exports.syncConversationMetaOnMessageCreate = (0, firestore_1.onDocumentCreated)
     const candidateData = candidateDoc.data() ?? {};
     const senderRole = message.senderRole === "admin" || message.senderRole === "system" ? message.senderRole : "candidate";
     const text = String(message.text ?? "").trim() || "(attachment)";
+    const createdAt = message.createdAt ?? firestore_2.FieldValue.serverTimestamp();
     await db.collection("conversations").doc(candidateId).set({
         candidateId,
         participantIds: [candidateId, "zenith-team"],
         candidateNameSnapshot: String(candidateData.fullName ?? "Candidate"),
         candidateAvatarUrlSnapshot: String(candidateData.avatarUrl ?? ""),
         lastMessageText: text,
-        lastMessageAt: firestore_2.FieldValue.serverTimestamp(),
+        lastMessageAt: createdAt,
         lastMessageSenderRole: senderRole,
         unreadByAdminCount: senderRole === "candidate" ? firestore_2.FieldValue.increment(1) : firestore_2.FieldValue.increment(0),
         unreadByCandidateCount: senderRole === "admin" || senderRole === "system"

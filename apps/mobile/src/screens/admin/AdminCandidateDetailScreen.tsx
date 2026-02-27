@@ -25,6 +25,7 @@ import {
   CandidateStatusRequestRecord
 } from "../../services/candidateStatusRequestService";
 import {
+  removeCandidateFirmStatus,
   saveCandidateFirmStatus,
   updateCandidateFirmStatus,
   watchAdminCandidateStatuses,
@@ -139,6 +140,27 @@ export function AdminCandidateDetailScreen() {
     }
   };
 
+  const confirmRemoveFirm = (statusRow: CandidateFirmStatusRow) => {
+    Alert.alert(
+      "Remove firm assignment",
+      "Are you sure you want to remove this firm from the candidate?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await removeCandidateFirmStatus(statusRow.id);
+            } catch (error: any) {
+              Alert.alert("Could not remove", error?.message ?? "Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <AppShell title="Candidate Detail" subtitle="Manage firms, statuses, and requests.">
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -171,9 +193,14 @@ export function AdminCandidateDetailScreen() {
             <View key={statusRow.id} style={styles.statusRow}>
               <Text style={styles.firmName}>{firmMap[statusRow.firmId] ?? statusRow.firmId}</Text>
               <StatusChip status={statusRow.status} />
-              <Pressable style={styles.changeButton} onPress={() => setEditingStatusRow(statusRow)}>
-                <Text style={styles.changeButtonText}>Change status</Text>
-              </Pressable>
+              <View style={styles.statusActionsRow}>
+                <Pressable style={styles.changeButton} onPress={() => setEditingStatusRow(statusRow)}>
+                  <Text style={styles.changeButtonText}>Change status</Text>
+                </Pressable>
+                <Pressable style={styles.removeButton} onPress={() => confirmRemoveFirm(statusRow)}>
+                  <Text style={styles.removeButtonText}>Remove firm</Text>
+                </Pressable>
+              </View>
             </View>
           ))}
         </SurfaceCard>
@@ -289,7 +316,7 @@ export function AdminCandidateDetailScreen() {
             <Text style={styles.modalTitle}>Select status</Text>
             {CANDIDATE_VISIBLE_STATUSES.map((status) => (
               <Pressable key={status} style={styles.choice} onPress={() => updateStatus(status)}>
-                <Text style={styles.choiceText}>{CANDIDATE_STATUS_LABELS[status]}</Text>
+                <StatusChip status={status} />
               </Pressable>
             ))}
             <Pressable style={styles.cancelModalButton} onPress={() => setEditingStatusRow(null)}>
@@ -368,6 +395,24 @@ const styles = StyleSheet.create({
   },
   changeButtonText: {
     color: theme.colors.primary,
+    fontWeight: "700"
+  },
+  statusActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  removeButton: {
+    borderWidth: 1,
+    borderColor: "#ef9c9c",
+    backgroundColor: "#fff2f2",
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  removeButtonText: {
+    color: theme.colors.danger,
     fontWeight: "700"
   },
   requestRow: {

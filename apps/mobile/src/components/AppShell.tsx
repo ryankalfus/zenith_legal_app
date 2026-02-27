@@ -13,6 +13,8 @@ type AppShellProps = {
   scroll?: boolean;
 };
 
+export const CONTACT_BAR_CONTENT_HEIGHT = 32;
+
 export function AppShell({
   children,
   title,
@@ -35,7 +37,7 @@ export function AppShell({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
       {shouldShowContactBar ? <CandidateContactBar /> : null}
       {scroll ? <ScrollView contentContainerStyle={styles.scrollContent}>{content}</ScrollView> : content}
     </SafeAreaView>
@@ -93,10 +95,12 @@ const styles = StyleSheet.create({
   },
   contactBar: {
     paddingHorizontal: 14,
-    paddingTop: 8,
+    minHeight: CONTACT_BAR_CONTENT_HEIGHT + 10,
+    paddingTop: 10,
     paddingBottom: 6,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     backgroundColor: "#fff"

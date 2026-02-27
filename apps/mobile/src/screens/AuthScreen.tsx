@@ -10,6 +10,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { CandidateContactBar } from "../components/AppShell";
 import { useAuth } from "../state/AuthContext";
 import { theme } from "../ui/theme";
@@ -44,7 +45,7 @@ export function AuthScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top", "left", "right", "bottom"]}>
       <CandidateContactBar />
       <KeyboardAvoidingView
         style={styles.container}
@@ -96,7 +97,7 @@ export function AuthScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

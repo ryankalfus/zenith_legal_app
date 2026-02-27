@@ -298,7 +298,7 @@ export function RootNavigator() {
       ) : session.role === "admin" ? (
         <RootStack.Screen name="AdminApp" component={AdminTabs} options={{ headerShown: false }} />
       ) : !session.profileComplete ? (
-        <RootStack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ title: "Finish profile" }} />
+        <RootStack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false }} />
       ) : (
         <RootStack.Screen name="CandidateApp" component={CandidateTabsScreen} options={{ headerShown: false }} />
       )}

@@ -1,6 +1,7 @@
 import {
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -125,4 +126,8 @@ export async function updateCandidateFirmStatus(input: {
       updatedAt: new Date().toISOString()
     })
   });
+}
+
+export async function removeCandidateFirmStatus(statusRecordId: string) {
+  await deleteDoc(doc(db, "candidateFirmStatuses", statusRecordId));
 }

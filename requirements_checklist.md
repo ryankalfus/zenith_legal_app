@@ -129,3 +129,11 @@ Legend:
 
 ## Step Log
 - 2026-02-26: Added requirement coverage for profile photos, iMessage-like chat previews, unread badge systems, overdue appointment sections, unattended request bell workflow, cancellation notifications, requested-expiry scheduler, and persistent Zenith contact bar behavior.
+- 2026-02-27: Added stabilization coverage for shared contact header height, chat unread badge restoration, appointment request visibility reliability, and admin firm-removal workflow.
+
+## Stabilization Update (2026-02-27)
+- [x] `MVP` Contact header bar uses one consistent height and safe-area placement across auth/profile/chat/app-shell mobile screens.
+- [x] `MVP` Candidate/admin chat unread badges are restored with correct clear rules (`candidate clears on chat open`, `admin clears per thread`).
+- [x] `MVP` Zenith admin can remove assigned firms with a red destructive action + confirmation.
+- [x] `MVP` Requested appointments remain visible until attended/canceled, improving end-to-end request reliability.
+- [x] `MVP` Added conversation metadata backfill command (`npm run backfill:conversations`) for older chat docs missing unread/snapshot fields.

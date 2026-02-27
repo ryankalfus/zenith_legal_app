@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { RouteProp, useRoute } from "@react-navigation/native";
+import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../state/AuthContext";
 import { markConversationRead, sendMessage, watchMessages } from "../services/messagingService";
@@ -22,10 +23,15 @@ import { Avatar } from "../components/Avatar";
 import { theme } from "../ui/theme";
 import { db } from "../lib/firebase";
 import { watchUser } from "../services/userService";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+const ZENITH_LOGO = require("../../assets/zenith-legal-logo.png");
 
 export function MessagesScreen() {
   const { session } = useAuth();
   const route = useRoute<RouteProp<AdminChatStackParamList, "Messages">>();
+  const tabBarHeight = useBottomTabBarHeight();
+  const isFocused = useIsFocused();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,19 +66,18 @@ export function MessagesScreen() {
   }, [candidateId]);
 
   useEffect(() => {
-    if (!candidateId || !session?.role) {
+    if (!candidateId || !session?.role || !isFocused) {
       return;
     }
-
     markConversationRead(candidateId, session.role).catch(() => undefined);
-  }, [candidateId, session?.role]);
+  }, [candidateId, isFocused, session?.role]);
 
   useEffect(() => {
-    if (!candidateId || !session?.role || messages.length === 0) {
+    if (!candidateId || !session?.role || !isFocused || messages.length === 0) {
       return;
     }
     markConversationRead(candidateId, session.role).catch(() => undefined);
-  }, [candidateId, messages.length, session?.role]);
+  }, [candidateId, isFocused, messages.length, session?.role]);
 
   useEffect(() => {
     if (!candidateId) {
@@ -152,15 +157,18 @@ export function MessagesScreen() {
 
   if (session?.role === "admin" && !candidateId) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyTitle}>Open a candidate chat</Text>
-        <Text style={styles.emptyBody}>Choose a candidate from the chat inbox.</Text>
-      </View>
+      <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
+        <CandidateContactBar />
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Open a candidate chat</Text>
+          <Text style={styles.emptyBody}>Choose a candidate from the chat inbox.</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
       <CandidateContactBar />
 
       <KeyboardAvoidingView
@@ -175,12 +183,21 @@ export function MessagesScreen() {
           </Text>
         </View>
 
-        <ScrollView ref={listRef} contentContainerStyle={styles.list}>
+        <ScrollView ref={listRef} contentContainerStyle={[styles.list, { paddingBottom: Math.max(14, tabBarHeight - 8) }]}>
           {messages.map((item) => {
             const mine = item.senderId === session?.user.uid;
+            const otherIsZenith = session?.role === "candidate";
+            const mineIsZenith = session?.role === "admin";
             return (
               <View key={item.id} style={[styles.messageRow, mine ? styles.mineRow : styles.theirRow]}>
-                {!mine ? <Avatar uri={candidateProfile.avatarUrl} name={candidateProfile.name} size={30} /> : null}
+                {!mine ? (
+                  <Avatar
+                    uri={otherIsZenith ? undefined : candidateProfile.avatarUrl}
+                    source={otherIsZenith ? ZENITH_LOGO : undefined}
+                    name={otherIsZenith ? "Zenith Legal" : candidateProfile.name}
+                    size={30}
+                  />
+                ) : null}
 
                 <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
                   <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
@@ -189,31 +206,40 @@ export function MessagesScreen() {
                   ) : null}
                 </View>
 
-                {mine ? <Avatar uri={selfProfile.avatarUrl} name={selfProfile.name} size={30} /> : null}
+                {mine ? (
+                  <Avatar
+                    uri={mineIsZenith ? undefined : selfProfile.avatarUrl}
+                    source={mineIsZenith ? ZENITH_LOGO : undefined}
+                    name={mineIsZenith ? "Zenith Legal" : selfProfile.name}
+                    size={30}
+                  />
+                ) : null}
               </View>
             );
           })}
         </ScrollView>
 
-        <View style={styles.composer}>
-          <Pressable style={styles.attachButton} onPress={onPickFile}>
-            <Text style={styles.attachText}>+</Text>
-          </Pressable>
-          <TextInput
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            placeholder="Type a message"
-            placeholderTextColor="#7f8b9d"
-            multiline
-          />
-          <Pressable style={[styles.sendButton, busy && styles.disabled]} onPress={onSend} disabled={busy}>
-            <Ionicons name="arrow-up" size={20} color="#fff" />
-          </Pressable>
+        <View style={[styles.composerWrap, { paddingBottom: Math.max(6, tabBarHeight - 18) }]}>
+          <View style={styles.composer}>
+            <Pressable style={styles.attachButton} onPress={onPickFile}>
+              <Text style={styles.attachText}>+</Text>
+            </Pressable>
+            <TextInput
+              style={styles.input}
+              value={text}
+              onChangeText={setText}
+              placeholder="Type a message"
+              placeholderTextColor="#7f8b9d"
+              multiline
+            />
+            <Pressable style={[styles.sendButton, busy && styles.disabled]} onPress={onSend} disabled={busy}>
+              <Ionicons name="arrow-up" size={20} color="#fff" />
+            </Pressable>
+          </View>
         </View>
         {file ? <Text style={styles.fileHint}>Attached: {file.fileName}</Text> : null}
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -228,8 +254,8 @@ const styles = StyleSheet.create({
   },
   headerWrap: {
     paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10
+    paddingTop: 10,
+    paddingBottom: 8
   },
   title: {
     fontSize: 24,
@@ -242,7 +268,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 12,
-    paddingBottom: 12,
     gap: 10
   },
   messageRow: {
@@ -283,8 +308,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#61708a"
   },
+  composerWrap: {
+    paddingHorizontal: 10
+  },
   composer: {
-    margin: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -336,7 +363,7 @@ const styles = StyleSheet.create({
   },
   fileHint: {
     paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingBottom: 8,
     color: theme.colors.textSecondary
   },
   emptyContainer: {

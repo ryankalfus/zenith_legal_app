@@ -22,6 +22,7 @@ export const syncConversationMetaOnMessageCreate = onDocumentCreated(
     const senderRole =
       message.senderRole === "admin" || message.senderRole === "system" ? message.senderRole : "candidate";
     const text = String(message.text ?? "").trim() || "(attachment)";
+    const createdAt = message.createdAt ?? FieldValue.serverTimestamp();
 
     await db.collection("conversations").doc(candidateId).set(
       {
@@ -30,7 +31,7 @@ export const syncConversationMetaOnMessageCreate = onDocumentCreated(
         candidateNameSnapshot: String(candidateData.fullName ?? "Candidate"),
         candidateAvatarUrlSnapshot: String(candidateData.avatarUrl ?? ""),
         lastMessageText: text,
-        lastMessageAt: FieldValue.serverTimestamp(),
+        lastMessageAt: createdAt,
         lastMessageSenderRole: senderRole,
         unreadByAdminCount: senderRole === "candidate" ? FieldValue.increment(1) : FieldValue.increment(0),
         unreadByCandidateCount:

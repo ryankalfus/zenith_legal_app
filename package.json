@@ -17,6 +17,7 @@
     "firebase:doctor": "node scripts/firebase-doctor.mjs",
     "seed:firms": "npm run seed:firms --workspace @zenith/functions",
     "enforce:single-admin": "npm run enforce:single-admin --workspace @zenith/functions",
+    "backfill:conversations": "npm run backfill:conversations --workspace @zenith/functions --",
     "test:rules:local": "node qa/rules/rbac-smoke.mjs",
     "test:rules": "node scripts/run-rules-test.mjs",
     "qa:smoke": "npm run typecheck && npm run test:rules"

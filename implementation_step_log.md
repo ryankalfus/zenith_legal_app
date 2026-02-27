@@ -527,3 +527,30 @@
   - Candidate appointment cancel confirmation auto-chat + email behavior.
   - Admin unattended requests bell workflow and modify->scheduled transition.
   - Auto-expiry of stale requested appointments via scheduler.
+
+## Step 33 - Mobile Stabilization Pass (Header + Notifications + Firm Removal)
+- What changed:
+  - Fixed contact/header safe-area behavior across mobile by switching to top-safe `SafeAreaView` usage and one shared contact bar height.
+  - Applied the normalized contact bar to auth, profile setup, app-shell screens, and chat thread views.
+  - Fixed chat unread logic so threads are marked read only while focused (prevents background unread resets).
+  - Kept Zenith avatar/logo rendering in chat rows for admin-side identity consistency.
+  - Improved conversation list reliability by sorting admin chat previews client-side using `lastMessageAt || updatedAt` (handles legacy docs missing `lastMessageAt`).
+  - Added one-time conversation metadata backfill script:
+    - `functions/src/scripts/backfillConversationMeta.ts`
+    - root command `npm run backfill:conversations`
+  - Improved appointment request visibility/sync by keeping `requested` rows visible until attended or auto-canceled.
+  - Added candidate appointments update-dot clear behavior on tab focus.
+  - Added admin firm removal flow with red button + confirmation in candidate detail.
+  - Added status service delete path for candidate-firm assignments.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`11 passed, 0 failed`)
+  - `npm run backfill:conversations` -> PASS (manual run updated existing conversation metadata)
+- What to test next:
+  - Verify `chat-header-error.png` overlap is resolved on both admin and candidate chat screens.
+  - Confirm chat badges now increment/decrement correctly:
+    - candidate clears on opening Chat tab
+    - admin clears per-thread when opening that thread
+  - Confirm admin can remove assigned firms and candidate dashboard updates immediately.
+  - Confirm requested appointments stay visible on admin unattended queue until attended/canceled.

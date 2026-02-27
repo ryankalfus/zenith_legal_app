@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar } from "../components/Avatar";
 import { CandidateContactBar } from "../components/AppShell";
 import { uploadCandidateProfilePhoto } from "../services/userService";
@@ -67,72 +68,72 @@ export function ProfileSetupScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <CandidateContactBar />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Finish your profile</Text>
         <Text style={styles.subtitle}>This lets Zenith match you with the right opportunities.</Text>
 
-      <Text style={styles.label}>Profile photo (optional)</Text>
-      <View style={styles.photoRow}>
-        <Avatar uri={photoFile?.uri} name={fullName} size={62} />
-        <Pressable style={styles.photoButton} onPress={onPickPhoto}>
-          <Text style={styles.photoButtonText}>{photoFile ? "Replace photo" : "Add photo"}</Text>
-        </Pressable>
-      </View>
+        <Text style={styles.label}>Profile photo (optional)</Text>
+        <View style={styles.photoRow}>
+          <Avatar uri={photoFile?.uri} name={fullName} size={62} />
+          <Pressable style={styles.photoButton} onPress={onPickPhoto}>
+            <Text style={styles.photoButtonText}>{photoFile ? "Replace photo" : "Add photo"}</Text>
+          </Pressable>
+        </View>
 
-      <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
+        <Text style={styles.label}>Name</Text>
+        <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-      <Text style={styles.label}>Mobile</Text>
-      <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
+        <Text style={styles.label}>Mobile</Text>
+        <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
 
-      <Text style={styles.label}>Preferred cities</Text>
-      <View style={styles.wrap}>
-        {PREFERRED_CITIES.map((city) => {
-          const selected = preferredCities.includes(city);
-          return (
-            <Pressable
-              key={city}
-              style={[styles.pill, selected && styles.pillSelected]}
-              onPress={() => toggleCity(city)}
-            >
-              <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{city}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <Text style={styles.label}>Preferred cities</Text>
+        <View style={styles.wrap}>
+          {PREFERRED_CITIES.map((city) => {
+            const selected = preferredCities.includes(city);
+            return (
+              <Pressable
+                key={city}
+                style={[styles.pill, selected && styles.pillSelected]}
+                onPress={() => toggleCity(city)}
+              >
+                <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{city}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <Text style={styles.label}>Practice area</Text>
-      <View style={styles.wrap}>
-        {PRACTICE_AREAS.map((area) => {
-          const selected = practiceArea === area;
-          return (
-            <Pressable
-              key={area}
-              style={[styles.pill, selected && styles.pillSelected]}
-              onPress={() => setPracticeArea(area)}
-            >
-              <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{area}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+        <Text style={styles.label}>Practice area</Text>
+        <View style={styles.wrap}>
+          {PRACTICE_AREAS.map((area) => {
+            const selected = practiceArea === area;
+            return (
+              <Pressable
+                key={area}
+                style={[styles.pill, selected && styles.pillSelected]}
+                onPress={() => setPracticeArea(area)}
+              >
+                <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{area}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
         <Pressable style={[styles.button, !isValid && styles.buttonDisabled]} disabled={!isValid || saving} onPress={onSave}>
           <Text style={styles.buttonText}>{saving ? "Saving..." : "Save profile"}</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

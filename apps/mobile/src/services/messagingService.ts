@@ -14,6 +14,27 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 
+function toSortMs(input: unknown) {
+  if (!input) {
+    return 0;
+  }
+  if (typeof input === "number") {
+    return input;
+  }
+  if (typeof input === "string") {
+    const parsed = Date.parse(input);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof input === "object" && input && "toDate" in input && typeof (input as any).toDate === "function") {
+    try {
+      return (input as any).toDate().getTime();
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
 export function watchMessages(
   candidateId: string,
   onData: (messages: any[]) => void,
@@ -37,12 +58,12 @@ export function watchAdminConversations(
   onData: (rows: any[]) => void,
   onError: (err: Error) => void
 ) {
-  const q = query(collection(db, "conversations"), orderBy("lastMessageAt", "desc"));
+  const q = query(collection(db, "conversations"));
 
   return onSnapshot(
     q,
     async (snapshot) => {
-      const rows = await Promise.all(
+      const rows: any[] = await Promise.all(
         snapshot.docs.map(async (entry) => {
           const data = entry.data();
           const candidateId = String(data.candidateId ?? entry.id);
@@ -60,6 +81,11 @@ export function watchAdminConversations(
           };
         })
       );
+      rows.sort((a, b) => {
+        const aMs = toSortMs(a.lastMessageAt ?? a.updatedAt);
+        const bMs = toSortMs(b.lastMessageAt ?? b.updatedAt);
+        return bMs - aMs;
+      });
       onData(rows);
     },
     (err) => onError(err as Error)

@@ -61,7 +61,7 @@ export function CandidateDashboardScreen() {
     const unsubscribePending = watchPendingCandidateStatusRequests(
       session.user.uid,
       (next) => setPendingRows(next.map((entry) => ({ id: entry.id, firmId: entry.firmId }))),
-      (err) => setError(err.message)
+      () => setPendingRows([])
     );
 
     const unsubscribeFirms = onSnapshot(
@@ -73,7 +73,7 @@ export function CandidateDashboardScreen() {
         });
         setFirmMap(next);
       },
-      (err) => setError(err.message)
+      () => setFirmMap({})
     );
 
     return () => {
@@ -136,7 +136,7 @@ export function CandidateDashboardScreen() {
         </View>
       ) : null}
 
-      {error ? (
+      {error && rows.length === 0 ? (
         <SurfaceCard>
           <Text style={styles.errorText}>
             {String(error).toLowerCase().includes("insufficient permissions")

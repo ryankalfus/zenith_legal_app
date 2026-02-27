@@ -131,11 +131,7 @@ export function AdminAppointmentRequestsScreen() {
 
   const now = Date.now();
   const unattendedRequests = sortedRows.filter((row) => {
-    if (row.status !== "requested") {
-      return false;
-    }
-    const parsed = parseDate(row.startsAt);
-    return parsed ? parsed.getTime() >= now : false;
+    return row.status === "requested";
   });
 
   const overdueScheduled = sortedRows.filter((row) => {

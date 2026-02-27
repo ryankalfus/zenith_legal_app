@@ -1,10 +1,11 @@
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, ImageSourcePropType, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../ui/theme";
 
 type AvatarProps = {
   uri?: string;
+  source?: ImageSourcePropType;
   name?: string;
   size?: number;
   showFallbackIcon?: boolean;
@@ -22,14 +23,15 @@ function buildInitials(name?: string) {
   return `${tokens[0][0] ?? ""}${tokens[1][0] ?? ""}`.toUpperCase();
 }
 
-export function Avatar({ uri, name, size = 40, showFallbackIcon = true }: AvatarProps) {
+export function Avatar({ uri, source, name, size = 40, showFallbackIcon = true }: AvatarProps) {
   const initials = buildInitials(name);
   const radius = size / 2;
+  const imageSource = source ?? (uri ? { uri } : undefined);
 
-  if (uri) {
+  if (imageSource) {
     return (
       <Image
-        source={{ uri }}
+        source={imageSource}
         style={{ width: size, height: size, borderRadius: radius, backgroundColor: "#e9edf6" }}
       />
     );

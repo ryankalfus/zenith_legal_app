@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -78,15 +79,7 @@ export function watchAdminUnattendedRequestCount(
   const q = query(collection(db, "appointments"), where("status", "==", "requested"));
   return onSnapshot(
     q,
-    (snapshot) => {
-      const now = Date.now();
-      const count = snapshot.docs.filter((entry) => {
-        const startsAt = String(entry.data().startsAt ?? "");
-        const value = Date.parse(startsAt);
-        return Number.isFinite(value) && value >= now;
-      }).length;
-      onData(count);
-    },
+    (snapshot) => onData(snapshot.size),
     (err) => onError(err as Error)
   );
 }
@@ -99,7 +92,7 @@ export async function createAppointmentRequest(payload: {
   phoneNumber: string;
   notes?: string;
 }) {
-  await addDoc(collection(db, "appointments"), {
+  const created = await addDoc(collection(db, "appointments"), {
     candidateId: payload.candidateId,
     createdBy: payload.createdBy,
     createdByRole: payload.createdByRole,
@@ -115,6 +108,11 @@ export async function createAppointmentRequest(payload: {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  const readBack = await getDoc(created);
+  if (!readBack.exists()) {
+    throw new Error("Appointment request did not persist.");
+  }
 }
 
 export async function updateAppointmentStatus(input: {
@@ -157,7 +155,7 @@ export async function createAdminAppointment(payload: {
   phoneNumber: string;
   notes?: string;
 }) {
-  await addDoc(collection(db, "appointments"), {
+  const created = await addDoc(collection(db, "appointments"), {
     candidateId: payload.candidateId,
     createdBy: payload.createdBy,
     createdByRole: "admin",
@@ -173,6 +171,11 @@ export async function createAdminAppointment(payload: {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  const readBack = await getDoc(created);
+  if (!readBack.exists()) {
+    throw new Error("Appointment did not persist.");
+  }
 }
 
 export async function updateAppointmentStatusLegacy(appointmentId: string, status: AppointmentStatus) {

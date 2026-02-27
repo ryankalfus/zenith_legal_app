@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { APPOINTMENT_STATUS_LABELS, AppointmentStatus } from "@zenith/shared";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import {
   createAppointmentRequest,
@@ -44,6 +44,7 @@ function parseStartsAt(startsAt: string) {
 
 export function CandidateAppointmentsScreen() {
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const { session } = useAuth();
   const [rows, setRows] = useState<AppointmentViewRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,10 +70,15 @@ export function CandidateAppointmentsScreen() {
       () => setLoading(false)
     );
 
-    clearCandidateAppointmentUpdates(session.user.uid).catch(() => undefined);
-
     return unsub;
   }, [session?.user.uid]);
+
+  useEffect(() => {
+    if (!session?.user.uid || !isFocused) {
+      return;
+    }
+    clearCandidateAppointmentUpdates(session.user.uid).catch(() => undefined);
+  }, [isFocused, session?.user.uid]);
 
   const startsAtIso = useMemo(() => {
     const merged = new Date(requestDate);
@@ -163,11 +169,7 @@ export function CandidateAppointmentsScreen() {
     return row.status === "scheduled" && date && date.getTime() >= now;
   });
   const pendingRequests = sorted.filter((row) => {
-    if (row.status !== "requested") {
-      return false;
-    }
-    const date = parseStartsAt(row.startsAt);
-    return date ? date.getTime() >= now : false;
+    return row.status === "requested";
   });
 
   return (

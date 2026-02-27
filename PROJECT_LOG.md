@@ -126,3 +126,9 @@
 - 02.26.2026: Made Zenith contact bar (email + phone) persist across all active mobile flows (auth, profile setup, app shell screens, and chat thread) and updated candidate profile label text from `What you work in` to `Practice`.
 - 02.26.2026: Improved firm-status reliability by simplifying candidate status watchers to avoid fragile indexed query paths and adding assignment read-back verification after admin save.
 - 02.26.2026: Added Storage rule path for profile photos and re-validated repo after redesign changes: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
+- 02.27.2026: Stabilized mobile contact header layout by normalizing safe-area handling and applying one consistent Zenith contact bar height across AppShell, auth, profile setup, and chat thread screens.
+- 02.27.2026: Fixed mobile chat unread behavior by preventing background read-clears and only marking threads read when chat screens are focused (candidate/admin), restoring red-dot/tab badge reliability.
+- 02.27.2026: Hardened appointment reliability by keeping `requested` items visible until attended/auto-canceled, adding candidate appointment update-dot clear-on-focus behavior, and preserving end-to-end admin/candidate sync.
+- 02.27.2026: Added admin firm removal flow in candidate detail (`Remove firm` red action with confirmation) and wired service-level delete path for `candidateFirmStatuses`.
+- 02.27.2026: Added conversation metadata backfill script (`npm run backfill:conversations`) and refreshed conversation trigger timestamp behavior for stable iMessage-style preview ordering/unread metadata.
+- 02.27.2026: Re-ran validation after stabilization pass: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`11 passed, 0 failed`).
