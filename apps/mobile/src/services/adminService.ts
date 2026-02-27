@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -35,6 +36,8 @@ export type CandidateRow = {
   assignedHeaderEmail?: string;
   assignedHeaderPhone?: string;
   hasAppointmentUpdates?: boolean;
+  assignedRecruiterId?: string;
+  assignedRecruiterName?: string;
   updatedAt?: unknown;
   preferences?: {
     preferredCities?: string[];
@@ -182,7 +185,7 @@ export function watchRecruiters(onData: (rows: RecruiterRow[]) => void, onError:
         id: entry.id,
         ...(entry.data() as Omit<RecruiterRow, "id">)
       }));
-      onData(sortByName(rows));
+      onData(dedupeCandidates(rows));
     },
     (error) => onError(error as Error)
   );
@@ -327,6 +330,76 @@ export async function updateCandidateAssignedHeader(
   );
 }
 
+export async function updateCandidateAssignedRecruiter(
+  candidateId: string,
+  input: { assignedRecruiterId?: string | null; assignedRecruiterName?: string | null }
+) {
+  const candidateRef = doc(db, "users", candidateId);
+  const candidateSnap = await getDoc(candidateRef);
+  if (!candidateSnap.exists()) {
+    throw new Error("Candidate profile no longer exists.");
+  }
+
+  const candidateData = candidateSnap.data() as Record<string, unknown>;
+  const targetUid = String(candidateData?.uid ?? candidateId).trim();
+  const targetEmail = String(candidateData?.email ?? "").trim().toLowerCase();
+  const targetName = normalizeName(candidateData?.fullName);
+  const targetPhoneDigits = normalizePhoneDigits(candidateData?.mobile);
+
+  const recruiterId = String(input.assignedRecruiterId ?? "").trim();
+  const recruiterName = String(input.assignedRecruiterName ?? "").trim();
+  const payload: Record<string, unknown> = {
+    updatedAt: serverTimestamp(),
+    assignedRecruiterId: recruiterId || deleteField(),
+    assignedRecruiterName: recruiterName || deleteField()
+  };
+
+  const batch = writeBatch(db);
+  batch.update(candidateRef, payload);
+
+  if (targetUid && targetUid !== candidateId) {
+    const activeAuthRef = doc(db, "users", targetUid);
+    const activeAuthSnap = await getDoc(activeAuthRef);
+    if (activeAuthSnap.exists()) {
+      batch.update(activeAuthRef, payload);
+    }
+  }
+
+  if (targetEmail || targetUid || targetName || targetPhoneDigits) {
+    const usersSnapshot = await getDocs(collection(db, "users"));
+    usersSnapshot.docs.forEach((entry) => {
+      if (entry.id === candidateId) {
+        return;
+      }
+      const row = entry.data() as Record<string, unknown>;
+      const rowRole = String(row.role ?? "").trim().toLowerCase();
+      if (rowRole === "admin") {
+        return;
+      }
+
+      const rowUid = String(entry.data()?.uid ?? "").trim();
+      const rowEmail = String(entry.data()?.email ?? "").trim().toLowerCase();
+      const rowName = normalizeName(row.fullName);
+      const rowPhoneDigits = normalizePhoneDigits(row.mobile);
+
+      const matchesEmail = Boolean(targetEmail) && rowEmail === targetEmail;
+      const matchesUid = Boolean(targetUid) && rowUid === targetUid;
+      const matchesDocId = Boolean(targetUid) && entry.id === targetUid;
+      const matchesNameAndPhone =
+        Boolean(targetName) &&
+        Boolean(targetPhoneDigits) &&
+        rowName === targetName &&
+        rowPhoneDigits === targetPhoneDigits;
+
+      if (matchesEmail || matchesUid || matchesDocId || matchesNameAndPhone) {
+        batch.update(entry.ref, payload);
+      }
+    });
+  }
+
+  await batch.commit();
+}
+
 export async function changeUserRoleByAdmin(input: { targetUid: string; targetRole: "candidate" | "admin" }) {
   const targetRef = doc(db, "users", input.targetUid);
   const targetSnap = await getDoc(targetRef);
@@ -357,12 +430,52 @@ export async function changeUserRoleByAdmin(input: { targetUid: string; targetRo
   await updateDoc(targetRef, payload);
 }
 
-export async function updateAdminOwnProfile(input: { uid: string; fullName: string; mobile: string }) {
-  await updateDoc(doc(db, "users", input.uid), {
-    fullName: input.fullName,
-    mobile: input.mobile,
-    updatedAt: serverTimestamp()
+export async function updateAdminOwnProfile(input: { uid: string; fullName: string; mobile: string; email?: string }) {
+  const currentEmail = String(input.email ?? auth.currentUser?.email ?? "")
+    .trim()
+    .toLowerCase();
+
+  const batch = writeBatch(db);
+  const ownRef = doc(db, "users", input.uid);
+  batch.set(
+    ownRef,
+    {
+      uid: input.uid,
+      role: "admin",
+      ...(currentEmail ? { email: currentEmail } : {}),
+      fullName: input.fullName,
+      mobile: input.mobile,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+
+  const usersSnapshot = await getDocs(collection(db, "users"));
+  usersSnapshot.docs.forEach((entry) => {
+    const data = entry.data() as Record<string, unknown>;
+    const rowRole = String(data.role ?? "").trim().toLowerCase();
+    if (rowRole !== "admin") {
+      return;
+    }
+
+    const rowUid = String(data.uid ?? "").trim();
+    const rowEmail = String(data.email ?? "").trim().toLowerCase();
+    if (entry.id === input.uid || rowUid === input.uid || (currentEmail && rowEmail === currentEmail)) {
+      batch.set(
+        entry.ref,
+        {
+          uid: input.uid,
+          fullName: input.fullName,
+          mobile: input.mobile,
+          ...(currentEmail ? { email: currentEmail } : {}),
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+    }
   });
+
+  await batch.commit();
 }
 
 async function reauthenticateForEmailChange(user: User, oldEmail: string, currentPassword: string) {

@@ -499,3 +499,70 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for detail-only role dropdown placement and `not-found` role change fix.
+
+## Candidate Email + Shared Password Management (2026-02-27)
+- [x] `MVP` Candidate profile tab now includes Firebase-backed `Change email` flow (old email + new email + current password).
+- [x] `MVP` Candidate profile tab now includes Firebase-backed `Change password` flow (current + new + confirm).
+- [x] `MVP` Recruiter/admin profile tab now includes Firebase-backed `Change password` flow (current + new + confirm).
+- [x] `MVP` Admin candidates tab heading copy updated to `Zenith Legal` and `Manage candidate and recruiter profiles`.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for candidate email-change support, shared password-change support, and admin-candidates heading copy update.
+
+## Admin Profile Photo Field (2026-02-27)
+- [x] `MVP` Admin/recruiter profile tab now includes profile photo field with same picker options as candidate profile (`Take photo now`, `Choose from camera roll`, `Files`).
+- [x] `MVP` Admin/recruiter profile photo supports upload and remove actions.
+- [x] `MVP` Updated admin/recruiter profile photo syncs to recruiter avatar shown in Zenith Legal Candidates tab.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for admin/recruiter profile photo parity and recruiter-avatar sync in candidates view.
+
+## Assigned Recruiter + Candidates Filter Search (2026-02-27)
+- [x] `MVP` Role dropdown labels are capitalized (`Candidate` / `Recruiter`) in admin detail role pickers.
+- [x] `MVP` Candidate Detail view includes `Assigned recruiter` field above `Practice` with dropdown selection (`None` + recruiters).
+- [x] `MVP` Candidates preview cards now show `Assigned recruiter` in place of `Age` before opening detailed profile.
+- [x] `MVP` Candidates section includes `Filter search` button that opens dedicated filter screen.
+- [x] `MVP` Filter screen supports recruiter/status/practice/assigned-firms/preferred-cities filtering with single/multi select behavior.
+- [x] `Tech` Added realtime candidate status index watcher to support status + firm filters.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for assigned recruiter field sync, preview display update, and multi-field candidate filter screen.
+
+## Filter + Profile Sync Fixes (2026-02-27)
+- [x] `MVP` Applying candidate filters no longer throws `GO_BACK not handled` warning.
+- [x] `MVP` `Any` option is available as top option in all filter dropdowns and clears that filter field.
+- [x] `MVP` Preferred cities filter always includes full shared city list, including `Other`.
+- [x] `MVP` Assigned-firms filter includes firm-name search to handle long lists.
+- [x] `MVP` Admin profile phone updates now sync reliably to recruiter display in Candidates tab.
+- [x] `MVP` Change-email flow now includes old/new/confirm/password validation and sync updates to matching user docs.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for filter apply stability, universal `Any` options, full preferred-city coverage, firm search, and admin profile phone/email sync reliability.
+
+## Email Change Verification Handling (2026-02-27)
+- [x] `MVP` Email-change flow now supports Firebase projects that require verification of the new email before update.
+- [x] `MVP` Candidate/admin profile screens now show explicit verification-next-step guidance instead of a generic error when verification is required.
+- [x] `Tech` Added `verifyBeforeUpdateEmail` fallback path in shared user email-change service.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for Firebase verification-required email-change handling and improved profile-tab messaging.
+
+## Admin Email Section Alignment (2026-02-27)
+- [x] `MVP` Admin profile tab now shows `Current email` at the top of the `Change email` section (same pattern as candidate profile tab).
+
+## Step Log
+- 2026-02-27: Added requirement coverage for admin profile `Current email` placement alignment with candidate profile layout.
+
+## Verified Email Sync Across Views (2026-02-27)
+- [x] `MVP` After new-email verification and re-login, current email now syncs across candidate/admin data views for that account.
+- [x] `Tech` Added auth-session reconciliation to update matching user docs to the current Firebase Auth email and verification state.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for post-verification email propagation across user-profile records.
+
+## Current Email Accuracy (2026-02-27)
+- [x] `MVP` Candidate/admin `Current email` now always reflects the actual Firebase Auth account email (source-of-truth).
+- [x] `Tech` Canonical `users/{uid}` email sync path is hardened to avoid stale old-email display caused by duplicate-doc write permission failures.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for current-email source-of-truth alignment and canonical sync reliability.

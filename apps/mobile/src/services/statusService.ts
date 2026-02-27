@@ -23,6 +23,14 @@ export type CandidateFirmStatusRow = {
   updatedAt?: unknown;
 };
 
+export type CandidateStatusIndex = Record<
+  string,
+  {
+    statuses: CandidateFirmStatus[];
+    firmIds: string[];
+  }
+>;
+
 function asSortMs(input: unknown) {
   if (!input) {
     return 0;
@@ -75,6 +83,41 @@ export function watchAdminCandidateStatuses(
       const rows = snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<CandidateFirmStatusRow, "id">) }));
       rows.sort((a, b) => asSortMs(b.updatedAt) - asSortMs(a.updatedAt));
       onData(rows);
+    },
+    (err) => onError(err as Error)
+  );
+}
+
+export function watchAllCandidateStatusIndex(
+  onData: (index: CandidateStatusIndex) => void,
+  onError: (err: Error) => void
+) {
+  const q = query(collection(db, "candidateFirmStatuses"));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const next: CandidateStatusIndex = {};
+      snapshot.docs.forEach((entry) => {
+        const row = entry.data() as Partial<CandidateFirmStatusRow>;
+        const candidateId = String(row.candidateId ?? "").trim();
+        const status = row.status as CandidateFirmStatus | undefined;
+        const firmId = String(row.firmId ?? "").trim();
+        if (!candidateId) {
+          return;
+        }
+
+        if (!next[candidateId]) {
+          next[candidateId] = { statuses: [], firmIds: [] };
+        }
+
+        if (status && !next[candidateId].statuses.includes(status)) {
+          next[candidateId].statuses.push(status);
+        }
+        if (firmId && !next[candidateId].firmIds.includes(firmId)) {
+          next[candidateId].firmIds.push(firmId);
+        }
+      });
+      onData(next);
     },
     (err) => onError(err as Error)
   );

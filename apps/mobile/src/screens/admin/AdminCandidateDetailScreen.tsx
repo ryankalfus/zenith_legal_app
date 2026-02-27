@@ -21,9 +21,11 @@ import { Avatar } from "../../components/Avatar";
 import { StatusChip } from "../../components/StatusChip";
 import {
   changeUserRoleByAdmin,
+  updateCandidateAssignedRecruiter,
   updateCandidateAssignedHeader,
   watchCandidateById,
   watchFirms,
+  watchRecruiters,
   FirmRow
 } from "../../services/adminService";
 import {
@@ -117,16 +119,24 @@ export function AdminCandidateDetailScreen() {
   const [savingHeader, setSavingHeader] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [recruiters, setRecruiters] = useState<Array<{ id: string; uid?: string; fullName?: string }>>([]);
+  const [recruiterModalOpen, setRecruiterModalOpen] = useState(false);
+  const [savingAssignedRecruiter, setSavingAssignedRecruiter] = useState(false);
 
   useEffect(() => {
     const unsubCandidate = watchCandidateById(candidateId, setCandidate, () => setCandidate(null));
     const unsubFirms = watchFirms(setFirms, () => setFirms([]));
     const unsubStatuses = watchAdminCandidateStatuses(candidateId, setStatuses, () => setStatuses([]));
+    const unsubRecruiters = watchRecruiters(
+      (rows) => setRecruiters(rows),
+      () => setRecruiters([])
+    );
 
     return () => {
       unsubCandidate();
       unsubFirms();
       unsubStatuses();
+      unsubRecruiters();
     };
   }, [candidateId]);
 
@@ -149,6 +159,12 @@ export function AdminCandidateDetailScreen() {
   const preferredCities = Array.isArray(candidate?.preferences?.preferredCities)
     ? candidate.preferences.preferredCities.join(", ")
     : "";
+  const selectedRecruiterId = String(candidate?.assignedRecruiterId ?? "").trim();
+  const selectedRecruiterName = String(candidate?.assignedRecruiterName ?? "").trim();
+  const selectedRecruiterLabel =
+    selectedRecruiterName ||
+    recruiters.find((row) => String(row.uid ?? row.id) === selectedRecruiterId)?.fullName ||
+    "None";
 
   useEffect(() => {
     setAssignedHeaderEmail(String(candidate?.assignedHeaderEmail ?? ZENITH_EMAIL));
@@ -273,6 +289,25 @@ export function AdminCandidateDetailScreen() {
     );
   };
 
+  const saveAssignedRecruiter = async (nextRecruiterId: string) => {
+    const resolvedId = nextRecruiterId === "none" ? "" : String(nextRecruiterId).trim();
+    const matchedRecruiter = recruiters.find((row) => String(row.uid ?? row.id) === resolvedId);
+    const resolvedName = resolvedId ? String(matchedRecruiter?.fullName ?? "").trim() : "";
+
+    try {
+      setSavingAssignedRecruiter(true);
+      await updateCandidateAssignedRecruiter(candidateId, {
+        assignedRecruiterId: resolvedId || null,
+        assignedRecruiterName: resolvedName || null
+      });
+      setRecruiterModalOpen(false);
+    } catch (error: any) {
+      Alert.alert("Could not save recruiter", error?.message ?? "Please try again.");
+    } finally {
+      setSavingAssignedRecruiter(false);
+    }
+  };
+
   return (
     <AppShell title="Candidate Detail" subtitle="Full profile + firm management.">
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -290,6 +325,17 @@ export function AdminCandidateDetailScreen() {
           </View>
 
           <View style={styles.profileDetails}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Assigned recruiter</Text>
+              <Pressable
+                style={[styles.roleFieldButton, savingAssignedRecruiter && styles.disabled]}
+                onPress={() => setRecruiterModalOpen(true)}
+                disabled={savingAssignedRecruiter}
+              >
+                <Text style={styles.roleFieldText}>{selectedRecruiterLabel}</Text>
+                <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Practice</Text>
               <Text style={styles.detailValue}>{candidate?.preferences?.practiceArea || "Not set"}</Text>
@@ -317,7 +363,7 @@ export function AdminCandidateDetailScreen() {
                 onPress={() => setRoleModalOpen(true)}
                 disabled={savingRole}
               >
-                <Text style={styles.roleFieldText}>candidate</Text>
+                <Text style={styles.roleFieldText}>Candidate</Text>
                 <Ionicons name="chevron-down" size={14} color={theme.colors.textSecondary} />
               </Pressable>
             </View>
@@ -473,13 +519,56 @@ export function AdminCandidateDetailScreen() {
             <Text style={styles.modalSubtitle}>{candidate?.fullName || "Candidate"}</Text>
 
             <Pressable style={[styles.choice, styles.choiceSelected]} onPress={() => setRoleModalOpen(false)}>
-              <Text style={[styles.choiceText, styles.choiceTextSelected]}>candidate</Text>
+              <Text style={[styles.choiceText, styles.choiceTextSelected]}>Candidate</Text>
             </Pressable>
             <Pressable style={styles.choice} onPress={promoteToRecruiter} disabled={savingRole}>
-              <Text style={styles.choiceText}>{savingRole ? "Saving..." : "recruiter"}</Text>
+              <Text style={styles.choiceText}>{savingRole ? "Saving..." : "Recruiter"}</Text>
             </Pressable>
 
             <Pressable style={styles.cancelModalButton} onPress={() => setRoleModalOpen(false)}>
+              <Text style={styles.cancelModalText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={recruiterModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRecruiterModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Assigned Recruiter</Text>
+            <Text style={styles.modalSubtitle}>{candidate?.fullName || "Candidate"}</Text>
+
+            <Pressable
+              style={[styles.choice, !selectedRecruiterId && styles.choiceSelected]}
+              onPress={() => saveAssignedRecruiter("none")}
+              disabled={savingAssignedRecruiter}
+            >
+              <Text style={[styles.choiceText, !selectedRecruiterId && styles.choiceTextSelected]}>None</Text>
+            </Pressable>
+
+            {recruiters.map((row) => {
+              const recruiterKey = String(row.uid ?? row.id);
+              const selected = selectedRecruiterId === recruiterKey;
+              return (
+                <Pressable
+                  key={recruiterKey}
+                  style={[styles.choice, selected && styles.choiceSelected]}
+                  onPress={() => saveAssignedRecruiter(recruiterKey)}
+                  disabled={savingAssignedRecruiter}
+                >
+                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                    {String(row.fullName || "Recruiter")}
+                  </Text>
+                </Pressable>
+              );
+            })}
+
+            <Pressable style={styles.cancelModalButton} onPress={() => setRecruiterModalOpen(false)}>
               <Text style={styles.cancelModalText}>Close</Text>
             </Pressable>
           </View>

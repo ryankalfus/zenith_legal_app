@@ -6,6 +6,8 @@ import { AppShell, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import { deleteMyAccount } from "../../services/accountService";
 import {
+  changeMyEmailWithPassword,
+  changeMyPasswordWithCurrentPassword,
   removeCandidateProfilePhoto,
   updateCandidateProfile,
   uploadCandidateProfilePhoto,
@@ -56,7 +58,17 @@ export function CandidateProfileScreen() {
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarPath, setAvatarPath] = useState("");
+  const [email, setEmail] = useState("");
+  const [oldEmail, setOldEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [confirmNewEmail, setConfirmNewEmail] = useState("");
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [activeDatePicker, setActiveDatePicker] = useState<"dob" | "jd" | null>(null);
 
@@ -68,18 +80,23 @@ export function CandidateProfileScreen() {
     return watchUser(
       session.user.uid,
       (data) => {
+        const authEmail = String(session.user.email ?? "").trim().toLowerCase();
+        const storedEmail = String(data?.email ?? "").trim().toLowerCase();
+        const nextEmail = authEmail || storedEmail;
         setFullName(String(data?.fullName ?? ""));
         setMobile(String(data?.mobile ?? ""));
         setDateOfBirth(String(data?.dateOfBirth ?? ""));
         setJdDegreeDate(String(data?.jdDegreeDate ?? ""));
         setAvatarUrl(String(data?.avatarUrl ?? ""));
         setAvatarPath(String(data?.avatarPath ?? ""));
+        setEmail(nextEmail);
+        setOldEmail(nextEmail);
         setPracticeArea(String(data?.preferences?.practiceArea ?? PRACTICE_AREAS[0]));
         setPreferredCities(Array.isArray(data?.preferences?.preferredCities) ? data.preferences.preferredCities : []);
       },
       () => undefined
     );
-  }, [session?.user.uid]);
+  }, [session?.user.email, session?.user.uid]);
 
   const toggleCity = (city: string) => {
     setPreferredCities((prev) => (prev.includes(city) ? prev.filter((entry) => entry !== city) : [...prev, city]));
@@ -192,6 +209,102 @@ export function CandidateProfileScreen() {
         }
       }
     ]);
+  };
+
+  const saveEmail = async () => {
+    if (!oldEmail.trim() || !newEmail.trim() || !confirmNewEmail.trim() || !emailCurrentPassword.trim()) {
+      Alert.alert("Missing fields", "Please fill out all email fields.");
+      return;
+    }
+    if (newEmail.trim().toLowerCase() !== confirmNewEmail.trim().toLowerCase()) {
+      Alert.alert("Emails do not match", "New email and confirm new email must match.");
+      return;
+    }
+
+    try {
+      setSavingEmail(true);
+      const result = await changeMyEmailWithPassword({
+        oldEmail,
+        newEmail,
+        currentPassword: emailCurrentPassword
+      });
+      if (result.mode === "verify_pending") {
+        setNewEmail("");
+        setConfirmNewEmail("");
+        setEmailCurrentPassword("");
+        Alert.alert(
+          "Verify new email",
+          "A verification link was sent to your new email. Open that email, confirm the change, then log out and back in."
+        );
+      } else {
+        setOldEmail(newEmail.trim().toLowerCase());
+        setEmail(newEmail.trim().toLowerCase());
+        setNewEmail("");
+        setConfirmNewEmail("");
+        setEmailCurrentPassword("");
+        Alert.alert("Email updated", "Your login email has been changed.");
+      }
+    } catch (error: any) {
+      const code = String(error?.code ?? "");
+      if (code === "auth/wrong-password") {
+        Alert.alert("Wrong password", "Current password is incorrect.");
+      } else if (code === "auth/email-already-in-use") {
+        Alert.alert("Email already in use", "That email is already linked to another account.");
+      } else if (code === "auth/invalid-email") {
+        Alert.alert("Invalid email", "Please enter a valid new email.");
+      } else if (code === "auth/requires-recent-login") {
+        Alert.alert("Please log in again", "For security, log out and log in before changing email.");
+      } else {
+        Alert.alert("Could not change email", error?.message ?? "Please try again.");
+      }
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Missing email", "Please refresh and try again.");
+      return;
+    }
+    if (!currentPassword.trim() || !newPassword.trim() || !confirmNewPassword.trim()) {
+      Alert.alert("Missing fields", "Please fill out all password fields.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert("Passwords do not match", "New password and confirm password must match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert("Weak password", "New password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await changeMyPasswordWithCurrentPassword({
+        email,
+        currentPassword,
+        newPassword
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      Alert.alert("Password updated", "Your password was changed successfully.");
+    } catch (error: any) {
+      const code = String(error?.code ?? "");
+      if (code === "auth/wrong-password") {
+        Alert.alert("Wrong password", "Current password is incorrect.");
+      } else if (code === "auth/weak-password") {
+        Alert.alert("Weak password", "Please use a stronger password.");
+      } else if (code === "auth/requires-recent-login") {
+        Alert.alert("Please log in again", "For security, log out and log in before changing password.");
+      } else {
+        Alert.alert("Could not change password", error?.message ?? "Please try again.");
+      }
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -320,6 +433,104 @@ export function CandidateProfileScreen() {
       </SurfaceCard>
 
       <SurfaceCard>
+        <Text style={styles.sectionTitle}>Change email</Text>
+        <Text style={styles.helperText}>
+          To change email, enter old email, new email, confirm new email, and current password.
+        </Text>
+
+        <Text style={styles.label}>Current email</Text>
+        <View style={styles.emailDisplayBox}>
+          <Text style={styles.emailDisplayText}>{email || "Not set"}</Text>
+        </View>
+
+        <Text style={styles.label}>Old email</Text>
+        <TextInput
+          style={styles.input}
+          value={oldEmail}
+          onChangeText={setOldEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="Old email"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Text style={styles.label}>New email</Text>
+        <TextInput
+          style={styles.input}
+          value={newEmail}
+          onChangeText={setNewEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="New email"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Text style={styles.label}>Confirm new email</Text>
+        <TextInput
+          style={styles.input}
+          value={confirmNewEmail}
+          onChangeText={setConfirmNewEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="Confirm new email"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Text style={styles.label}>Current password</Text>
+        <TextInput
+          style={styles.input}
+          value={emailCurrentPassword}
+          onChangeText={setEmailCurrentPassword}
+          secureTextEntry
+          placeholder="Current password"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Pressable style={styles.primaryButton} onPress={saveEmail} disabled={savingEmail}>
+          <Text style={styles.primaryButtonText}>{savingEmail ? "Updating..." : "Update email"}</Text>
+        </Pressable>
+      </SurfaceCard>
+
+      <SurfaceCard>
+        <Text style={styles.sectionTitle}>Change password</Text>
+        <Text style={styles.helperText}>Enter your current password and your new password.</Text>
+
+        <Text style={styles.label}>Current password</Text>
+        <TextInput
+          style={styles.input}
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry
+          placeholder="Current password"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Text style={styles.label}>New password</Text>
+        <TextInput
+          style={styles.input}
+          value={newPassword}
+          onChangeText={setNewPassword}
+          secureTextEntry
+          placeholder="New password"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Text style={styles.label}>Confirm new password</Text>
+        <TextInput
+          style={styles.input}
+          value={confirmNewPassword}
+          onChangeText={setConfirmNewPassword}
+          secureTextEntry
+          placeholder="Confirm new password"
+          placeholderTextColor="#7f8b9d"
+        />
+
+        <Pressable style={styles.primaryButton} onPress={savePassword} disabled={savingPassword}>
+          <Text style={styles.primaryButtonText}>{savingPassword ? "Updating..." : "Update password"}</Text>
+        </Pressable>
+      </SurfaceCard>
+
+      <SurfaceCard>
         <Pressable style={styles.secondaryButton} onPress={() => logout()}>
           <Text style={styles.secondaryButtonText}>Log out</Text>
         </Pressable>
@@ -337,6 +548,16 @@ const styles = StyleSheet.create({
     height: 90,
     top: -6,
     right: 8
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 4
+  },
+  helperText: {
+    color: theme.colors.textSecondary,
+    marginBottom: 10
   },
   label: {
     marginTop: 10,
@@ -360,6 +581,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     backgroundColor: "#fff"
+  },
+  emailDisplayBox: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#f8fafc"
+  },
+  emailDisplayText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "600"
   },
   optionalPickerRow: {
     flexDirection: "row",

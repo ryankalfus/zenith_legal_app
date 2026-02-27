@@ -1,6 +1,13 @@
-import { deleteField, doc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
+import { deleteField, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "../lib/firebase";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateEmail,
+  updatePassword,
+  verifyBeforeUpdateEmail
+} from "firebase/auth";
+import { auth, db, storage } from "../lib/firebase";
 
 export function watchUser(uid: string, onData: (data: any) => void, onError: (err: Error) => void) {
   return onSnapshot(
@@ -109,4 +116,74 @@ export async function clearCandidateAppointmentUpdates(uid: string) {
     hasAppointmentUpdates: false,
     updatedAt: serverTimestamp()
   });
+}
+
+export async function changeMyEmailWithPassword(input: {
+  oldEmail: string;
+  newEmail: string;
+  currentPassword: string;
+}): Promise<{ mode: "updated" | "verify_pending" }> {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No authenticated user.");
+  }
+
+  const oldEmail = input.oldEmail.trim().toLowerCase();
+  const newEmail = input.newEmail.trim().toLowerCase();
+  const currentEmail = String(user.email ?? "").trim().toLowerCase();
+  const currentPassword = input.currentPassword.trim();
+
+  if (!oldEmail || !newEmail || !currentPassword) {
+    throw new Error("Old email, new email, and current password are required.");
+  }
+  if (oldEmail !== currentEmail) {
+    throw new Error("Old email does not match your signed-in account email.");
+  }
+
+  const credential = EmailAuthProvider.credential(oldEmail, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  try {
+    await updateEmail(user, newEmail);
+  } catch (error: any) {
+    if (String(error?.code ?? "") === "auth/operation-not-allowed") {
+      await verifyBeforeUpdateEmail(user, newEmail);
+      return { mode: "verify_pending" };
+    }
+    throw error;
+  }
+
+  await setDoc(
+    doc(db, "users", user.uid),
+    {
+      uid: user.uid,
+      email: newEmail,
+      emailVerified: Boolean(user.emailVerified),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+  return { mode: "updated" };
+}
+
+export async function changeMyPasswordWithCurrentPassword(input: {
+  email: string;
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No authenticated user.");
+  }
+
+  const email = input.email.trim().toLowerCase();
+  const currentPassword = input.currentPassword.trim();
+  const newPassword = input.newPassword.trim();
+
+  if (!email || !currentPassword || !newPassword) {
+    throw new Error("Email, current password, and new password are required.");
+  }
+
+  const credential = EmailAuthProvider.credential(email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }

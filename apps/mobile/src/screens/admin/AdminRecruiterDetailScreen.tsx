@@ -97,7 +97,7 @@ export function AdminRecruiterDetailScreen() {
             onPress={() => setRoleModalOpen(true)}
             disabled={savingRole || isSelf}
           >
-            <Text style={styles.roleButtonText}>Role: recruiter</Text>
+            <Text style={styles.roleButtonText}>Role: Recruiter</Text>
             <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
           </Pressable>
           {isSelf ? <Text style={styles.selfHint}>You cannot change your own role.</Text> : null}
@@ -111,8 +111,8 @@ export function AdminRecruiterDetailScreen() {
             <Text style={styles.modalSubtitle}>{recruiter?.fullName || "Recruiter"}</Text>
 
             {([
-              { role: "admin" as const, label: "recruiter" },
-              { role: "candidate" as const, label: "candidate" }
+              { role: "admin" as const, label: "Recruiter" },
+              { role: "candidate" as const, label: "Candidate" }
             ]).map((option) => {
               const selected = option.role === "admin";
               return (

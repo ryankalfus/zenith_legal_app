@@ -1,3 +1,5 @@
+import type { CandidateFirmStatus } from "@zenith/shared";
+
 export type RootStackParamList = {
   Auth: undefined;
   ProfileSetup: undefined;
@@ -37,10 +39,30 @@ export type CandidateProfileStackParamList = {
   ProfileHome: undefined;
 };
 
+export type CandidateFilterState = {
+  assignedRecruiter: string; // "any" | "none" | recruiter uid/doc id
+  statuses: CandidateFirmStatus[];
+  practices: string[];
+  firmIds: string[];
+  preferredCities: string[];
+};
+
+export type CandidateFilterOptions = {
+  recruiters: Array<{ id: string; label: string }>;
+  statuses: Array<{ id: CandidateFirmStatus; label: string }>;
+  practices: Array<{ id: string; label: string }>;
+  firms: Array<{ id: string; label: string }>;
+  preferredCities: Array<{ id: string; label: string }>;
+};
+
 export type AdminCandidatesStackParamList = {
-  CandidatesList: undefined;
+  CandidatesList: { filters?: CandidateFilterState } | undefined;
   CandidateDetail: { candidateId: string };
   RecruiterDetail: { recruiterId: string };
+  CandidateFilters: {
+    filters: CandidateFilterState;
+    options: CandidateFilterOptions;
+  };
 };
 
 export type AdminChatStackParamList = {

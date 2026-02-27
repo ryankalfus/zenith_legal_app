@@ -7,7 +7,15 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
-import { arrayUnion, deleteField, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import {
+  arrayUnion,
+  deleteField,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc
+} from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "../lib/firebase";
 import { registerForPushNotificationsAsync } from "../lib/notifications";
@@ -44,6 +52,30 @@ const zenithAdminEmail =
   (process.env.EXPO_PUBLIC_ZENITH_ADMIN_EMAIL ?? extra.zenithAdminEmail ?? "mason@zenithlegal.com")
     .trim()
     .toLowerCase();
+
+async function reconcileUserEmailAcrossDocs(input: {
+  uid: string;
+  authEmail: string;
+  emailVerified: boolean;
+  pushTokens: string[];
+}) {
+  const authEmail = input.authEmail.trim().toLowerCase();
+  if (!authEmail) {
+    return;
+  }
+
+  await setDoc(
+    doc(db, "users", input.uid),
+    {
+      uid: input.uid,
+      email: authEmail,
+      emailVerified: input.emailVerified,
+      pushTokens: input.pushTokens,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -97,7 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const refreshed = await getDoc(userRef);
-      const data = refreshed.data() as { role?: "candidate" | "admin"; fullName?: string } | undefined;
+      const data = refreshed.data() as {
+        role?: "candidate" | "admin";
+        fullName?: string;
+        pushTokens?: string[];
+      } | undefined;
       const roleFromDoc = String(data?.role ?? "").trim().toLowerCase();
       let sessionRole: "candidate" | "admin" =
         roleFromClaim === "admin" || roleFromDoc === "admin" ? "admin" : "candidate";
@@ -111,6 +147,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
           { merge: true }
         ).catch(() => undefined);
+      }
+
+      if (userEmail) {
+        const existingTokens = Array.isArray(data?.pushTokens)
+          ? data?.pushTokens.filter((token) => typeof token === "string")
+          : [];
+        await reconcileUserEmailAcrossDocs({
+          uid: user.uid,
+          authEmail: userEmail,
+          emailVerified: Boolean(user.emailVerified),
+          pushTokens: existingTokens
+        }).catch(() => undefined);
       }
 
       setSession({

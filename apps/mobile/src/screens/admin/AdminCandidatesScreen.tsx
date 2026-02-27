@@ -1,14 +1,23 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
+import { CANDIDATE_STATUS_LABELS, CANDIDATE_VISIBLE_STATUSES, PRACTICE_AREAS, PREFERRED_CITIES } from "@zenith/shared";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import {
   watchCandidates,
   watchRecruiters,
+  watchFirms,
   CandidateRow,
-  RecruiterRow
+  RecruiterRow,
+  FirmRow
 } from "../../services/adminService";
+import { watchAllCandidateStatusIndex, CandidateStatusIndex } from "../../services/statusService";
+import {
+  AdminCandidatesStackParamList,
+  CandidateFilterOptions,
+  CandidateFilterState
+} from "../../navigation/types";
 import { theme } from "../../ui/theme";
 
 function parseIsoDate(input?: string) {
@@ -17,21 +26,6 @@ function parseIsoDate(input?: string) {
   }
   const parsed = new Date(`${input}T12:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function getAge(dateOfBirth?: string) {
-  const dob = parseIsoDate(dateOfBirth);
-  if (!dob) {
-    return null;
-  }
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  const dayDiff = today.getDate() - dob.getDate();
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age -= 1;
-  }
-  return age >= 0 ? age : null;
 }
 
 function formatShortDate(input?: string) {
@@ -54,11 +48,25 @@ function matchesSearch(term: string, row: { fullName?: string; email?: string; m
   );
 }
 
+function createDefaultFilters(): CandidateFilterState {
+  return {
+    assignedRecruiter: "any",
+    statuses: [],
+    practices: [],
+    firmIds: [],
+    preferredCities: []
+  };
+}
+
 export function AdminCandidatesScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<AdminCandidatesStackParamList, "CandidatesList">>();
   const [search, setSearch] = useState("");
   const [candidateRows, setCandidateRows] = useState<CandidateRow[]>([]);
   const [recruiterRows, setRecruiterRows] = useState<RecruiterRow[]>([]);
+  const [firmRows, setFirmRows] = useState<FirmRow[]>([]);
+  const [statusIndex, setStatusIndex] = useState<CandidateStatusIndex>({});
+  const [filters, setFilters] = useState<CandidateFilterState>(route.params?.filters ?? createDefaultFilters());
 
   useEffect(() => {
     const unsubCandidates = watchCandidates(
@@ -70,26 +78,117 @@ export function AdminCandidatesScreen() {
       (next) => setRecruiterRows(next),
       () => setRecruiterRows([])
     );
+    const unsubFirms = watchFirms(
+      (next) => setFirmRows(next),
+      () => setFirmRows([])
+    );
+    const unsubStatusIndex = watchAllCandidateStatusIndex(
+      (next) => setStatusIndex(next),
+      () => setStatusIndex({})
+    );
 
     return () => {
       unsubCandidates();
       unsubRecruiters();
+      unsubFirms();
+      unsubStatusIndex();
     };
   }, []);
+
+  useEffect(() => {
+    if (route.params?.filters) {
+      setFilters(route.params.filters);
+    }
+  }, [route.params?.filters]);
+
+  const recruiterMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    recruiterRows.forEach((row) => {
+      map[String(row.id)] = String(row.fullName || "Recruiter");
+      if (row.uid) {
+        map[String(row.uid)] = String(row.fullName || "Recruiter");
+      }
+    });
+    return map;
+  }, [recruiterRows]);
+
+  const filterOptions = useMemo<CandidateFilterOptions>(() => {
+    return {
+      recruiters: recruiterRows.map((row) => ({
+        id: String(row.uid ?? row.id),
+        label: String(row.fullName || "Recruiter")
+      })),
+      statuses: CANDIDATE_VISIBLE_STATUSES.map((id) => ({ id, label: CANDIDATE_STATUS_LABELS[id] })),
+      practices: [...PRACTICE_AREAS].map((entry) => ({ id: entry, label: entry })),
+      firms: firmRows.map((firm) => ({ id: firm.id, label: firm.name })),
+      preferredCities: [...PREFERRED_CITIES].map((entry) => ({ id: entry, label: entry }))
+    };
+  }, [firmRows, recruiterRows]);
 
   const filteredRecruiters = useMemo(
     () => recruiterRows.filter((row) => matchesSearch(search, row)),
     [recruiterRows, search]
   );
   const filteredCandidates = useMemo(
-    () => candidateRows.filter((row) => matchesSearch(search, row)),
-    [candidateRows, search]
+    () =>
+      candidateRows.filter((row) => {
+        if (!matchesSearch(search, row)) {
+          return false;
+        }
+
+        const rowIds = [String(row.id), String(row.uid ?? "")].filter(Boolean);
+        const rowStatus = rowIds.map((id) => statusIndex[id]).find(Boolean) ?? { statuses: [], firmIds: [] };
+
+        if (filters.assignedRecruiter !== "any") {
+          if (filters.assignedRecruiter === "none") {
+            if (row.assignedRecruiterId || row.assignedRecruiterName) {
+              return false;
+            }
+          } else {
+            const assignedId = String(row.assignedRecruiterId ?? "");
+            const assignedName = String(row.assignedRecruiterName ?? "");
+            const selectedName = recruiterMap[filters.assignedRecruiter] ?? "";
+            if (
+              assignedId !== filters.assignedRecruiter &&
+              (!selectedName || assignedName.toLowerCase() !== selectedName.toLowerCase())
+            ) {
+              return false;
+            }
+          }
+        }
+
+        if (filters.statuses.length > 0 && !filters.statuses.some((status) => rowStatus.statuses.includes(status))) {
+          return false;
+        }
+        if (filters.practices.length > 0 && !filters.practices.includes(String(row.preferences?.practiceArea ?? ""))) {
+          return false;
+        }
+        if (filters.firmIds.length > 0 && !filters.firmIds.some((firmId) => rowStatus.firmIds.includes(firmId))) {
+          return false;
+        }
+        if (
+          filters.preferredCities.length > 0 &&
+          !filters.preferredCities.some((city) => (row.preferences?.preferredCities ?? []).includes(city))
+        ) {
+          return false;
+        }
+
+        return true;
+      }),
+    [candidateRows, filters, recruiterMap, search, statusIndex]
   );
+
+  const openFilters = () => {
+    navigation.navigate("CandidateFilters", {
+      filters,
+      options: filterOptions
+    });
+  };
 
   return (
     <AppShell
-      title="Candidates"
-      subtitle="Manage recruiter accounts, candidate profiles, and firms."
+      title="Zenith Legal"
+      subtitle="Manage candidate and recruiter profiles"
       topRightLogoStyle={styles.dashboardHeroLogo}
       scroll
     >
@@ -126,12 +225,20 @@ export function AdminCandidatesScreen() {
       </View>
 
       <View style={styles.sectionWrap}>
-        <Text style={styles.sectionTitle}>Candidates</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Candidates</Text>
+          <Pressable style={styles.filterButton} onPress={openFilters}>
+            <Text style={styles.filterButtonText}>Filter search</Text>
+          </Pressable>
+        </View>
         {filteredCandidates.length === 0 ? <EmptyState message="No candidates found." /> : null}
         {filteredCandidates.map((candidate) => {
-          const age = getAge(candidate.dateOfBirth);
           const jdDate = formatShortDate(candidate.jdDegreeDate);
           const targetCandidateId = String(candidate.uid ?? candidate.id);
+          const assignedRecruiter =
+            String(candidate.assignedRecruiterName ?? "").trim() ||
+            recruiterMap[String(candidate.assignedRecruiterId ?? "")] ||
+            "None";
           return (
             <SurfaceCard key={candidate.id}>
               <Pressable onPress={() => navigation.navigate("CandidateDetail", { candidateId: targetCandidateId })}>
@@ -141,7 +248,7 @@ export function AdminCandidatesScreen() {
                     <Text style={styles.name}>{candidate.fullName || "(No display name)"}</Text>
                     <Text style={styles.meta}>{candidate.email || "No email"}</Text>
                     <Text style={styles.meta}>{candidate.mobile || "No phone"}</Text>
-                    <Text style={styles.meta}>Age: {age ?? "Not set"}</Text>
+                    <Text style={styles.meta}>Assigned recruiter: {assignedRecruiter}</Text>
                     <Text style={styles.meta}>JD degree received: {jdDate ?? "Not set"}</Text>
                     <Text style={styles.meta}>Work: {candidate.preferences?.practiceArea || "Not set"}</Text>
                     <Text style={styles.meta}>
@@ -182,6 +289,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
     marginTop: 6
+  },
+  sectionTitleRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8
+  },
+  filterButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: "#fff",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  filterButtonText: {
+    color: theme.colors.textSecondary,
+    fontWeight: "700",
+    fontSize: 12
   },
   row: {
     flexDirection: "row",

@@ -13,6 +13,7 @@ import { CandidateAppointmentsScreen } from "../screens/candidate/CandidateAppoi
 import { CandidateProfileScreen } from "../screens/candidate/CandidateProfileScreen";
 import { AdminCandidatesScreen } from "../screens/admin/AdminCandidatesScreen";
 import { AdminCandidateDetailScreen } from "../screens/admin/AdminCandidateDetailScreen";
+import { AdminCandidateFiltersScreen } from "../screens/admin/AdminCandidateFiltersScreen";
 import { AdminAppointmentRequestsScreen } from "../screens/admin/AdminAppointmentRequestsScreen";
 import { AdminNewConversationScreen } from "../screens/admin/AdminNewConversationScreen";
 import { AdminRecruiterDetailScreen } from "../screens/admin/AdminRecruiterDetailScreen";
@@ -88,6 +89,7 @@ function AdminCandidatesStackScreen() {
       <AdminCandidatesStack.Screen name="CandidatesList" component={AdminCandidatesScreen} />
       <AdminCandidatesStack.Screen name="CandidateDetail" component={AdminCandidateDetailScreen} />
       <AdminCandidatesStack.Screen name="RecruiterDetail" component={AdminRecruiterDetailScreen} />
+      <AdminCandidatesStack.Screen name="CandidateFilters" component={AdminCandidateFiltersScreen} />
     </AdminCandidatesStack.Navigator>
   );
 }

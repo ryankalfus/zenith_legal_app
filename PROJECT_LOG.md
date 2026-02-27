@@ -231,3 +231,25 @@
 - 02.27.2026: Updated candidate/recruiter detail screens to use dropdown-style role controls (current role checked) instead of one-off role buttons.
 - 02.27.2026: Moved role dropdown controls out of admin list rows and back into detailed profile screens (`Candidate Detail` and `Recruiter Detail`) as dedicated profile fields.
 - 02.27.2026: Fixed role-change `not-found` failures by replacing mobile role-change calls from missing callable endpoint to direct admin Firestore role updates (with rules support), restoring functional recruiter/candidate switching.
+- 02.27.2026: Added Firebase-backed `Change email` section to candidate profile tab (old email + new email + current password) with user doc email sync after Auth email update.
+- 02.27.2026: Added Firebase-backed `Change password` section (current + new + confirm) to both candidate and recruiter/admin profile tabs.
+- 02.27.2026: Updated Zenith admin Candidates-tab header copy: title now `Zenith Legal` and subtitle now `Manage candidate and recruiter profiles`.
+- 02.27.2026: Added admin/recruiter profile photo management in admin Profile tab with the same source-picker flow as candidates (`Take photo now`, `Choose from camera roll`, `Files`) plus upload/remove actions.
+- 02.27.2026: Wired admin profile photo uploads to Firebase Storage/user doc avatar fields so recruiter avatars update in Zenith Legal `Candidates` tab recruiter rows.
+- 02.27.2026: Capitalized role dropdown labels in admin detail role pickers to `Candidate` / `Recruiter`.
+- 02.27.2026: Added admin Candidate Detail `Assigned recruiter` dropdown field (supports `None` plus recruiter options) and synced assignments to candidate profile records.
+- 02.27.2026: Updated admin Candidates preview cards to show `Assigned recruiter` in place of `Age` before opening candidate detail.
+- 02.27.2026: Added admin Candidates-section `Filter search` button + new filter screen with recruiter/status/practice/assigned-firms/preferred-cities filtering.
+- 02.27.2026: Added realtime candidate filter data sources (firm list + candidate status index) so filter results update live from Firestore changes.
+- 02.27.2026: Fixed admin Candidates filter apply flow crash (`GO_BACK not handled`) by returning to Candidates list via direct navigate without extra back action.
+- 02.27.2026: Added `Any` as the top selectable option for all candidate-filter dropdown fields (recruiter/status/practice/assigned firms/preferred cities), with `Any` resetting that filter field.
+- 02.27.2026: Added searchable firm picker in Candidates filter (`Assigned firms`) to handle long firm lists by name.
+- 02.27.2026: Updated preferred-cities filter options to always include the full shared city list (`PREFERRED_CITIES`) including `Other`.
+- 02.27.2026: Hardened admin profile phone sync by updating all matching admin user records (uid/email-linked docs) and deduping recruiter watch rows so edited phone values reflect correctly in Candidates tab.
+- 02.27.2026: Extended email-change UX on mobile profile tabs with confirm-new-email field + validation and expanded backend user-doc email sync to all matching account docs after auth email update.
+- 02.27.2026: Fixed Firebase email-change `auth/operation-not-allowed` flow by adding secure fallback to `verifyBeforeUpdateEmail` when project requires new-email verification before update.
+- 02.27.2026: Updated candidate/admin profile email-change UI to handle verification-required mode with a clear user instruction alert (check new inbox, verify, then re-login) instead of generic failure.
+- 02.27.2026: Moved admin profile `Current email` display from the top profile card into the top of the `Change email` section to match candidate profile layout.
+- 02.27.2026: Added login-time email reconciliation in mobile `AuthContext` so when verified Firebase email changes take effect, all matching user docs for that account are updated to the new current email (`uid`, `email`, `emailVerified`) and stale old-email copies are synced.
+- 02.27.2026: Fixed profile email display source-of-truth: candidate/admin `Current email` now always prioritizes Firebase Auth account email over stale profile-doc email values.
+- 02.27.2026: Simplified post-verify email sync writes to canonical user doc (`users/{uid}`) in both login reconciliation and email-change service to avoid permission failures on legacy duplicate docs and keep current-email field accurate.

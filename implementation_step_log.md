@@ -1277,3 +1277,129 @@
   - `npm run test:rules` -> PASS
 - What to test next:
   - Open candidate/recruiter detail, change role from dropdown, verify success and realtime movement between Recruiters/Candidates sections.
+
+## Step 80 - Candidate Email Change + Password Sections (Candidate + Recruiter)
+- What changed:
+  - Added shared Firebase auth helpers in `userService` for `changeMyEmailWithPassword` and `changeMyPasswordWithCurrentPassword`.
+  - Added `Change email` section to candidate profile tab with old/new/current password flow and Firestore email sync.
+  - Added `Change password` section to candidate profile tab (current/new/confirm).
+  - Added `Change password` section to recruiter/admin profile tab (current/new/confirm).
+  - Updated admin Candidates tab heading copy to `Zenith Legal` + `Manage candidate and recruiter profiles`.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Candidate and recruiter can both change password using current password.
+  - Candidate and recruiter can both change login email and re-login with new email.
+
+## Step 81 - Admin Profile Photo Upload Parity
+- What changed:
+  - Added profile photo field to `AdminProfileScreen` with same picker flow as candidate profile (`Take photo now`, `Choose from camera roll`, `Files`).
+  - Added admin avatar upload/remove wiring using existing Firebase Storage + user avatar fields.
+  - Recruiter/avatar values now reflect from admin profile updates in Zenith Legal Candidates tab recruiter rows.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Upload admin photo from camera roll, camera, and files.
+  - Confirm updated recruiter avatar appears in admin Candidates tab.
+
+## Step 82 - Assigned Recruiter + Candidates Filter Search
+- What changed:
+  - Capitalized role dropdown labels in admin detail role controls to `Candidate` / `Recruiter`.
+  - Added candidate profile field in `AdminCandidateDetailScreen`: `Assigned recruiter` (dropdown with `None` + recruiter options).
+  - Added `updateCandidateAssignedRecruiter(...)` in `adminService` and synced recruiter assignment fields across candidate profile records.
+  - Updated admin candidates preview card line to show `Assigned recruiter: ...` in place of `Age`.
+  - Added new admin screen `AdminCandidateFiltersScreen` and wired `Filter search` button next to the Candidates section title.
+  - Implemented filter controls for:
+    - Assigned recruiter (single select)
+    - Current status (multi select)
+    - Practice (multi select)
+    - Assigned firms (multi select)
+    - Preferred cities (multi select)
+  - Added realtime status-index watcher (`watchAllCandidateStatusIndex`) for candidate status/firm-based filtering.
+  - Added navigation route/types for `CandidateFilters` with typed filter state + option payloads.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Set candidate assigned recruiter in detail view and verify preview list updates.
+  - Open Filter search, apply each filter type, and confirm candidate results update correctly.
+
+## Step 83 - Filter Crash + Any Options + Admin Profile Sync Reliability
+- What changed:
+  - Fixed `AdminCandidateFiltersScreen` apply action crash (`GO_BACK not handled`) by removing redundant `goBack()` after navigate.
+  - Added `Any` top option to every filter picker:
+    - Assigned recruiter
+    - Current status
+    - Practice
+    - Assigned firms
+    - Preferred cities
+  - Added `Assigned firms` search box in filter modal for long firm lists.
+  - Updated filter option sources so preferred cities always include full shared list (`PREFERRED_CITIES`, including `Other`) and practices use full shared list (`PRACTICE_AREAS`).
+  - Improved admin profile sync behavior:
+    - `updateAdminOwnProfile` now updates all matching admin records by uid/email and ensures canonical own admin doc is updated.
+    - Recruiter watchers now dedupe same-person duplicate docs for cleaner synced display.
+  - Upgraded change-email flow in admin + candidate profile tabs:
+    - Added `Confirm new email` field.
+    - Added required-field and match validation.
+    - Expanded user-doc email updates to all matching docs after Firebase Auth email change.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS
+- What to test next:
+  - Apply filters repeatedly and confirm no navigation warning/error.
+  - Confirm `Any` behavior resets each individual filter field.
+  - Confirm firm search narrows assigned-firm options by name.
+  - Update admin phone and verify recruiter preview card reflects updated number.
+  - Change email with old/new/confirm/password and verify next login uses new email.
+
+## Step 84 - Email Change Verification-Required Firebase Flow
+- What changed:
+  - Added `verifyBeforeUpdateEmail` fallback in `changeMyEmailWithPassword` for Firebase projects requiring new-email verification before email updates.
+  - Service now returns mode:
+    - `updated` when direct update succeeds
+    - `verify_pending` when verification link flow is required
+  - Updated candidate/admin profile screens to handle `verify_pending` gracefully and show clear next-step guidance.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Trigger email change on account with verification-required policy and confirm verification email arrives.
+  - Complete verification link flow and confirm account email updates after re-login.
+
+## Step 85 - Admin Email Section Layout Alignment
+- What changed:
+  - Moved admin `Current email` display from the profile-info card to the top of the `Change email` section.
+  - Admin email section now matches candidate profile layout pattern.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - Open admin profile tab and verify `Current email` appears at the top of `Change email`.
+
+## Step 86 - Verified Email Sync Across Candidate/Admin Records
+- What changed:
+  - Added auth-session reconciliation in `AuthContext` that runs on login/auth refresh.
+  - When Firebase Auth email is now different (post-verification), the app syncs matching user records to the current email and verification state:
+    - updates `uid`, `email`, `emailVerified`, `updatedAt`
+    - matches by `uid` and stale primary-doc email
+  - This ensures verified email changes propagate to candidate/admin views that read from user docs.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Change email via verification flow, complete verification, log out/in, and verify new email appears everywhere for that account.
+
+## Step 87 - Current Email Field Source-of-Truth Fix
+- What changed:
+  - Updated candidate/admin profile watchers to always use Firebase Auth email (`session.user.email`) as primary source for `Current email`.
+  - Updated login-time email reconciliation to write canonical `users/{uid}` with auth email + verification state and preserve push-token list for rules compatibility.
+  - Updated email-change service post-success write to canonical `users/{uid}` only, preventing multi-doc permission failures that could leave old email values visible.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Log in as account whose email was verified-changed and confirm `Current email` instantly matches login email.
+  - Confirm old email no longer appears in candidate/admin profile change-email section.
