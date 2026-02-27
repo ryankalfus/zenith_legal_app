@@ -108,7 +108,23 @@ service cloud.firestore {
           isOwnerOrAdmin(candidateId) &&
           request.resource.data.candidateId == candidateId
         );
-        allow update, delete: if isAdmin();
+        allow update: if (
+          isAdmin() ||
+          (
+            isAuthenticated() &&
+            request.auth.uid == candidateId &&
+            request.resource.data.candidateId == resource.data.candidateId &&
+            request.resource.data.senderId == resource.data.senderId &&
+            request.resource.data.senderRole == resource.data.senderRole &&
+            request.resource.data.text == resource.data.text &&
+            request.resource.data.attachments == resource.data.attachments &&
+            request.resource.data.createdAt == resource.data.createdAt &&
+            request.resource.data.hiddenForAdmin == resource.data.hiddenForAdmin &&
+            resource.data.hiddenForCandidate != true &&
+            request.resource.data.hiddenForCandidate == true
+          )
+        );
+        allow delete: if isAdmin();
       }
     }
 

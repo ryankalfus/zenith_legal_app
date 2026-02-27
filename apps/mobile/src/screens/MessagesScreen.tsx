@@ -13,14 +13,17 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native";
-import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../state/AuthContext";
-import { markConversationRead, sendMessage, watchMessages } from "../services/messagingService";
+import {
+  hideMessageForViewer,
+  markConversationRead,
+  sendMessage,
+  watchMessages
+} from "../services/messagingService";
 import { AdminChatStackParamList } from "../navigation/types";
 import { CandidateContactBar } from "../components/AppShell";
 import { Avatar } from "../components/Avatar";
 import { theme } from "../ui/theme";
-import { db } from "../lib/firebase";
 import { watchUser } from "../services/userService";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -83,15 +86,20 @@ export function MessagesScreen() {
     }
 
     if (session?.role === "admin") {
-      getDoc(doc(db, "users", candidateId))
-        .then((snapshot) => {
-          const data = snapshot.data();
+      return watchUser(
+        candidateId,
+        (data) => {
           setCandidateProfile({
             name: String(data?.fullName ?? route.params?.title ?? "Candidate"),
             avatarUrl: String(data?.avatarUrl ?? "")
           });
-        })
-        .catch(() => undefined);
+        },
+        () =>
+          setCandidateProfile({
+            name: String(route.params?.title ?? "Candidate"),
+            avatarUrl: ""
+          })
+      );
     } else {
       setCandidateProfile({
         name: "Zenith Legal",
@@ -153,9 +161,41 @@ export function MessagesScreen() {
     }
   };
 
+  const confirmDeleteMessage = (messageId: string) => {
+    if (!candidateId || !session?.role) {
+      return;
+    }
+
+    Alert.alert("Delete message", "Delete this message for your view only?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await hideMessageForViewer({
+              candidateId,
+              messageId,
+              role: session.role
+            });
+          } catch (error: any) {
+            Alert.alert("Could not delete", error?.message ?? "Please retry.");
+          }
+        }
+      }
+    ]);
+  };
+
+  const visibleMessages = messages.filter((item) => {
+    if (session?.role === "admin") {
+      return !Boolean(item.hiddenForAdmin);
+    }
+    return !Boolean(item.hiddenForCandidate);
+  });
+
   if (session?.role === "admin" && !candidateId) {
     return (
-      <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
+      <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
         <CandidateContactBar />
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>Open a candidate chat</Text>
@@ -166,7 +206,7 @@ export function MessagesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <CandidateContactBar />
 
       <KeyboardAvoidingView
@@ -175,14 +215,14 @@ export function MessagesScreen() {
         keyboardVerticalOffset={96}
       >
         <View style={styles.headerWrap}>
-          <Text style={styles.title}>{session?.role === "admin" ? route.params?.title ?? "Candidate" : "Chat"}</Text>
+          <Text style={styles.title}>{session?.role === "admin" ? candidateProfile.name : "Chat"}</Text>
           <Text style={styles.subtitle}>
             {session?.role === "admin" ? "Direct message thread" : "Direct message with Zenith Legal"}
           </Text>
         </View>
 
         <ScrollView ref={listRef} contentContainerStyle={styles.list}>
-          {messages.map((item) => {
+          {visibleMessages.map((item) => {
             const mine = item.senderId === session?.user.uid;
             const otherIsZenith = session?.role === "candidate";
             const mineIsZenith = session?.role === "admin";
@@ -197,12 +237,16 @@ export function MessagesScreen() {
                   />
                 ) : null}
 
-                <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                <Pressable
+                  style={[styles.bubble, mine ? styles.mine : styles.theirs]}
+                  onLongPress={() => confirmDeleteMessage(item.id)}
+                  delayLongPress={250}
+                >
                   <Text style={mine ? styles.mineText : styles.theirText}>{item.text || "(attachment)"}</Text>
                   {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
                     <Text style={styles.attachmentText}>Attachment: {item.attachments[0].fileName}</Text>
                   ) : null}
-                </View>
+                </Pressable>
 
                 {mine ? (
                   <Avatar
@@ -309,7 +353,7 @@ const styles = StyleSheet.create({
   },
   composerWrap: {
     paddingHorizontal: 10,
-    paddingBottom: 2
+    paddingBottom: 0
   },
   composer: {
     flexDirection: "row",
@@ -363,7 +407,7 @@ const styles = StyleSheet.create({
   },
   fileHint: {
     paddingHorizontal: 12,
-    paddingBottom: 8,
+    paddingBottom: 2,
     color: theme.colors.textSecondary
   },
   emptyContainer: {

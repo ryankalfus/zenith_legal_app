@@ -1,17 +1,22 @@
 import {
   addDoc,
   collection,
+  getDocs,
   increment,
+  limit,
   onSnapshot,
   doc,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
+
+type ViewerRole = "candidate" | "admin";
 
 function toSortMs(input: unknown) {
   if (!input) {
@@ -65,16 +70,21 @@ export function watchAdminConversations(
       const rows: any[] = snapshot.docs.map((entry) => {
         const data = entry.data();
         const candidateId = String(data.candidateId ?? entry.id);
+        const previewText = String(data.lastMessageTextForAdmin ?? data.lastMessageText ?? "");
+        const previewAt = data.lastMessageAtForAdmin ?? data.lastMessageAt ?? data.updatedAt;
         return {
           id: entry.id,
           ...data,
           candidateId,
           candidateName: String(data.candidateNameSnapshot ?? "Candidate"),
           candidateAvatarUrl: String(data.candidateAvatarUrlSnapshot ?? ""),
+          lastMessageText: previewText,
+          lastMessageAt: previewAt,
+          hiddenForAdmin: Boolean(data.hiddenForAdmin),
           unreadByAdminCount: Number(data.unreadByAdminCount ?? 0),
           unreadByCandidateCount: Number(data.unreadByCandidateCount ?? 0)
         };
-      });
+      }).filter((row) => !Boolean(row.hiddenForAdmin));
       rows.sort((a, b) => {
         const aMs = toSortMs(a.lastMessageAt ?? a.updatedAt);
         const bMs = toSortMs(b.lastMessageAt ?? b.updatedAt);
@@ -95,7 +105,11 @@ export function watchAdminUnreadChatsCount(
     q,
     (snapshot) => {
       const totalUnread = snapshot.docs.reduce((sum, entry) => {
-        return sum + Number(entry.data().unreadByAdminCount ?? 0);
+        const data = entry.data();
+        if (Boolean(data.hiddenForAdmin)) {
+          return sum;
+        }
+        return sum + Number(data.unreadByAdminCount ?? 0);
       }, 0);
       onData(totalUnread);
     },
@@ -135,15 +149,120 @@ export async function markConversationRead(
       ...(role === "admin"
         ? {
             unreadByAdminCount: 0,
+            hiddenForAdmin: false,
             adminLastReadAt: serverTimestamp()
           }
         : {
             unreadByCandidateCount: 0,
+            hiddenForCandidate: false,
             candidateLastReadAt: serverTimestamp()
           })
     },
     { merge: true }
   );
+}
+
+export async function startConversationAsAdmin(input: {
+  candidateId: string;
+  candidateName?: string;
+  candidateAvatarUrl?: string;
+}) {
+  await setDoc(
+    doc(db, "conversations", input.candidateId),
+    {
+      candidateId: input.candidateId,
+      participantIds: [input.candidateId, "zenith-team"],
+      candidateNameSnapshot: input.candidateName ?? "Candidate",
+      candidateAvatarUrlSnapshot: input.candidateAvatarUrl ?? "",
+      unreadByAdminCount: increment(0),
+      unreadByCandidateCount: increment(0),
+      lastMessageTextForAdmin: "",
+      lastMessageTextForCandidate: "",
+      hiddenForAdmin: false,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+export async function deleteConversationForAdmin(candidateId: string) {
+  await setDoc(
+    doc(db, "conversations", candidateId),
+    {
+      candidateId,
+      participantIds: [candidateId, "zenith-team"],
+      hiddenForAdmin: true,
+      unreadByAdminCount: 0,
+      adminLastReadAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+async function refreshLocalPreview(candidateId: string, role: ViewerRole) {
+  const hiddenField = role === "admin" ? "hiddenForAdmin" : "hiddenForCandidate";
+  const textField = role === "admin" ? "lastMessageTextForAdmin" : "lastMessageTextForCandidate";
+  const atField = role === "admin" ? "lastMessageAtForAdmin" : "lastMessageAtForCandidate";
+  const senderField = role === "admin" ? "lastMessageSenderRoleForAdmin" : "lastMessageSenderRoleForCandidate";
+
+  const q = query(
+    collection(db, "conversations", candidateId, "messages"),
+    orderBy("createdAt", "desc"),
+    limit(100)
+  );
+  const snapshot = await getDocs(q);
+
+  let previewText = "";
+  let previewAt: unknown = null;
+  let previewSenderRole: string = "";
+
+  for (const entry of snapshot.docs) {
+    const data = entry.data();
+    if (Boolean((data as any)[hiddenField])) {
+      continue;
+    }
+    previewText = String((data as any).text ?? "").trim() || "(attachment)";
+    previewAt = (data as any).createdAt ?? null;
+    previewSenderRole = String((data as any).senderRole ?? "");
+    break;
+  }
+
+  await setDoc(
+    doc(db, "conversations", candidateId),
+    {
+      candidateId,
+      participantIds: [candidateId, "zenith-team"],
+      [textField]: previewText,
+      [atField]: previewAt,
+      [senderField]: previewSenderRole,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+export async function hideMessageForViewer(input: {
+  candidateId: string;
+  messageId: string;
+  role: "candidate" | "admin";
+}) {
+  const messageRef = doc(db, "conversations", input.candidateId, "messages", input.messageId);
+  if (input.role === "admin") {
+    await updateDoc(messageRef, {
+      hiddenForAdmin: true,
+      deletedForAdminAt: serverTimestamp()
+    });
+    await refreshLocalPreview(input.candidateId, "admin");
+    return;
+  }
+
+  await updateDoc(messageRef, {
+    hiddenForCandidate: true,
+    deletedForCandidateAt: serverTimestamp()
+  });
+  await refreshLocalPreview(input.candidateId, "candidate");
 }
 
 export async function sendMessage(input: {
@@ -171,6 +290,14 @@ export async function sendMessage(input: {
       lastMessageText: previewText,
       lastMessageAt: serverTimestamp(),
       lastMessageSenderRole: input.senderRole,
+      lastMessageTextForAdmin: previewText,
+      lastMessageAtForAdmin: serverTimestamp(),
+      lastMessageSenderRoleForAdmin: input.senderRole,
+      lastMessageTextForCandidate: previewText,
+      lastMessageAtForCandidate: serverTimestamp(),
+      lastMessageSenderRoleForCandidate: input.senderRole,
+      hiddenForAdmin: false,
+      hiddenForCandidate: false,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     },
@@ -208,6 +335,8 @@ export async function sendMessage(input: {
     senderRole: input.senderRole,
     text: input.text,
     attachments,
+    hiddenForAdmin: false,
+    hiddenForCandidate: false,
     metaHandledClient: true,
     createdAt: serverTimestamp()
   });

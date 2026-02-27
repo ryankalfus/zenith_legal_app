@@ -182,3 +182,49 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for overdue ignore flow, admin upcoming appointment controls, and final appointment routing consistency.
+
+## Candidate Permission Patch (2026-02-27)
+- [x] `MVP` Candidate `Authorize` / `Cancel` transition service now enforces only valid target statuses and uses direct status update writes with read-back verification.
+- [x] `MVP` Candidate status transition guard rails now explicitly block invalid/non-waiting transitions before write attempts.
+- [x] `MVP` Local rules smoke tests confirm candidate can transition `authorization_pending` -> `waiting_for_submission` and cannot perform arbitrary status edits.
+- [x] `Ops` Firestore rules deployed live to `zenith-legal-dev` so candidate authorize/cancel permission path is active in hosted environment.
+- [x] `Ops` Firebase CLI network TLS trust issue was identified and worked around for deployment execution.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for candidate authorize/cancel permission root-cause patch and explicit live deploy blocker tracking.
+
+## Admin Chat Identity + Creation + Delete (2026-02-27)
+- [x] `MVP` Zenith admin chat preview name/photo now syncs from live candidate display profile data (display name + avatar), not stale conversation snapshot only.
+- [x] `MVP` Zenith admin can tap `+` in chat tab, pick a candidate, and start/open a conversation directly.
+- [x] `MVP` Zenith admin can swipe left on chat previews to reveal red `Delete` action with animation-like reveal behavior.
+- [x] `MVP` Admin delete is local-only (admin hidden state); candidate conversation data is not globally deleted.
+- [x] `MVP` Opening/sending in a conversation unhides it as needed for active side visibility.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for live chat identity sync, new-conversation entry flow, and admin-local swipe delete behavior.
+
+## Chat Interaction Polish + Local Message Delete (2026-02-27)
+- [x] `MVP` Admin swipe-left delete rows auto-reset closed when leaving inbox or opening a thread.
+- [x] `MVP` Admin chat `+` action is aligned with `Chat` heading while search bar remains directly below heading/subtitle.
+- [x] `MVP` Message composer is lowered closer to tab bar area with no overlap.
+- [x] `MVP` Both admin and candidate can long-press sent/received messages and delete locally (red destructive action, non-global).
+- [x] `MVP` Firestore rules permit candidate local message hide updates without allowing message content mutation.
+- [x] `Ops` Updated Firestore rules deployed live to `zenith-legal-dev` for local message delete support.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for inbox swipe-reset behavior, header-level plus button placement, lower composer position, and per-user long-press message deletion.
+
+## Local Preview Consistency (2026-02-27)
+- [x] `MVP` Chat previews are viewer-local after local message delete (latest visible message per side).
+- [x] `MVP` Admin inbox preview uses admin-local preview fields with fallback compatibility for older docs.
+- [x] `MVP` Local delete now triggers immediate preview recompute/sync so preview text/time stays accurate per viewer.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for viewer-local chat preview behavior and realtime preview recompute after local message deletion.
+
+## Admin Unread Visual Adjustment (2026-02-27)
+- [x] `MVP` Blue unread dot removed from Zenith admin chat preview rows.
+- [x] `MVP` Unread preview bold text + tab notification badge remain active.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for admin unread visual update (bold-only unread rows).

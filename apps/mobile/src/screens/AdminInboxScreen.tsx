@@ -1,9 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { AppShell, EmptyState } from "../components/AppShell";
 import { Avatar } from "../components/Avatar";
-import { markConversationRead, watchAdminConversations } from "../services/messagingService";
+import {
+  deleteConversationForAdmin,
+  markConversationRead,
+  watchAdminConversations
+} from "../services/messagingService";
 import { watchCandidates } from "../services/adminService";
 import { theme } from "../ui/theme";
 
@@ -65,6 +70,9 @@ export function AdminInboxScreen() {
   const [rows, setRows] = useState<InboxRow[]>([]);
   const [search, setSearch] = useState("");
   const [candidateDirectory, setCandidateDirectory] = useState<Record<string, { name: string; avatarUrl: string }>>({});
+  const [rowWidth, setRowWidth] = useState(320);
+  const rowRefs = useRef<Record<string, ScrollView | null>>({});
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     return watchAdminConversations(
@@ -89,8 +97,9 @@ export function AdminInboxScreen() {
     );
   }, []);
 
-  const getDisplayName = (row: InboxRow) => row.candidateName || candidateDirectory[row.candidateId]?.name || "Candidate";
-  const getDisplayAvatar = (row: InboxRow) => row.candidateAvatarUrl || candidateDirectory[row.candidateId]?.avatarUrl || "";
+  const getDisplayName = (row: InboxRow) => candidateDirectory[row.candidateId]?.name || row.candidateName || "Candidate";
+  const getDisplayAvatar = (row: InboxRow) =>
+    candidateDirectory[row.candidateId]?.avatarUrl || row.candidateAvatarUrl || "";
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -104,6 +113,7 @@ export function AdminInboxScreen() {
   }, [rows, search, candidateDirectory]);
 
   const openThread = async (item: InboxRow) => {
+    Object.values(rowRefs.current).forEach((ref) => ref?.scrollTo({ x: 0, y: 0, animated: false }));
     try {
       await markConversationRead(item.candidateId, "admin");
     } catch {
@@ -116,8 +126,40 @@ export function AdminInboxScreen() {
     });
   };
 
+  useEffect(() => {
+    if (isFocused) {
+      return;
+    }
+    Object.values(rowRefs.current).forEach((ref) => ref?.scrollTo({ x: 0, y: 0, animated: false }));
+  }, [isFocused]);
+
+  const confirmDelete = (item: InboxRow) => {
+    Alert.alert("Delete chat", "Delete this conversation from Zenith Legal chat list?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteConversationForAdmin(item.candidateId);
+          } catch (error: any) {
+            Alert.alert("Could not delete", error?.message ?? "Please try again.");
+          }
+        }
+      }
+    ]);
+  };
+
   return (
-    <AppShell title="Chat" subtitle="Candidate direct messages">
+    <AppShell
+      title="Chat"
+      subtitle="Candidate direct messages"
+      headerRight={(
+        <Pressable style={styles.plusButton} onPress={() => navigation.navigate("NewConversation")}>
+          <Ionicons name="add" size={18} color={theme.colors.primary} />
+        </Pressable>
+      )}
+    >
       <View style={styles.searchWrap}>
         <TextInput
           style={styles.searchInput}
@@ -131,30 +173,51 @@ export function AdminInboxScreen() {
       {filtered.length === 0 ? (
         <EmptyState message="No candidate conversations yet." />
       ) : (
-        <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          onLayout={(event) => setRowWidth(Math.max(220, Math.floor(event.nativeEvent.layout.width)))}
+        >
           {filtered.map((item, index) => {
             const unread = Number(item.unreadByAdminCount ?? 0) > 0;
             return (
-              <Pressable key={item.id} style={styles.row} onPress={() => openThread(item)}>
-                <View style={styles.avatarWrap}>
-                  {unread ? <View style={styles.unreadDot} /> : null}
-                  <Avatar uri={getDisplayAvatar(item)} name={getDisplayName(item)} size={46} />
-                </View>
-
-                <View style={styles.rowBody}>
-                  <View style={styles.rowTop}>
-                    <Text style={[styles.name, unread && styles.boldText]} numberOfLines={1}>
-                      {getDisplayName(item)}
-                    </Text>
-                    <Text style={[styles.time, unread && styles.boldTime]}>{formatPreviewTime(item.lastMessageAt)}</Text>
+              <ScrollView
+                key={item.id}
+                horizontal
+                ref={(ref) => {
+                  rowRefs.current[item.id] = ref;
+                }}
+                showsHorizontalScrollIndicator={false}
+                bounces={false}
+                decelerationRate="fast"
+                snapToOffsets={[0, 92]}
+                directionalLockEnabled
+                contentContainerStyle={[styles.swipeContent, { width: rowWidth + 92 }]}
+              >
+                <Pressable style={[styles.row, { width: rowWidth }]} onPress={() => openThread(item)}>
+                  <View style={styles.avatarWrap}>
+                    <Avatar uri={getDisplayAvatar(item)} name={getDisplayName(item)} size={46} />
                   </View>
-                  <Text style={[styles.preview, unread && styles.boldText]} numberOfLines={2}>
-                    {item.lastMessageText || "No message text"}
-                  </Text>
-                </View>
 
-                {index < filtered.length - 1 ? <View style={styles.divider} /> : null}
-              </Pressable>
+                  <View style={styles.rowBody}>
+                    <View style={styles.rowTop}>
+                      <Text style={[styles.name, unread && styles.boldText]} numberOfLines={1}>
+                        {getDisplayName(item)}
+                      </Text>
+                      <Text style={[styles.time, unread && styles.boldTime]}>{formatPreviewTime(item.lastMessageAt)}</Text>
+                    </View>
+                    <Text style={[styles.preview, unread && styles.boldText]} numberOfLines={2}>
+                      {item.lastMessageText || "No message text"}
+                    </Text>
+                  </View>
+
+                  {index < filtered.length - 1 ? <View style={styles.divider} /> : null}
+                </Pressable>
+
+                <Pressable style={styles.deleteAction} onPress={() => confirmDelete(item)}>
+                  <Text style={styles.deleteText}>Delete</Text>
+                </Pressable>
+              </ScrollView>
             );
           })}
         </ScrollView>
@@ -164,6 +227,16 @@ export function AdminInboxScreen() {
 }
 
 const styles = StyleSheet.create({
+  plusButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center"
+  },
   searchWrap: {
     marginBottom: 4
   },
@@ -181,6 +254,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 12
   },
+  swipeContent: {
+    flexDirection: "row"
+  },
   row: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -192,15 +268,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative"
-  },
-  unreadDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: "#0a66ff",
-    position: "absolute",
-    left: 4,
-    top: 18
   },
   rowBody: {
     flex: 1,
@@ -236,6 +303,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 1,
     backgroundColor: theme.colors.border
+  },
+  deleteAction: {
+    width: 92,
+    backgroundColor: "#d73636",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  deleteText: {
+    color: "#fff",
+    fontWeight: "700"
   },
   boldText: {
     color: theme.colors.textPrimary,

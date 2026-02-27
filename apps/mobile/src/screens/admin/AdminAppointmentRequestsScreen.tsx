@@ -185,6 +185,16 @@ export function AdminAppointmentRequestsScreen() {
     }
   };
 
+  const handleAcceptRequest = async (row: AppointmentRow) => {
+    const starts = parseDate(row.startsAt);
+    if (!starts || starts.getTime() <= Date.now()) {
+      Alert.alert("Pick a new time", "This request time has passed. Modify it to a future time before accepting.");
+      openModifyModal(row, true);
+      return;
+    }
+    await setStatus(row.id, "scheduled");
+  };
+
   const confirmIgnoreOverdue = (row: AppointmentRow) => {
     Alert.alert(
       "Ignore overdue appointment",
@@ -249,12 +259,18 @@ export function AdminAppointmentRequestsScreen() {
       return;
     }
 
+    const startsAt = mergeDateAndTime(createDate, createTime);
+    if (new Date(startsAt).getTime() <= Date.now()) {
+      Alert.alert("Future time required", "Please select a future date/time so this appears in upcoming appointments.");
+      return;
+    }
+
     try {
       setCreating(true);
       await createAdminAppointment({
         candidateId: createCandidateId,
         createdBy: session.user.uid,
-        startsAt: mergeDateAndTime(createDate, createTime),
+        startsAt,
         phoneNumber: createPhone.trim(),
         notes: createNote.trim()
       });
@@ -287,11 +303,17 @@ export function AdminAppointmentRequestsScreen() {
       return;
     }
 
+    const startsAt = mergeDateAndTime(editDate, editTime);
+    if (new Date(startsAt).getTime() <= Date.now()) {
+      Alert.alert("Future time required", "Please select a future date/time so this appears in upcoming appointments.");
+      return;
+    }
+
     try {
       setSavingEdit(true);
       await updateAppointmentDetails({
         appointmentId: editingRow.id,
-        startsAt: mergeDateAndTime(editDate, editTime),
+        startsAt,
         phoneNumber: editPhone.trim(),
         notes: editNote.trim(),
         updatedBy: session.user.uid,
@@ -512,7 +534,7 @@ export function AdminAppointmentRequestsScreen() {
                       <Text style={styles.meta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
                       {String(row.notes ?? "").trim() ? <Text style={styles.meta}>Note: {row.notes}</Text> : null}
                       <View style={styles.actionRow}>
-                        <Pressable style={styles.actionButton} onPress={() => setStatus(row.id, "scheduled")}>
+                        <Pressable style={styles.actionButton} onPress={() => handleAcceptRequest(row)}>
                           <Text style={styles.actionButtonText}>Accept</Text>
                         </Pressable>
                         <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>

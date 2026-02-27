@@ -8,6 +8,7 @@ type AppShellProps = {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  headerRight?: React.ReactNode;
   showCandidateContactBar?: boolean;
   showZenithContactBar?: boolean;
   scroll?: boolean;
@@ -19,6 +20,7 @@ export function AppShell({
   children,
   title,
   subtitle,
+  headerRight,
   showCandidateContactBar,
   showZenithContactBar,
   scroll = false
@@ -28,7 +30,10 @@ export function AppShell({
     <View style={styles.contentArea}>
       {title ? (
         <View style={styles.headingWrap}>
-          <Text style={styles.title}>{title}</Text>
+          <View style={styles.headingRow}>
+            <Text style={styles.title}>{title}</Text>
+            {headerRight ? <View style={styles.headingRight}>{headerRight}</View> : null}
+          </View>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
       ) : null}
@@ -83,6 +88,16 @@ const styles = StyleSheet.create({
     gap: 3,
     marginTop: 4,
     marginBottom: 2
+  },
+  headingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8
+  },
+  headingRight: {
+    alignItems: "flex-end",
+    justifyContent: "center"
   },
   title: {
     fontSize: 24,

@@ -14,6 +14,7 @@ import { CandidateProfileScreen } from "../screens/candidate/CandidateProfileScr
 import { AdminCandidatesScreen } from "../screens/admin/AdminCandidatesScreen";
 import { AdminCandidateDetailScreen } from "../screens/admin/AdminCandidateDetailScreen";
 import { AdminAppointmentRequestsScreen } from "../screens/admin/AdminAppointmentRequestsScreen";
+import { AdminNewConversationScreen } from "../screens/admin/AdminNewConversationScreen";
 import {
   AdminAppointmentsStackParamList,
   AdminCandidatesStackParamList,
@@ -90,6 +91,7 @@ function AdminChatStackScreen() {
   return (
     <AdminChatStack.Navigator screenOptions={{ headerShown: false }}>
       <AdminChatStack.Screen name="Inbox" component={AdminInboxScreen} />
+      <AdminChatStack.Screen name="NewConversation" component={AdminNewConversationScreen} />
       <AdminChatStack.Screen name="Messages" component={MessagesScreen} />
     </AdminChatStack.Navigator>
   );

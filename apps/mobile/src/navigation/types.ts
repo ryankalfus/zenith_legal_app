@@ -43,6 +43,7 @@ export type AdminCandidatesStackParamList = {
 
 export type AdminChatStackParamList = {
   Inbox: undefined;
+  NewConversation: undefined;
   Messages: MessageThreadParams;
 };
 

@@ -151,3 +151,16 @@
 - 02.27.2026: Updated admin upcoming appointments to include `Modify` and `Cancel` actions so admin-created or accepted appointments remain fully manageable after they move to upcoming.
 - 02.27.2026: Aligned appointment routing behavior so active appointments consistently resolve into requests (`requested` bell queue), upcoming (`scheduled` future), or overdue (`scheduled` past, red section) with realtime cross-account sync.
 - 02.27.2026: Re-ran validation after overdue-ignore and appointment-management updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`12 passed, 0 failed`).
+- 02.27.2026: Root-caused candidate `Authorize/Cancel` failure as Firestore `permission-denied` on the candidate status transition write path; tightened `updateCandidateFirmStatusByCandidate` to strict allowed transitions with direct `updateDoc` + post-write read-back verification to guarantee persisted status changes.
+- 02.27.2026: Verified rules behavior locally for candidate status transitions (`authorization_pending` -> `waiting_for_submission`/`canceled`) with `npm run test:rules` PASS (`12 passed, 0 failed`); live rules deploy is currently blocked by expired Firebase CLI auth in this environment.
+- 02.27.2026: Deployed Firestore rules to `zenith-legal-dev` successfully from repo root after diagnosing network TLS trust issue (`unable to get local issuer certificate`) and using a one-time CLI TLS workaround for deployment.
+- 02.27.2026: Updated Zenith admin chat candidate identity sync so inbox/thread display names and profile photos now always resolve from live `users` profile data (display name + avatar), with conversation snapshots used only as fallback.
+- 02.27.2026: Added Zenith admin `+` new-chat flow in chat tab (open candidate picker screen, select candidate, start/unhide conversation, jump directly into the thread).
+- 02.27.2026: Added Zenith admin swipe-left chat deletion action (red `Delete`) that removes conversations only from Zenith’s inbox by setting admin-hidden state, not deleting globally for candidates.
+- 02.27.2026: Updated Zenith admin inbox swipe behavior so exposed red `Delete` actions auto-reset closed when leaving chat list or entering a thread.
+- 02.27.2026: Moved Zenith admin chat `+` action to header level (aligned with `Chat` title) and restored search bar placement directly below the heading/subtitle.
+- 02.27.2026: Added per-user long-press message deletion in chat threads (candidate/admin) using local hide flags (`hiddenForCandidate` / `hiddenForAdmin`) so deletes are not global.
+- 02.27.2026: Lowered mobile message composer closer to the tab area by removing extra bottom safe-area padding while preserving no-overlap layout.
+- 02.27.2026: Deployed updated Firestore rules to `zenith-legal-dev` to enable candidate-side per-message hide writes for local delete behavior.
+- 02.27.2026: Updated chat preview semantics to be viewer-local: after local message delete, each side’s preview now resolves to that side’s most recent visible message (`lastMessageTextForAdmin` / `lastMessageTextForCandidate`) and stays realtime-synced.
+- 02.27.2026: Removed blue unread-dot indicator from Zenith admin chat preview rows while keeping unread preview text bolding and tab notification badge counts active.

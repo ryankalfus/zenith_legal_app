@@ -659,3 +659,103 @@
   - Overdue sections (red) show only for past scheduled appointments.
   - Candidate/admin `Ignore` removes overdue appointment globally.
   - Candidate authorize/cancel updates status + DM and no longer shows generic permission failure for valid rows.
+
+## Step 38 - Candidate Authorize/Cancel Permission Root-Cause Patch
+- What changed:
+  - Confirmed the failing user alert path is a Firestore `permission-denied` error from candidate status transition writes.
+  - Hardened `updateCandidateFirmStatusByCandidate` in `apps/mobile/src/services/statusService.ts`:
+    - rejects invalid transitions (only `waiting_for_submission` or `canceled`)
+    - keeps explicit preflight ownership/waiting-state checks
+    - uses direct `updateDoc` transition write (status/updatedBy/updatedAt/history)
+    - performs read-back verification after write to ensure persisted status.
+  - Verified local Firestore rules still allow the intended candidate transition and block arbitrary edits.
+- Commands run + result:
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- Notes / blocker:
+  - Live Firebase rules/function deployment from this environment is currently blocked by expired CLI credentials (`firebase deploy` returns `credentials are no longer valid`).
+
+## Step 39 - Live Rules Deploy Recovery (TLS/Network Constraint)
+- What changed:
+  - Confirmed Firebase CLI auth/token refresh was failing due to network TLS trust (`unable to get local issuer certificate`) during Google token/API calls.
+  - Verified Firebase access with temporary TLS override and successfully deployed Firestore rules from `/Users/ryankalfus/Downloads/zenith_legal_app`.
+- Commands run + result:
+  - `NODE_TLS_REJECT_UNAUTHORIZED=0 firebase projects:list --json` -> PASS
+  - `NODE_TLS_REJECT_UNAUTHORIZED=0 firebase deploy --only firestore:rules --project zenith-legal-dev` -> PASS
+- Outcome:
+  - Latest Firestore rules are now live in `zenith-legal-dev`, unblocking candidate status transition enforcement in production.
+
+## Step 40 - Admin Chat UX: Live Identity Sync + New Conversation + Swipe Delete
+- What changed:
+  - Updated admin inbox display-name/avatar resolution to prefer live candidate profile directory data (`users.fullName`, `users.avatarUrl`) for always-synced identity in chat previews.
+  - Updated admin thread header to live-watch candidate profile so display name/photo changes appear without relying on stale route snapshot values.
+  - Added admin-only new conversation screen (`AdminNewConversationScreen`) with candidate search/picker, wired to start or unhide conversation and navigate directly to message thread.
+  - Added `+` action button above admin chat search bar to open new conversation flow.
+  - Added swipe-left row action in admin inbox with red `Delete` action:
+    - hides conversation from Zenith inbox only (`hiddenForAdmin = true`)
+    - does not delete globally for candidate side
+    - clears admin unread for hidden thread.
+  - Added conversation service helpers:
+    - `startConversationAsAdmin(...)`
+    - `deleteConversationForAdmin(...)`
+    - read/send flows now unhide conversations when appropriate (`hiddenForAdmin/hiddenForCandidate = false`).
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Admin inbox names/avatars update after candidate edits profile display name/photo.
+  - Admin taps `+` -> selects candidate -> lands in thread with conversation visible in inbox.
+  - Admin swipes left on conversation -> red `Delete` -> row removed only on admin side.
+
+## Step 41 - Chat Interaction Polish + Local Message Delete
+- What changed:
+  - Added admin inbox swipe-reset behavior: swiped rows auto-close when navigating away from inbox or opening any conversation.
+  - Moved admin chat `+` action into header-right slot (aligned with `Chat` title) and restored search bar to normal position under the subtitle.
+  - Lowered message composer by removing bottom safe-area edge usage on message screen and tightening bottom padding.
+  - Added long-press message delete-for-me behavior for both roles:
+    - long-press any sent/received bubble
+    - red destructive `Delete` confirmation
+    - applies local hide only (`hiddenForAdmin`/`hiddenForCandidate`)
+    - not global removal.
+  - Added messaging service helper `hideMessageForViewer(...)` and default hidden flags on new messages.
+  - Updated Firestore rules to allow candidate-side message local-hide updates while preserving immutable message payload fields.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+  - `NODE_TLS_REJECT_UNAUTHORIZED=0 firebase deploy --only firestore:rules --project zenith-legal-dev` -> PASS
+- What to test next:
+  - Swipe-left row shows delete; entering thread/backing out resets row to closed state.
+  - `+` button appears next to `Chat` heading; search stays under heading.
+  - Composer sits lower just above tab bar without overlap.
+  - Long-press delete hides message only for current viewer.
+
+## Step 42 - Viewer-Local Chat Preview Sync
+- What changed:
+  - Added viewer-local preview fields in conversation metadata updates:
+    - `lastMessageTextForAdmin` / `lastMessageAtForAdmin`
+    - `lastMessageTextForCandidate` / `lastMessageAtForCandidate`
+  - Admin inbox preview now reads admin-local preview fields first (fallback to global preview fields for backward compatibility).
+  - Added message-hide preview recalculation (`refreshLocalPreview`) so when the latest message is locally deleted, preview text/time updates to that viewer’s next visible message.
+  - Kept preview sync realtime by writing conversation preview metadata immediately on send and after local message hide.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Delete latest message locally on admin side -> admin preview shifts to previous visible message while candidate preview remains unchanged.
+  - Delete latest message locally on candidate side -> candidate local preview metadata updates without changing admin preview.
+
+## Step 43 - Admin Inbox Unread Visual Tweak
+- What changed:
+  - Removed the blue unread dot from Zenith admin chat preview rows.
+  - Kept unread behavior intact for:
+    - bold preview text/time on unread rows
+    - tab-level unread notification badge counts.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - Unread chat row on admin inbox shows bold text only (no blue dot).
+  - Opening thread clears bold unread style and updates chat badge count.

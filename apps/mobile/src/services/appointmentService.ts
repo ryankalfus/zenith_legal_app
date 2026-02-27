@@ -65,11 +65,8 @@ export function watchAdminAppointmentRequests(
   onData: (rows: AppointmentRow[]) => void,
   onError: (err: Error) => void
 ) {
-  const q = query(
-    collection(db, "appointments"),
-    where("status", "in", ["requested", "scheduled", "completed", "canceled"]),
-    orderBy("startsAt", "asc")
-  );
+  // Keep this admin stream index-safe and deterministic, then split into sections in UI.
+  const q = query(collection(db, "appointments"), orderBy("startsAt", "asc"));
 
   return onSnapshot(
     q,
@@ -145,12 +142,18 @@ export async function updateAppointmentStatus(input: {
   updatedBy: string;
   updatedByRole: "candidate" | "admin";
 }) {
-  await updateDoc(doc(db, "appointments", input.appointmentId), {
+  const ref = doc(db, "appointments", input.appointmentId);
+  await updateDoc(ref, {
     status: input.status,
     updatedBy: input.updatedBy,
     updatedByRole: input.updatedByRole,
     updatedAt: serverTimestamp()
   });
+
+  const readBack = await getDoc(ref);
+  if (!readBack.exists() || String(readBack.data()?.status ?? "") !== input.status) {
+    throw new Error("Appointment status update did not persist.");
+  }
 }
 
 export async function updateAppointmentDetails(input: {
@@ -161,7 +164,8 @@ export async function updateAppointmentDetails(input: {
   updatedBy: string;
   updatedByRole: "candidate" | "admin";
 }) {
-  await updateDoc(doc(db, "appointments", input.appointmentId), {
+  const ref = doc(db, "appointments", input.appointmentId);
+  await updateDoc(ref, {
     startsAt: input.startsAt,
     endsAt: buildEndsAt(input.startsAt),
     phoneNumber: input.phoneNumber,
@@ -170,6 +174,11 @@ export async function updateAppointmentDetails(input: {
     updatedByRole: input.updatedByRole,
     updatedAt: serverTimestamp()
   });
+
+  const readBack = await getDoc(ref);
+  if (!readBack.exists()) {
+    throw new Error("Appointment edit did not persist.");
+  }
 }
 
 export async function createAdminAppointment(payload: {

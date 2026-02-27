@@ -133,6 +133,10 @@ export async function updateCandidateFirmStatusByCandidate(input: {
   status: CandidateFirmStatus;
   candidateUid: string;
 }) {
+  if (input.status !== "waiting_for_submission" && input.status !== "canceled") {
+    throw new Error("Invalid candidate status transition.");
+  }
+
   const statusRef = doc(db, "candidateFirmStatuses", input.statusRecordId);
   const snapshot = await getDoc(statusRef);
   if (!snapshot.exists()) {
@@ -147,22 +151,21 @@ export async function updateCandidateFirmStatusByCandidate(input: {
     throw new Error("This firm status is no longer waiting on your authorization.");
   }
 
-  await setDoc(
-    statusRef,
-    {
-      candidateId: current.candidateId,
-      firmId: current.firmId,
+  await updateDoc(statusRef, {
+    status: input.status,
+    updatedBy: input.candidateUid,
+    updatedAt: serverTimestamp(),
+    history: arrayUnion({
       status: input.status,
       updatedBy: input.candidateUid,
-      updatedAt: serverTimestamp(),
-      history: arrayUnion({
-        status: input.status,
-        updatedBy: input.candidateUid,
-        updatedAt: new Date().toISOString()
-      })
-    },
-    { merge: true }
-  );
+      updatedAt: new Date().toISOString()
+    })
+  });
+
+  const readBack = await getDoc(statusRef);
+  if (!readBack.exists() || String(readBack.data()?.status ?? "") !== input.status) {
+    throw new Error("Status update did not persist. Please try again.");
+  }
 }
 
 export async function removeCandidateFirmStatus(statusRecordId: string) {
