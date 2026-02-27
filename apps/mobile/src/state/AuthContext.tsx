@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import Constants from "expo-constants";
 import {
   User,
   onAuthStateChanged,
@@ -47,11 +46,6 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const defaultPracticeArea = PRACTICE_AREAS[0];
-const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
-const zenithAdminEmail =
-  (process.env.EXPO_PUBLIC_ZENITH_ADMIN_EMAIL ?? extra.zenithAdminEmail ?? "mason@zenithlegal.com")
-    .trim()
-    .toLowerCase();
 
 async function reconcileUserEmailAcrossDocs(input: {
   uid: string;
@@ -90,19 +84,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userEmail = String(user.email ?? "").trim().toLowerCase();
-      let tokenResult = await user.getIdTokenResult().catch(() => null);
-      let roleFromClaim = String(tokenResult?.claims?.role ?? "").trim().toLowerCase();
-
-      if (userEmail === zenithAdminEmail && roleFromClaim !== "admin") {
-        try {
-          const ensureZenithAdmin = httpsCallable(functions, "ensureZenithAdminClaim");
-          await ensureZenithAdmin();
-          tokenResult = await user.getIdTokenResult(true).catch(() => tokenResult);
-          roleFromClaim = String(tokenResult?.claims?.role ?? "").trim().toLowerCase();
-        } catch {
-          // Keep session available even if callable fails.
-        }
+      try {
+        const syncOwnRole = httpsCallable(functions, "syncOwnRoleFromProfile");
+        await syncOwnRole();
+      } catch {
+        // Continue with current role snapshot if callable is unavailable.
       }
+
+      const tokenResult = await user.getIdTokenResult(true).catch(() => null);
+      const roleFromClaim = String(tokenResult?.claims?.role ?? "").trim().toLowerCase();
 
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);

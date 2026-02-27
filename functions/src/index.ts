@@ -9,3 +9,4 @@ export { deleteCandidateAccountData } from "./callable/deleteAccount";
 export { setAdminRoleByEmail } from "./callable/adminRole";
 export { ensureZenithAdminClaim } from "./callable/ensureZenithAdmin";
 export { changeUserRole } from "./callable/changeUserRole";
+export { syncOwnRoleFromProfile } from "./callable/syncOwnRoleFromProfile";

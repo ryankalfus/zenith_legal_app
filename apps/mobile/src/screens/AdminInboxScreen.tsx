@@ -103,11 +103,10 @@ export function AdminInboxScreen() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const activeRows = rows.filter((row) => Boolean(candidateDirectory[row.candidateId]));
     if (!term) {
-      return activeRows;
+      return rows;
     }
-    return activeRows.filter((row) => {
+    return rows.filter((row) => {
       const name = getDisplayName(row).toLowerCase();
       return name.includes(term);
     });
@@ -135,7 +134,7 @@ export function AdminInboxScreen() {
   }, [isFocused]);
 
   const confirmDelete = (item: InboxRow) => {
-    Alert.alert("Delete chat", "Delete this conversation from Zenith Legal chat list?", [
+    Alert.alert("Delete chat", "Remove this chat from the admin inbox until a new message arrives?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -308,7 +307,7 @@ const styles = StyleSheet.create({
   },
   deleteAction: {
     width: 92,
-    backgroundColor: "#d73636",
+    backgroundColor: "#c02828",
     alignItems: "center",
     justifyContent: "center"
   },

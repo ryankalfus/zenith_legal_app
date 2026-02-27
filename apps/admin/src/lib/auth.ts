@@ -10,18 +10,35 @@ import {
   User
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb, getFirebaseFunctions, getGoogleProvider } from "./firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-const defaultZenithAdminEmail = "mason@zenithlegal.com";
-const zenithAdminDisplayName = "Zenith Legal";
-
-export function getZenithAdminEmail() {
-  return (process.env.NEXT_PUBLIC_ZENITH_ADMIN_EMAIL ?? defaultZenithAdminEmail).trim().toLowerCase();
+function normalizeRole(input: unknown) {
+  const value = String(input ?? "").trim().toLowerCase();
+  return value === "admin" ? "admin" : value === "candidate" ? "candidate" : "";
 }
 
-export function isZenithAdminUser(user: User | null) {
-  return String(user?.email ?? "").trim().toLowerCase() === getZenithAdminEmail();
+async function syncAdminProfile(user: User) {
+  const userRef = doc(getFirebaseDb(), "users", user.uid);
+  await setDoc(
+    userRef,
+    {
+      uid: user.uid,
+      role: "admin",
+      email: String(user.email ?? "").trim().toLowerCase(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  ).catch(() => undefined);
+}
+
+async function syncOwnRoleFromProfileIfNeeded() {
+  try {
+    const syncFn = httpsCallable(getFirebaseFunctions(), "syncOwnRoleFromProfile");
+    await syncFn();
+  } catch {
+    // Continue even if callable is unavailable.
+  }
 }
 
 export async function loginWithGoogle() {
@@ -61,87 +78,34 @@ export async function logout() {
   return signOut(auth);
 }
 
-export async function ensureZenithAdminClaimIfNeeded(user: User | null) {
-  if (!user || !isZenithAdminUser(user)) {
-    return;
-  }
-
-  const functions = getFirebaseFunctions();
-
-  // Prefer the strict callable, then fall back to legacy bootstrap callable.
-  try {
-    const strictFn = httpsCallable(functions, "ensureZenithAdminClaim");
-    await strictFn();
-  } catch {
-    const legacyFn = httpsCallable(functions, "setAdminRoleByEmail");
-    await legacyFn({ email: getZenithAdminEmail() });
-  }
-
-  await user.getIdToken(true);
+export async function ensureZenithAdminClaimIfNeeded(_user: User | null) {
+  // Legacy no-op kept for compatibility with older imports.
+  return;
 }
 
 export async function bootstrapAdminSessionIfNeeded() {
   const auth = getFirebaseAuth();
-  const user = auth.currentUser;
-  if (!isZenithAdminUser(user)) {
-    return false;
-  }
-
-  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
-  return isAuthorizedAdmin(user);
+  return isAuthorizedAdmin(auth.currentUser);
 }
 
 export async function isAuthorizedAdmin(user: User | null) {
-  if (!user?.email || !isZenithAdminUser(user)) {
+  if (!user) {
     return false;
   }
 
-  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
-
+  await syncOwnRoleFromProfileIfNeeded();
   const tokenResult = await user.getIdTokenResult(true).catch(() => null);
-  const hasAdminClaim = tokenResult?.claims?.role === "admin";
+  const hasAdminClaim = normalizeRole(tokenResult?.claims?.role) === "admin";
 
-  const db = getFirebaseDb();
-  const userRef = doc(db, "users", user.uid);
+  const userRef = doc(getFirebaseDb(), "users", user.uid);
   const profileDoc = await getDoc(userRef).catch(() => null);
-  const hasAdminProfileRole = Boolean(profileDoc?.exists() && profileDoc.data().role === "admin");
-
-  if (hasAdminClaim || hasAdminProfileRole) {
-    if (hasAdminClaim) {
-      await setDoc(
-        userRef,
-        {
-          uid: user.uid,
-          email: getZenithAdminEmail(),
-          fullName: zenithAdminDisplayName,
-          role: "admin",
-          updatedAt: serverTimestamp()
-        },
-        { merge: true }
-      ).catch(() => undefined);
-    }
-    return true;
+  const hasAdminProfileRole = Boolean(profileDoc?.exists() && normalizeRole(profileDoc.data()?.role) === "admin");
+  if (!hasAdminClaim && !hasAdminProfileRole) {
+    return false;
   }
 
-  // Last retry in case callable deployment or token propagation was delayed.
-  await ensureZenithAdminClaimIfNeeded(user).catch(() => undefined);
-  const retryTokenResult = await user.getIdTokenResult(true).catch(() => null);
-  if (retryTokenResult?.claims?.role === "admin") {
-    await setDoc(
-      userRef,
-      {
-        uid: user.uid,
-        email: getZenithAdminEmail(),
-        fullName: zenithAdminDisplayName,
-        role: "admin",
-        updatedAt: serverTimestamp()
-      },
-      { merge: true }
-    ).catch(() => undefined);
-    return true;
-  }
-
-  return false;
+  await syncAdminProfile(user);
+  return true;
 }
 
 export function watchAuth(callback: (user: User | null) => void) {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changeUserRole = exports.ensureZenithAdminClaim = exports.setAdminRoleByEmail = exports.deleteCandidateAccountData = exports.sendSignupSummaryEmail = exports.autoCancelExpiredAppointmentRequests = exports.flagCandidateAppointmentUpdates = exports.notifyOnCandidateAppointmentCancel = exports.sendPushOnAppointmentChange = exports.syncConversationMetaOnMessageCreate = exports.sendPushOnMessageCreate = void 0;
+exports.syncOwnRoleFromProfile = exports.changeUserRole = exports.ensureZenithAdminClaim = exports.setAdminRoleByEmail = exports.deleteCandidateAccountData = exports.sendSignupSummaryEmail = exports.autoCancelExpiredAppointmentRequests = exports.flagCandidateAppointmentUpdates = exports.notifyOnCandidateAppointmentCancel = exports.sendPushOnAppointmentChange = exports.syncConversationMetaOnMessageCreate = exports.sendPushOnMessageCreate = void 0;
 var messagePush_1 = require("./triggers/messagePush");
 Object.defineProperty(exports, "sendPushOnMessageCreate", { enumerable: true, get: function () { return messagePush_1.sendPushOnMessageCreate; } });
 var conversationMeta_1 = require("./triggers/conversationMeta");
@@ -23,3 +23,5 @@ var ensureZenithAdmin_1 = require("./callable/ensureZenithAdmin");
 Object.defineProperty(exports, "ensureZenithAdminClaim", { enumerable: true, get: function () { return ensureZenithAdmin_1.ensureZenithAdminClaim; } });
 var changeUserRole_1 = require("./callable/changeUserRole");
 Object.defineProperty(exports, "changeUserRole", { enumerable: true, get: function () { return changeUserRole_1.changeUserRole; } });
+var syncOwnRoleFromProfile_1 = require("./callable/syncOwnRoleFromProfile");
+Object.defineProperty(exports, "syncOwnRoleFromProfile", { enumerable: true, get: function () { return syncOwnRoleFromProfile_1.syncOwnRoleFromProfile; } });

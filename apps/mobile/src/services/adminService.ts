@@ -20,7 +20,8 @@ import {
   updateEmail,
   User
 } from "firebase/auth";
-import { auth, db } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "../lib/firebase";
 import { normalizeAssignedEmail, normalizeAssignedPhone } from "../lib/zenithContact";
 
 export type CandidateRow = {
@@ -436,6 +437,26 @@ export async function changeUserRoleByAdmin(input: { targetUid: string; targetRo
     return;
   }
 
+  if (currentRole === "admin" && input.targetRole === "candidate") {
+    const adminSnapshot = await getDocs(query(collection(db, "users"), where("role", "==", "admin")));
+    if (adminSnapshot.size <= 1) {
+      throw new Error("At least one admin account must remain active.");
+    }
+  }
+
+  // Claim + profile sync must be atomic; do not silently continue on callable errors.
+  const changeRoleFn = httpsCallable(functions, "changeUserRole");
+  await changeRoleFn({
+    targetUid: input.targetUid,
+    targetRole: input.targetRole
+  });
+
+  const targetData = (await getDoc(targetRef)).data() ?? {};
+  const targetEmail = String(targetData.email ?? "").trim().toLowerCase();
+  const targetUid = String(targetData.uid ?? input.targetUid).trim();
+  const targetName = normalizeName(targetData.fullName);
+  const targetPhoneDigits = normalizePhoneDigits(targetData.mobile);
+
   const payload: Record<string, unknown> = {
     role: input.targetRole,
     updatedAt: serverTimestamp()
@@ -451,7 +472,32 @@ export async function changeUserRoleByAdmin(input: { targetUid: string; targetRo
     }
   }
 
-  await updateDoc(targetRef, payload);
+  const batch = writeBatch(db);
+  const usersSnapshot = await getDocs(collection(db, "users"));
+
+  usersSnapshot.docs.forEach((entry) => {
+    const row = entry.data() as Record<string, unknown>;
+    const rowUid = String(row.uid ?? "").trim();
+    const rowEmail = String(row.email ?? "").trim().toLowerCase();
+    const matches =
+      entry.id === input.targetUid ||
+      entry.id === targetUid ||
+      (targetUid && rowUid === targetUid) ||
+      (targetEmail && rowEmail === targetEmail) ||
+      (targetName &&
+        targetPhoneDigits &&
+        normalizeName(row.fullName) === targetName &&
+        normalizePhoneDigits(row.mobile) === targetPhoneDigits);
+
+    if (!matches) {
+      return;
+    }
+
+    batch.set(entry.ref, payload, { merge: true });
+  });
+
+  batch.set(targetRef, payload, { merge: true });
+  await batch.commit();
 }
 
 export async function updateAdminOwnProfile(input: { uid: string; fullName: string; mobile: string; email?: string }) {

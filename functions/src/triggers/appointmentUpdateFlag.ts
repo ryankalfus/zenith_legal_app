@@ -23,6 +23,8 @@ export const flagCandidateAppointmentUpdates = onDocumentWritten(
       before?.startsAt !== after.startsAt ||
       before?.endsAt !== after.endsAt ||
       before?.phoneNumber !== after.phoneNumber ||
+      before?.recruiterId !== after.recruiterId ||
+      before?.recruiterName !== after.recruiterName ||
       before?.notes !== after.notes;
 
     if (!(actor === "admin" || actor === "system")) {

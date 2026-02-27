@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   hero: {
     borderRadius: 14,
     padding: 16,
-    backgroundColor: "#1e3a8a"
+    backgroundColor: "#111111"
   },
   title: {
     color: "#fff",
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   subtitle: {
-    color: "#bfdbfe",
+    color: "#d1d5db",
     marginTop: 4
   },
   card: {
@@ -74,26 +74,26 @@ const styles = StyleSheet.create({
     fontSize: 18
   },
   cta: {
-    backgroundColor: "#dbeafe",
+    backgroundColor: "#f3f4f6",
     borderRadius: 8,
     padding: 12
   },
   ctaText: {
-    color: "#1e40af",
+    color: "#111111",
     fontWeight: "600"
   },
   ctaSecondary: {
-    borderColor: "#93c5fd",
+    borderColor: "#d1d5db",
     borderWidth: 1,
     borderRadius: 8,
     padding: 12
   },
   ctaSecondaryText: {
-    color: "#1e40af",
+    color: "#111111",
     fontWeight: "600"
   },
   primaryButton: {
-    backgroundColor: "#1d4ed8",
+    backgroundColor: "#111111",
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center"

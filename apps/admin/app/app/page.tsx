@@ -16,14 +16,19 @@ import {
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import {
+  APPOINTMENT_RECRUITERS,
   CANDIDATE_STATUS_LABELS,
   CandidateFirmStatus,
   CANDIDATE_VISIBLE_STATUSES,
+  DEFAULT_APPOINTMENT_RECRUITER_ID,
   PRACTICE_AREAS,
   PREFERRED_CITIES
 } from "@zenith/shared";
 import { getFirebaseDb, getFirebaseFunctions } from "../../src/lib/firebase";
 import { bootstrapAdminSessionIfNeeded, isAuthorizedAdmin, logout, watchAuth } from "../../src/lib/auth";
+
+const defaultRecruiterLabel =
+  APPOINTMENT_RECRUITERS.find((entry) => entry.id === DEFAULT_APPOINTMENT_RECRUITER_ID)?.label || "Mason";
 
 export default function AppPage() {
   const router = useRouter();
@@ -227,6 +232,8 @@ export default function AppPage() {
         title: apptTitle.trim(),
         startsAt: apptStart.trim(),
         endsAt: apptEnd.trim(),
+        recruiterId: DEFAULT_APPOINTMENT_RECRUITER_ID,
+        recruiterName: defaultRecruiterLabel,
         status: "scheduled",
         reminderMinutesBefore: 30,
         createdAt: serverTimestamp(),
@@ -328,7 +335,7 @@ export default function AppPage() {
         <h2 style={{ margin: 0 }}>Messages</h2>
         <div className="grid">
           {messages.map((msg) => (
-            <div key={msg.id} className="card" style={{ background: msg.senderRole === "candidate" ? "#dbeafe" : "#f9fafb" }}>
+            <div key={msg.id} className="card" style={{ background: msg.senderRole === "candidate" ? "#f3f4f6" : "#f9fafb" }}>
               <strong>{msg.senderRole}</strong>
               <p style={{ margin: 0 }}>{msg.text || "(attachment)"}</p>
             </div>

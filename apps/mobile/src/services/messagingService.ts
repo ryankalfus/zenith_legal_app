@@ -11,7 +11,8 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where
+  where,
+  writeBatch
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
@@ -84,13 +85,14 @@ export function watchAdminConversations(
           unreadByAdminCount: Number(data.unreadByAdminCount ?? 0),
           unreadByCandidateCount: Number(data.unreadByCandidateCount ?? 0)
         };
-      }).filter((row) => !Boolean(row.hiddenForAdmin));
-      rows.sort((a, b) => {
+      });
+      const visibleRows = rows.filter((row) => !row.hiddenForAdmin);
+      visibleRows.sort((a, b) => {
         const aMs = toSortMs(a.lastMessageAt ?? a.updatedAt);
         const bMs = toSortMs(b.lastMessageAt ?? b.updatedAt);
         return bMs - aMs;
       });
-      onData(rows);
+      onData(visibleRows);
     },
     (err) => onError(err as Error)
   );
@@ -104,13 +106,7 @@ export function watchAdminUnreadChatsCount(
   return onSnapshot(
     q,
     (snapshot) => {
-      const totalUnread = snapshot.docs.reduce((sum, entry) => {
-        const data = entry.data();
-        if (Boolean(data.hiddenForAdmin)) {
-          return sum;
-        }
-        return sum + Number(data.unreadByAdminCount ?? 0);
-      }, 0);
+      const totalUnread = snapshot.docs.reduce((sum, entry) => sum + Number(entry.data().unreadByAdminCount ?? 0), 0);
       onData(totalUnread);
     },
     (err) => onError(err as Error)
@@ -209,18 +205,53 @@ export async function startConversationAsAdmin(input: {
 }
 
 export async function deleteConversationForAdmin(candidateId: string) {
+  const conversationRef = doc(db, "conversations", candidateId);
   await setDoc(
-    doc(db, "conversations", candidateId),
+    conversationRef,
     {
       candidateId,
       participantIds: [candidateId, "zenith-team"],
       hiddenForAdmin: true,
       unreadByAdminCount: 0,
+      lastMessageTextForAdmin: "",
+      lastMessageAtForAdmin: null,
+      lastMessageSenderRoleForAdmin: "",
+      deletedForAdminAt: serverTimestamp(),
       adminLastReadAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     },
     { merge: true }
   );
+
+  const messagesSnapshot = await getDocs(collection(db, "conversations", candidateId, "messages"));
+  if (messagesSnapshot.empty) {
+    return;
+  }
+
+  let batch = writeBatch(db);
+  let pending = 0;
+
+  const flushBatch = async () => {
+    if (pending === 0) {
+      return;
+    }
+    await batch.commit();
+    batch = writeBatch(db);
+    pending = 0;
+  };
+
+  for (const messageDoc of messagesSnapshot.docs) {
+    batch.update(messageDoc.ref, {
+      hiddenForAdmin: true,
+      deletedForAdminAt: serverTimestamp()
+    });
+    pending += 1;
+    if (pending >= 400) {
+      await flushBatch();
+    }
+  }
+
+  await flushBatch();
 }
 
 async function refreshLocalPreview(candidateId: string, role: ViewerRole) {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -23,6 +24,7 @@ import {
   watchCandidateAppointments,
   updateAppointmentStatus
 } from "../../services/appointmentService";
+import { watchRecruiters } from "../../services/adminService";
 import { addAppointmentToDeviceCalendar } from "../../services/calendarService";
 import { sendMessage } from "../../services/messagingService";
 import { useAuth } from "../../state/AuthContext";
@@ -35,7 +37,14 @@ type AppointmentViewRow = {
   endsAt?: string;
   status: AppointmentStatus;
   phoneNumber: string;
+  recruiterId: string;
+  recruiterName: string;
   notes?: string;
+};
+
+type RecruiterOption = {
+  id: string;
+  label: string;
 };
 
 function formatDate(date: Date) {
@@ -63,6 +72,9 @@ export function CandidateAppointmentsScreen() {
   const [note, setNote] = useState("");
   const [candidateName, setCandidateName] = useState("Candidate");
   const [activePicker, setActivePicker] = useState<"date" | "time" | null>(null);
+  const [recruiters, setRecruiters] = useState<RecruiterOption[]>([]);
+  const [requestRecruiterId, setRequestRecruiterId] = useState("");
+  const [showRecruiterModal, setShowRecruiterModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -101,6 +113,34 @@ export function CandidateAppointmentsScreen() {
     clearCandidateAppointmentUpdates(session.user.uid).catch(() => undefined);
   }, [isFocused, session?.user.uid]);
 
+  useEffect(() => {
+    const unsubscribe = watchRecruiters(
+      (rows) => {
+        const unique = new Map<string, RecruiterOption>();
+        rows.forEach((row) => {
+          const id = String(row.uid ?? row.id).trim();
+          const label = String(row.fullName ?? "").trim() || "Recruiter";
+          if (!id) {
+            return;
+          }
+          unique.set(id, { id, label });
+        });
+        const next = [...unique.values()].sort((a, b) =>
+          a.label.localeCompare(b.label, "en", { sensitivity: "base" })
+        );
+        setRecruiters(next);
+      },
+      () => setRecruiters([])
+    );
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!requestRecruiterId && recruiters.length > 0) {
+      setRequestRecruiterId(recruiters[0].id);
+    }
+  }, [recruiters, requestRecruiterId]);
+
   const startsAtIso = useMemo(() => {
     const merged = new Date(requestDate);
     merged.setHours(requestTime.getHours());
@@ -109,6 +149,24 @@ export function CandidateAppointmentsScreen() {
     merged.setMilliseconds(0);
     return merged.toISOString();
   }, [requestDate, requestTime]);
+
+  const recruiterLabelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    recruiters.forEach((entry) => {
+      map[entry.id] = entry.label;
+    });
+    return map;
+  }, [recruiters]);
+
+  const selectedRecruiterLabel =
+    recruiterLabelById[requestRecruiterId] ||
+    recruiters[0]?.label ||
+    "Recruiter";
+
+  const getRecruiterLabel = (row: AppointmentViewRow) =>
+    String(row.recruiterName ?? "").trim() ||
+    recruiterLabelById[String(row.recruiterId ?? "")] ||
+    selectedRecruiterLabel;
 
   const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (selectedDate) {
@@ -131,6 +189,10 @@ export function CandidateAppointmentsScreen() {
       Alert.alert("Phone required", "Please provide a phone number.");
       return;
     }
+    if (!requestRecruiterId) {
+      Alert.alert("Recruiter required", "Please choose a recruiter.");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -141,6 +203,8 @@ export function CandidateAppointmentsScreen() {
         createdByRole: "candidate",
         startsAt: startsAtIso,
         phoneNumber: phoneNumber.trim(),
+        recruiterId: requestRecruiterId,
+        recruiterName: selectedRecruiterLabel,
         notes: trimmedNote
       });
       try {
@@ -151,6 +215,7 @@ export function CandidateAppointmentsScreen() {
           text: formatCandidateAppointmentRequestChat({
             candidateName,
             startsAt: startsAtIso,
+            recruiterName: selectedRecruiterLabel,
             notes: trimmedNote
           })
         });
@@ -195,6 +260,7 @@ export function CandidateAppointmentsScreen() {
                 text: formatCandidateAppointmentCanceledChat({
                   candidateName,
                   startsAt: row.startsAt,
+                  recruiterName: getRecruiterLabel(row),
                   notes: row.notes
                 })
               });
@@ -268,6 +334,14 @@ export function CandidateAppointmentsScreen() {
       <SurfaceCard>
         <Text style={styles.sectionTitle}>Request appointment</Text>
 
+        <Pressable style={styles.dropdownButton} onPress={() => setShowRecruiterModal(true)}>
+          <Text style={styles.dropdownLabel}>Recruiter</Text>
+          <View style={styles.dropdownValueRow}>
+            <Text style={styles.dropdownValue}>{selectedRecruiterLabel}</Text>
+            <Text style={styles.pickChevron}>▼</Text>
+          </View>
+        </Pressable>
+
         <View style={styles.rowButtons}>
           <Pressable
             style={[styles.pickButton, activePicker === "date" && styles.pickButtonActive]}
@@ -332,6 +406,9 @@ export function CandidateAppointmentsScreen() {
         <Pressable style={styles.submitButton} onPress={submitRequest} disabled={saving}>
           <Text style={styles.submitButtonText}>{saving ? "Submitting..." : "Submit request"}</Text>
         </Pressable>
+        {recruiters.length === 0 ? (
+          <Text style={styles.recruiterHint}>Recruiters are syncing. Please wait.</Text>
+        ) : null}
 
       </SurfaceCard>
 
@@ -355,6 +432,7 @@ export function CandidateAppointmentsScreen() {
                   <Text style={styles.historyTitle}>
                     {formatDate(starts)} at {formatTime(starts)}
                   </Text>
+                  <Text style={styles.historyMeta}>Recruiter: {getRecruiterLabel(row)}</Text>
                   <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
                   <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
                   {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
@@ -378,13 +456,14 @@ export function CandidateAppointmentsScreen() {
               {upcomingScheduled.map((row) => {
                 const starts = parseStartsAt(row.startsAt) ?? new Date();
                 return (
-                  <View key={row.id} style={styles.historyRow}>
-                    <Text style={styles.historyTitle}>
-                      {formatDate(starts)} at {formatTime(starts)}
-                    </Text>
-                    <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
-                    <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
-                    {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
+                <View key={row.id} style={styles.historyRow}>
+                  <Text style={styles.historyTitle}>
+                    {formatDate(starts)} at {formatTime(starts)}
+                  </Text>
+                  <Text style={styles.historyMeta}>Recruiter: {getRecruiterLabel(row)}</Text>
+                  <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
+                  <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
+                  {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
                     <Pressable style={styles.calendarButton} onPress={() => addToCalendar(row)}>
                       <Text style={styles.calendarButtonText}>Add to Calendar</Text>
                     </Pressable>
@@ -412,13 +491,14 @@ export function CandidateAppointmentsScreen() {
               {pendingRequests.map((row) => {
                 const starts = parseStartsAt(row.startsAt) ?? new Date();
                 return (
-                  <View key={row.id} style={styles.historyRow}>
-                    <Text style={styles.historyTitle}>
-                      {formatDate(starts)} at {formatTime(starts)}
-                    </Text>
-                    <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
-                    <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
-                    {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
+                <View key={row.id} style={styles.historyRow}>
+                  <Text style={styles.historyTitle}>
+                    {formatDate(starts)} at {formatTime(starts)}
+                  </Text>
+                  <Text style={styles.historyMeta}>Recruiter: {getRecruiterLabel(row)}</Text>
+                  <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
+                  <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
+                  {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
                     <Pressable style={styles.cancelButton} onPress={() => confirmCancel(row)}>
                       <Text style={styles.cancelButtonText}>Cancel</Text>
                     </Pressable>
@@ -429,6 +509,38 @@ export function CandidateAppointmentsScreen() {
           )}
         </SurfaceCard>
       ) : null}
+
+      <Modal
+        visible={showRecruiterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRecruiterModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select recruiter</Text>
+            {recruiters.length === 0 ? <Text style={styles.modalEmptyText}>No recruiters available.</Text> : null}
+            {recruiters.map((entry) => {
+              const selected = requestRecruiterId === entry.id;
+              return (
+                <Pressable
+                  key={entry.id}
+                  style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                  onPress={() => {
+                    setRequestRecruiterId(entry.id);
+                    setShowRecruiterModal(false);
+                  }}
+                >
+                  <Text style={[styles.modalOptionText, selected && styles.modalOptionTextSelected]}>{entry.label}</Text>
+                </Pressable>
+              );
+            })}
+            <Pressable style={styles.closeModalButton} onPress={() => setShowRecruiterModal(false)}>
+              <Text style={styles.closeModalButtonText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </AppShell>
   );
 }
@@ -445,6 +557,30 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
     marginBottom: 8
+  },
+  dropdownButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    marginBottom: 10
+  },
+  dropdownLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  dropdownValueRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  dropdownValue: {
+    color: theme.colors.textPrimary,
+    fontWeight: "700"
   },
   overdueTitle: {
     fontSize: 17,
@@ -521,6 +657,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700"
   },
+  recruiterHint: {
+    marginTop: 8,
+    color: theme.colors.textSecondary,
+    fontSize: 12
+  },
   centeredRow: {
     alignItems: "center",
     gap: 8,
@@ -591,5 +732,61 @@ const styles = StyleSheet.create({
     color: "#2f68e8",
     fontSize: 12,
     fontWeight: "600"
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 18,
+    backgroundColor: "rgba(11,18,32,0.42)"
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 14,
+    gap: 8
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: "700"
+  },
+  modalEmptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 4
+  },
+  modalOption: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  modalOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft
+  },
+  modalOptionText: {
+    color: theme.colors.textSecondary,
+    fontWeight: "700"
+  },
+  modalOptionTextSelected: {
+    color: theme.colors.primary
+  },
+  closeModalButton: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    alignItems: "center",
+    paddingVertical: 10,
+    backgroundColor: "#fff"
+  },
+  closeModalButtonText: {
+    color: theme.colors.textSecondary,
+    fontWeight: "700"
   }
 });

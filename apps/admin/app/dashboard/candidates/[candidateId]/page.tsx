@@ -15,9 +15,17 @@ import {
   updateDoc,
   where
 } from "firebase/firestore";
-import { CANDIDATE_STATUS_LABELS, CANDIDATE_VISIBLE_STATUSES } from "@zenith/shared";
+import {
+  APPOINTMENT_RECRUITERS,
+  CANDIDATE_STATUS_LABELS,
+  CANDIDATE_VISIBLE_STATUSES,
+  DEFAULT_APPOINTMENT_RECRUITER_ID
+} from "@zenith/shared";
 import { getFirebaseDb } from "../../../../src/lib/firebase";
 import { isAuthorizedAdmin, watchAuth } from "../../../../src/lib/auth";
+
+const defaultRecruiterLabel =
+  APPOINTMENT_RECRUITERS.find((entry) => entry.id === DEFAULT_APPOINTMENT_RECRUITER_ID)?.label || "Mason";
 
 export default function CandidateDetailPage() {
   const router = useRouter();
@@ -223,6 +231,8 @@ export default function CandidateDetailPage() {
       title: newAppointmentTitle,
       startsAt: newAppointmentStart,
       endsAt: newAppointmentEnd,
+      recruiterId: DEFAULT_APPOINTMENT_RECRUITER_ID,
+      recruiterName: defaultRecruiterLabel,
       status: "scheduled",
       reminderMinutesBefore: 30,
       createdAt: serverTimestamp(),

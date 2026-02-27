@@ -9,6 +9,7 @@ export const userRoleSchema = z.enum(["candidate", "admin"]);
 export const candidateFirmStatusSchema = z.enum(CANDIDATE_VISIBLE_STATUSES);
 export const authorizationStateSchema = z.enum(["pending", "approved", "declined"]);
 export const appointmentStatusSchema = z.enum(["requested", "scheduled", "canceled", "completed"]);
+export const appointmentRecruiterIdSchema = z.string().min(1);
 export const candidateStatusRequestTypeSchema = z.enum(["authorization", "cancellation"]);
 export const candidateStatusRequestStateSchema = z.enum(["pending", "resolved"]);
 
@@ -120,6 +121,8 @@ export const appointmentSchema = z.object({
   startsAt: z.string(),
   endsAt: z.string(),
   phoneNumber: z.string().min(7),
+  recruiterId: appointmentRecruiterIdSchema,
+  recruiterName: z.string().min(1),
   location: z.string().optional(),
   meetingLink: z.string().optional(),
   notes: z.string().optional(),

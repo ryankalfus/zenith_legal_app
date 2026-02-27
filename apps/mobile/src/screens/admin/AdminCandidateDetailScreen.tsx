@@ -97,6 +97,13 @@ function formatStatusUpdatedDate(input: unknown) {
   });
 }
 
+type RecruiterOption = {
+  id: string;
+  fullName: string;
+  phone: string;
+  avatarUrl?: string;
+};
+
 export function AdminCandidateDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<AdminCandidatesStackParamList, "CandidateDetail">>();
@@ -119,7 +126,7 @@ export function AdminCandidateDetailScreen() {
   const [savingHeader, setSavingHeader] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [recruiters, setRecruiters] = useState<Array<{ id: string; uid?: string; fullName?: string }>>([]);
+  const [recruiters, setRecruiters] = useState<RecruiterOption[]>([]);
   const [recruiterModalOpen, setRecruiterModalOpen] = useState(false);
   const [savingAssignedRecruiter, setSavingAssignedRecruiter] = useState(false);
 
@@ -128,7 +135,25 @@ export function AdminCandidateDetailScreen() {
     const unsubFirms = watchFirms(setFirms, () => setFirms([]));
     const unsubStatuses = watchAdminCandidateStatuses(candidateId, setStatuses, () => setStatuses([]));
     const unsubRecruiters = watchRecruiters(
-      (rows) => setRecruiters(rows),
+      (rows) => {
+        const unique = new Map<string, RecruiterOption>();
+        rows.forEach((row) => {
+          const id = String(row.uid ?? row.id).trim();
+          if (!id) {
+            return;
+          }
+          unique.set(id, {
+            id,
+            fullName: String(row.fullName ?? "").trim() || "Recruiter",
+            phone: String(row.mobile ?? "").trim(),
+            avatarUrl: String(row.avatarUrl ?? "").trim()
+          });
+        });
+        const mapped = [...unique.values()].sort((a, b) =>
+          a.fullName.localeCompare(b.fullName, "en", { sensitivity: "base" })
+        );
+        setRecruiters(mapped);
+      },
       () => setRecruiters([])
     );
 
@@ -163,7 +188,7 @@ export function AdminCandidateDetailScreen() {
   const selectedRecruiterName = String(candidate?.assignedRecruiterName ?? "").trim();
   const selectedRecruiterLabel =
     selectedRecruiterName ||
-    recruiters.find((row) => String(row.uid ?? row.id) === selectedRecruiterId)?.fullName ||
+    recruiters.find((row) => row.id === selectedRecruiterId)?.fullName ||
     "None";
 
   useEffect(() => {
@@ -291,7 +316,7 @@ export function AdminCandidateDetailScreen() {
 
   const saveAssignedRecruiter = async (nextRecruiterId: string) => {
     const resolvedId = nextRecruiterId === "none" ? "" : String(nextRecruiterId).trim();
-    const matchedRecruiter = recruiters.find((row) => String(row.uid ?? row.id) === resolvedId);
+    const matchedRecruiter = recruiters.find((row) => row.id === resolvedId);
     const resolvedName = resolvedId ? String(matchedRecruiter?.fullName ?? "").trim() : "";
 
     try {
@@ -397,10 +422,6 @@ export function AdminCandidateDetailScreen() {
           </Pressable>
         </View>
 
-        <Pressable style={styles.assignButton} onPress={openAssignFlow}>
-          <Text style={styles.assignButtonText}>Assign Firm</Text>
-        </Pressable>
-
         <Text style={styles.sectionTitle}>Assigned firms</Text>
         {statuses.length === 0 ? <EmptyState message="No firms assigned yet." /> : null}
         {statuses.map((statusRow) => (
@@ -418,6 +439,9 @@ export function AdminCandidateDetailScreen() {
             </View>
           </View>
         ))}
+        <Pressable style={styles.assignButton} onPress={openAssignFlow}>
+          <Text style={styles.assignButtonText}>Assign Firm</Text>
+        </Pressable>
       </ScrollView>
 
       <Modal
@@ -539,26 +563,34 @@ export function AdminCandidateDetailScreen() {
             <Text style={styles.modalSubtitle}>{candidate?.fullName || "Candidate"}</Text>
 
             <Pressable
-              style={[styles.choice, !selectedRecruiterId && styles.choiceSelected]}
+              style={[styles.choice, styles.recruiterChoiceRow, !selectedRecruiterId && styles.choiceSelected]}
               onPress={() => saveAssignedRecruiter("none")}
               disabled={savingAssignedRecruiter}
             >
-              <Text style={[styles.choiceText, !selectedRecruiterId && styles.choiceTextSelected]}>None</Text>
+              <Avatar name="None" size={32} showFallbackIcon />
+              <View style={styles.recruiterChoiceBody}>
+                <Text style={[styles.choiceText, !selectedRecruiterId && styles.choiceTextSelected]}>None</Text>
+                <Text style={styles.recruiterChoiceMeta}>No assigned recruiter</Text>
+              </View>
             </Pressable>
 
             {recruiters.map((row) => {
-              const recruiterKey = String(row.uid ?? row.id);
+              const recruiterKey = row.id;
               const selected = selectedRecruiterId === recruiterKey;
               return (
                 <Pressable
                   key={recruiterKey}
-                  style={[styles.choice, selected && styles.choiceSelected]}
+                  style={[styles.choice, styles.recruiterChoiceRow, selected && styles.choiceSelected]}
                   onPress={() => saveAssignedRecruiter(recruiterKey)}
                   disabled={savingAssignedRecruiter}
                 >
-                  <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
-                    {String(row.fullName || "Recruiter")}
-                  </Text>
+                  <Avatar uri={row.avatarUrl} name={row.fullName || "Recruiter"} size={32} />
+                  <View style={styles.recruiterChoiceBody}>
+                    <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                      {String(row.fullName || "Recruiter")}
+                    </Text>
+                    <Text style={styles.recruiterChoiceMeta}>{row.phone || "No phone"}</Text>
+                  </View>
                 </Pressable>
               );
             })}
@@ -833,6 +865,19 @@ const styles = StyleSheet.create({
   choiceText: {
     color: theme.colors.textSecondary,
     fontWeight: "600"
+  },
+  recruiterChoiceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10
+  },
+  recruiterChoiceBody: {
+    flex: 1
+  },
+  recruiterChoiceMeta: {
+    marginTop: 2,
+    color: theme.colors.textSecondary,
+    fontSize: 12
   },
   choiceTextSelected: {
     color: theme.colors.primary

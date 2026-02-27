@@ -23,6 +23,8 @@ export const sendPushOnAppointmentChange = onDocumentWritten(
       before?.startsAt !== after.startsAt ||
       before?.endsAt !== after.endsAt ||
       before?.phoneNumber !== after.phoneNumber ||
+      before?.recruiterId !== after.recruiterId ||
+      before?.recruiterName !== after.recruiterName ||
       before?.notes !== after.notes;
 
     // Candidate-created request events are handled by appointmentRequestMessage trigger.

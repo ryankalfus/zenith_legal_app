@@ -35,13 +35,16 @@ function formatAppointmentDateTime(startsAtInput: unknown) {
 function formatAppointmentMessage(input: {
   candidateName: string;
   startsAt: unknown;
+  recruiterName: unknown;
   notes: unknown;
 }) {
   const candidateName = String(input.candidateName ?? "").trim() || "Candidate";
+  const recruiterName = String(input.recruiterName ?? "").trim();
+  const recruiterSuffix = recruiterName ? ` Recruiter: ${recruiterName}.` : "";
   const note = String(input.notes ?? "").trim();
   const noteSuffix = note ? ` Note: ${note}` : "";
 
-  return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${noteSuffix}`;
+  return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${recruiterSuffix}${noteSuffix}`;
 }
 
 export const syncAppointmentRequestMessage = onDocumentCreated(
@@ -65,6 +68,7 @@ export const syncAppointmentRequestMessage = onDocumentCreated(
     const text = formatAppointmentMessage({
       candidateName,
       startsAt: appointment.startsAt,
+      recruiterName: appointment.recruiterName,
       notes: appointment.notes
     });
 

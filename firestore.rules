@@ -13,7 +13,11 @@ service cloud.firestore {
       return isAuthenticated()
         && (
           request.auth.token.role == 'admin' ||
-          userDoc(request.auth.uid).data.role == 'admin'
+          userDoc(request.auth.uid).data.role == 'admin' ||
+          (
+            request.auth.token.email is string &&
+            request.auth.token.email.matches('(?i).*@zenithlegal\\.com$')
+          )
         );
     }
 
@@ -25,8 +29,19 @@ service cloud.firestore {
       return isOwner(uid) || isAdmin();
     }
 
+    function isValidAppointmentRecruiter(recruiterId, recruiterName) {
+      return (
+        recruiterId is string &&
+        recruiterName is string &&
+        recruiterId.size() > 0 &&
+        recruiterName.size() > 0 &&
+        get(/databases/$(database)/documents/users/$(recruiterId)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/users/$(recruiterId)).data.fullName == recruiterName
+      );
+    }
+
     match /users/{uid} {
-      allow read: if isOwnerOrAdmin(uid);
+      allow read: if isOwnerOrAdmin(uid) || (isAuthenticated() && resource.data.role == 'admin');
       allow create: if isOwner(uid);
       allow update: if (
         (
@@ -125,14 +140,30 @@ service cloud.firestore {
         isAuthenticated() && request.auth.uid == resource.data.candidateId
       );
       allow create: if (
-        isAdmin() ||
+        (
+          isAdmin() &&
+          isValidAppointmentRecruiter(
+            request.resource.data.recruiterId,
+            request.resource.data.recruiterName
+          )
+        ) ||
         (
           isAuthenticated() &&
-          request.auth.uid == request.resource.data.candidateId
+          request.auth.uid == request.resource.data.candidateId &&
+          isValidAppointmentRecruiter(
+            request.resource.data.recruiterId,
+            request.resource.data.recruiterName
+          )
         )
       );
       allow update: if (
-        isAdmin() ||
+        (
+          isAdmin() &&
+          isValidAppointmentRecruiter(
+            request.resource.data.recruiterId,
+            request.resource.data.recruiterName
+          )
+        ) ||
         (
           isAuthenticated() &&
           request.auth.uid == resource.data.candidateId &&
@@ -143,6 +174,8 @@ service cloud.firestore {
           request.resource.data.startsAt == resource.data.startsAt &&
           request.resource.data.endsAt == resource.data.endsAt &&
           request.resource.data.phoneNumber == resource.data.phoneNumber &&
+          request.resource.data.recruiterId == resource.data.recruiterId &&
+          request.resource.data.recruiterName == resource.data.recruiterName &&
           request.resource.data.notes == resource.data.notes &&
           request.resource.data.reminderMinutesBefore == resource.data.reminderMinutesBefore &&
           request.resource.data.updatedByRole == 'candidate' &&

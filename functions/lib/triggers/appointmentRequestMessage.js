@@ -30,9 +30,11 @@ function formatAppointmentDateTime(startsAtInput) {
 }
 function formatAppointmentMessage(input) {
     const candidateName = String(input.candidateName ?? "").trim() || "Candidate";
+    const recruiterName = String(input.recruiterName ?? "").trim();
+    const recruiterSuffix = recruiterName ? ` Recruiter: ${recruiterName}.` : "";
     const note = String(input.notes ?? "").trim();
     const noteSuffix = note ? ` Note: ${note}` : "";
-    return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${noteSuffix}`;
+    return `${candidateName} has requested an appointment on ${formatAppointmentDateTime(input.startsAt)}.${recruiterSuffix}${noteSuffix}`;
 }
 exports.syncAppointmentRequestMessage = (0, firestore_1.onDocumentCreated)("appointments/{appointmentId}", async (event) => {
     const appointment = event.data?.data();
@@ -51,6 +53,7 @@ exports.syncAppointmentRequestMessage = (0, firestore_1.onDocumentCreated)("appo
     const text = formatAppointmentMessage({
         candidateName,
         startsAt: appointment.startsAt,
+        recruiterName: appointment.recruiterName,
         notes: appointment.notes
     });
     const conversationRef = db.collection("conversations").doc(candidateId);

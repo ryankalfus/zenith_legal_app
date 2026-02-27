@@ -13,7 +13,10 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { APPOINTMENT_STATUS_LABELS, AppointmentStatus } from "@zenith/shared";
+import {
+  APPOINTMENT_STATUS_LABELS,
+  AppointmentStatus
+} from "@zenith/shared";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import { Avatar } from "../../components/Avatar";
 import {
@@ -32,7 +35,7 @@ import {
   watchAdminUnattendedRequests
 } from "../../services/appointmentService";
 import { addAppointmentToDeviceCalendar } from "../../services/calendarService";
-import { watchCandidates } from "../../services/adminService";
+import { watchCandidates, watchRecruiters } from "../../services/adminService";
 import { sendMessage } from "../../services/messagingService";
 import { useAuth } from "../../state/AuthContext";
 import { theme } from "../../ui/theme";
@@ -40,6 +43,13 @@ import { theme } from "../../ui/theme";
 type CandidateOption = {
   id: string;
   name: string;
+  phone: string;
+  avatarUrl?: string;
+};
+
+type RecruiterOption = {
+  id: string;
+  label: string;
   phone: string;
   avatarUrl?: string;
 };
@@ -70,18 +80,29 @@ function badgeText(count: number) {
   return count > 9 ? "9+" : String(count);
 }
 
+function normalizeRecruiterId(input: unknown, recruiters: RecruiterOption[]) {
+  const raw = String(input ?? "").trim();
+  if (!raw) {
+    return recruiters[0]?.id ?? "";
+  }
+  return recruiters.some((entry) => entry.id === raw) ? raw : recruiters[0]?.id ?? raw;
+}
+
 export function AdminAppointmentRequestsScreen() {
   const { session } = useAuth();
   const [rows, setRows] = useState<AppointmentRow[]>([]);
   const [unattendedRows, setUnattendedRows] = useState<AppointmentRow[]>([]);
   const [candidates, setCandidates] = useState<CandidateOption[]>([]);
+  const [recruiters, setRecruiters] = useState<RecruiterOption[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [showCreateCandidateModal, setShowCreateCandidateModal] = useState(false);
+  const [showCreateRecruiterModal, setShowCreateRecruiterModal] = useState(false);
   const [unattendedLoading, setUnattendedLoading] = useState(true);
   const [unattendedError, setUnattendedError] = useState<string | null>(null);
 
   const [createCandidateId, setCreateCandidateId] = useState("");
+  const [createRecruiterId, setCreateRecruiterId] = useState("");
   const [createDate, setCreateDate] = useState<Date>(new Date());
   const [createTime, setCreateTime] = useState<Date>(new Date());
   const [createPhone, setCreatePhone] = useState("");
@@ -92,6 +113,8 @@ export function AdminAppointmentRequestsScreen() {
   const [editingRow, setEditingRow] = useState<AppointmentRow | null>(null);
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [editTime, setEditTime] = useState<Date>(new Date());
+  const [editRecruiterId, setEditRecruiterId] = useState("");
+  const [showEditRecruiterModal, setShowEditRecruiterModal] = useState(false);
   const [editPhone, setEditPhone] = useState("");
   const [editNote, setEditNote] = useState("");
   const [activeEditPicker, setActiveEditPicker] = useState<"date" | "time" | null>(null);
@@ -122,11 +145,32 @@ export function AdminAppointmentRequestsScreen() {
       },
       () => setCandidates([])
     );
+    const unsubRecruiters = watchRecruiters(
+      (next) => {
+        const unique = new Map<string, RecruiterOption>();
+        next.forEach((row) => {
+          const id = String(row.uid ?? row.id).trim();
+          const label = String(row.fullName ?? "").trim() || "Recruiter";
+          const phone = String(row.mobile ?? "").trim();
+          const avatarUrl = String(row.avatarUrl ?? "").trim();
+          if (!id) {
+            return;
+          }
+          unique.set(id, { id, label, phone, avatarUrl });
+        });
+        const mapped = [...unique.values()].sort((a, b) =>
+          a.label.localeCompare(b.label, "en", { sensitivity: "base" })
+        );
+        setRecruiters(mapped);
+      },
+      () => setRecruiters([])
+    );
 
     return () => {
       unsubAppointments();
       unsubUnattended();
       unsubCandidates();
+      unsubRecruiters();
     };
   }, []);
 
@@ -141,6 +185,29 @@ export function AdminAppointmentRequestsScreen() {
     }
   }, [createCandidateId, candidates]);
 
+  useEffect(() => {
+    if (recruiters.length === 0) {
+      setCreateRecruiterId("");
+      return;
+    }
+    if (!createRecruiterId || !recruiters.some((entry) => entry.id === createRecruiterId)) {
+      setCreateRecruiterId(recruiters[0].id);
+    }
+  }, [createRecruiterId, recruiters]);
+
+  useEffect(() => {
+    if (!editingRow) {
+      return;
+    }
+    if (recruiters.length === 0) {
+      setEditRecruiterId("");
+      return;
+    }
+    if (!editRecruiterId || !recruiters.some((entry) => entry.id === editRecruiterId)) {
+      setEditRecruiterId(recruiters[0].id);
+    }
+  }, [editRecruiterId, editingRow, recruiters]);
+
   const candidateMap = useMemo(() => {
     const map: Record<string, CandidateOption> = {};
     candidates.forEach((entry) => {
@@ -149,16 +216,35 @@ export function AdminAppointmentRequestsScreen() {
     return map;
   }, [candidates]);
 
+  const recruiterLabelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    recruiters.forEach((entry) => {
+      map[entry.id] = entry.label;
+    });
+    return map;
+  }, [recruiters]);
+
+  const fallbackRecruiterLabel = recruiters[0]?.label || "Recruiter";
+  const createRecruiterLabel = recruiterLabelById[createRecruiterId] || fallbackRecruiterLabel;
+  const editRecruiterLabel =
+    recruiterLabelById[editRecruiterId] ||
+    String(editingRow?.recruiterName ?? "").trim() ||
+    recruiterLabelById[String(editingRow?.recruiterId ?? "")] ||
+    fallbackRecruiterLabel;
+
+  const getRecruiterLabel = (row: AppointmentRow) =>
+    String(row.recruiterName ?? "").trim() ||
+    recruiterLabelById[String(row.recruiterId ?? "")] ||
+    fallbackRecruiterLabel;
+
   const sortedRows = useMemo(() => {
-    const activeRows = rows.filter((row) => Boolean(candidateMap[row.candidateId]));
-    return [...activeRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  }, [rows, candidateMap]);
+    return [...rows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [rows]);
 
   const now = Date.now();
   const unattendedRequests = useMemo(() => {
-    const activeRows = unattendedRows.filter((row) => Boolean(candidateMap[row.candidateId]));
-    return [...activeRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  }, [unattendedRows, candidateMap]);
+    return [...unattendedRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [unattendedRows]);
 
   const overdueScheduled = sortedRows.filter((row) => {
     if (row.status !== "scheduled") {
@@ -206,6 +292,7 @@ export function AdminAppointmentRequestsScreen() {
         text: formatAdminAppointmentDecisionChat({
           action: "accepted",
           startsAt: row.startsAt,
+          recruiterName: getRecruiterLabel(row),
           notes: row.notes
         })
       });
@@ -227,6 +314,7 @@ export function AdminAppointmentRequestsScreen() {
         text: formatAdminAppointmentDecisionChat({
           action: "declined",
           startsAt: row.startsAt,
+          recruiterName: getRecruiterLabel(row),
           notes: row.notes
         })
       });
@@ -247,6 +335,7 @@ export function AdminAppointmentRequestsScreen() {
         senderRole: "admin",
         text: formatAdminAppointmentCanceledChat({
           startsAt: row.startsAt,
+          recruiterName: getRecruiterLabel(row),
           notes: row.notes
         })
       });
@@ -328,6 +417,11 @@ export function AdminAppointmentRequestsScreen() {
       Alert.alert("Phone required", "Please enter a phone number.");
       return;
     }
+    const selectedRecruiterName = recruiterLabelById[createRecruiterId] ?? "";
+    if (!createRecruiterId || !selectedRecruiterName) {
+      Alert.alert("Recruiter required", "Please choose a recruiter.");
+      return;
+    }
 
     const startsAt = mergeDateAndTime(createDate, createTime);
     if (new Date(startsAt).getTime() <= Date.now()) {
@@ -341,6 +435,8 @@ export function AdminAppointmentRequestsScreen() {
         candidateId: createCandidateId,
         createdBy: session.user.uid,
         startsAt,
+        recruiterId: createRecruiterId,
+        recruiterName: selectedRecruiterName,
         phoneNumber: createPhone.trim(),
         notes: createNote.trim()
       });
@@ -351,6 +447,7 @@ export function AdminAppointmentRequestsScreen() {
           senderRole: "admin",
           text: formatAdminAppointmentCreatedChat({
             startsAt,
+            recruiterName: selectedRecruiterName,
             notes: createNote.trim()
           })
         });
@@ -371,6 +468,7 @@ export function AdminAppointmentRequestsScreen() {
     setEditingRow(row);
     setEditDate(starts);
     setEditTime(starts);
+    setEditRecruiterId(normalizeRecruiterId(row.recruiterId, recruiters));
     setEditPhone(String(row.phoneNumber ?? ""));
     setEditNote(String(row.notes ?? ""));
     setActiveEditPicker(null);
@@ -385,6 +483,11 @@ export function AdminAppointmentRequestsScreen() {
       Alert.alert("Phone required", "Please enter a phone number.");
       return;
     }
+    const selectedRecruiterName = recruiterLabelById[editRecruiterId] ?? "";
+    if (!editRecruiterId || !selectedRecruiterName) {
+      Alert.alert("Recruiter required", "Please choose a recruiter.");
+      return;
+    }
 
     const startsAt = mergeDateAndTime(editDate, editTime);
     if (new Date(startsAt).getTime() <= Date.now()) {
@@ -395,9 +498,12 @@ export function AdminAppointmentRequestsScreen() {
     try {
       setSavingEdit(true);
       const previousStartsAt = editingRow.startsAt;
+      const previousRecruiterName = getRecruiterLabel(editingRow);
       await updateAppointmentDetails({
         appointmentId: editingRow.id,
         startsAt,
+        recruiterId: editRecruiterId,
+        recruiterName: selectedRecruiterName,
         phoneNumber: editPhone.trim(),
         notes: editNote.trim(),
         updatedBy: session.user.uid,
@@ -419,6 +525,8 @@ export function AdminAppointmentRequestsScreen() {
           text: formatAdminAppointmentModifiedChat({
             previousStartsAt,
             nextStartsAt: startsAt,
+            previousRecruiterName,
+            nextRecruiterName: selectedRecruiterName,
             notes: editNote.trim()
           })
         });
@@ -457,6 +565,19 @@ export function AdminAppointmentRequestsScreen() {
                 <View>
                   <Text style={styles.dropdownLabel}>Candidate</Text>
                   <Text style={styles.dropdownValue}>{selectedCandidate?.name || "Select candidate"}</Text>
+                </View>
+              </View>
+              <Text style={styles.chevron}>▼</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.dropdownButton, styles.dropdownSpacing]}
+              onPress={() => setShowCreateRecruiterModal(true)}
+            >
+              <View style={styles.dropdownLeft}>
+                <View>
+                  <Text style={styles.dropdownLabel}>Recruiter</Text>
+                  <Text style={styles.dropdownValue}>{createRecruiterLabel}</Text>
                 </View>
               </View>
               <Text style={styles.chevron}>▼</Text>
@@ -541,6 +662,7 @@ export function AdminAppointmentRequestsScreen() {
                           <Text style={styles.meta}>{row.phoneNumber || candidate?.phone || "n/a"}</Text>
                         </View>
                       </View>
+                      <Text style={styles.meta}>Recruiter: {getRecruiterLabel(row)}</Text>
                       <Text style={styles.meta}>
                         {formatDate(startsAt)} {formatTime(startsAt)}
                       </Text>
@@ -584,6 +706,7 @@ export function AdminAppointmentRequestsScreen() {
                           <Text style={styles.meta}>{row.phoneNumber || candidate?.phone || "n/a"}</Text>
                         </View>
                       </View>
+                      <Text style={styles.meta}>Recruiter: {getRecruiterLabel(row)}</Text>
                       <Text style={styles.meta}>
                         {formatDate(startsAt)} {formatTime(startsAt)}
                       </Text>
@@ -662,6 +785,7 @@ export function AdminAppointmentRequestsScreen() {
                           <Text style={styles.meta}>{row.phoneNumber || candidate?.phone || "n/a"}</Text>
                         </View>
                       </View>
+                      <Text style={styles.meta}>Recruiter: {getRecruiterLabel(row)}</Text>
                       <Text style={styles.meta}>
                         {formatDate(starts)} {formatTime(starts)}
                       </Text>
@@ -721,14 +845,67 @@ export function AdminAppointmentRequestsScreen() {
       </Modal>
 
       <Modal
+        visible={showCreateRecruiterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreateRecruiterModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select recruiter</Text>
+            <ScrollView style={styles.modalList}>
+              {recruiters.length === 0 ? <Text style={styles.modalOptionMeta}>No recruiters available.</Text> : null}
+              {recruiters.map((recruiter) => {
+                const selected = createRecruiterId === recruiter.id;
+                return (
+                  <Pressable
+                    key={recruiter.id}
+                    style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                    onPress={() => {
+                      setCreateRecruiterId(recruiter.id);
+                      setShowCreateRecruiterModal(false);
+                    }}
+                  >
+                    <Avatar uri={recruiter.avatarUrl} name={recruiter.label} size={32} />
+                    <View>
+                      <Text style={[styles.modalOptionTitle, selected && styles.modalOptionTitleSelected]}>
+                        {recruiter.label}
+                      </Text>
+                      <Text style={styles.modalOptionMeta}>{recruiter.phone || "No phone"}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable style={styles.closeModalButton} onPress={() => setShowCreateRecruiterModal(false)}>
+              <Text style={styles.closeModalButtonText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={Boolean(editingRow)}
         transparent
         animationType="fade"
-        onRequestClose={() => setEditingRow(null)}
+        onRequestClose={() => {
+          setEditingRow(null);
+          setShowEditRecruiterModal(false);
+        }}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Modify appointment</Text>
+
+            <Pressable style={styles.dropdownButton} onPress={() => setShowEditRecruiterModal(true)}>
+              <View style={styles.dropdownLeft}>
+                <View>
+                  <Text style={styles.dropdownLabel}>Recruiter</Text>
+                  <Text style={styles.dropdownValue}>{editRecruiterLabel}</Text>
+                </View>
+              </View>
+              <Text style={styles.chevron}>▼</Text>
+            </Pressable>
 
             <View style={styles.rowButtons}>
               <Pressable
@@ -791,6 +968,7 @@ export function AdminAppointmentRequestsScreen() {
                 onPress={() => {
                   setEditingRow(null);
                   setActiveEditPicker(null);
+                  setShowEditRecruiterModal(false);
                 }}
               >
                 <Text style={styles.cancelModalText}>Close</Text>
@@ -799,6 +977,46 @@ export function AdminAppointmentRequestsScreen() {
                 <Text style={styles.createButtonText}>{savingEdit ? "Saving..." : "Save changes"}</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showEditRecruiterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditRecruiterModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Select recruiter</Text>
+            <ScrollView style={styles.modalList}>
+              {recruiters.length === 0 ? <Text style={styles.modalOptionMeta}>No recruiters available.</Text> : null}
+              {recruiters.map((recruiter) => {
+                const selected = editRecruiterId === recruiter.id;
+                return (
+                  <Pressable
+                    key={recruiter.id}
+                    style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                    onPress={() => {
+                      setEditRecruiterId(recruiter.id);
+                      setShowEditRecruiterModal(false);
+                    }}
+                  >
+                    <Avatar uri={recruiter.avatarUrl} name={recruiter.label} size={32} />
+                    <View>
+                      <Text style={[styles.modalOptionTitle, selected && styles.modalOptionTitleSelected]}>
+                        {recruiter.label}
+                      </Text>
+                      <Text style={styles.modalOptionMeta}>{recruiter.phone || "No phone"}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Pressable style={styles.closeModalButton} onPress={() => setShowEditRecruiterModal(false)}>
+              <Text style={styles.closeModalButtonText}>Close</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -842,6 +1060,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center"
+  },
+  dropdownSpacing: {
+    marginTop: 8
   },
   dropdownLeft: {
     flexDirection: "row",
@@ -1073,6 +1294,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
+    backgroundColor: "#fff",
     paddingHorizontal: 10,
     paddingVertical: 10,
     marginBottom: 7,
@@ -1080,9 +1302,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10
   },
+  modalOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft
+  },
   modalOptionTitle: {
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  modalOptionTitleSelected: {
+    color: theme.colors.primary
   },
   modalOptionMeta: {
     marginTop: 3,

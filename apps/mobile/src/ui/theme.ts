@@ -2,13 +2,13 @@ import { CandidateFirmStatus } from "@zenith/shared";
 
 export const theme = {
   colors: {
-    background: "#f4f6fb",
+    background: "#f5f5f5",
     card: "#ffffff",
     textPrimary: "#111827",
     textSecondary: "#4b5563",
-    border: "#d4dce8",
-    primary: "#0a66ff",
-    primarySoft: "#e7f0ff",
+    border: "#d1d5db",
+    primary: "#111111",
+    primarySoft: "#f3f4f6",
     success: "#1a9c5f",
     warning: "#b97800",
     danger: "#c53333",

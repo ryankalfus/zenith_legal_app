@@ -13,6 +13,7 @@ export type AuthorizationState = "pending" | "approved" | "declined";
 
 export type AppointmentStatus = "requested" | "scheduled" | "canceled" | "completed";
 export type AppointmentActorRole = "candidate" | "admin" | "system";
+export type AppointmentRecruiterId = string;
 
 export type MessageSenderRole = "candidate" | "admin" | "system";
 export type CandidateStatusRequestType = "authorization" | "cancellation";
@@ -114,6 +115,8 @@ export interface Appointment {
   startsAt: string;
   endsAt: string;
   phoneNumber: string;
+  recruiterId: AppointmentRecruiterId;
+  recruiterName: string;
   location?: string;
   meetingLink?: string;
   notes?: string;

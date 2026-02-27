@@ -52,3 +52,10 @@ export const APPOINTMENT_STATUS_LABELS = {
   canceled: "Canceled",
   completed: "Completed"
 } as const;
+
+export const APPOINTMENT_RECRUITERS = [
+  { id: "ellen", label: "Ellen" },
+  { id: "mason", label: "Mason" }
+] as const;
+
+export const DEFAULT_APPOINTMENT_RECRUITER_ID = "mason" as const;

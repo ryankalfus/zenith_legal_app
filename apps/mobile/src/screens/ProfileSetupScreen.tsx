@@ -298,8 +298,8 @@ const styles = StyleSheet.create({
     gap: 3
   },
   pickButtonActive: {
-    borderColor: "#1d4ed8",
-    backgroundColor: "#dbeafe"
+    borderColor: "#111111",
+    backgroundColor: "#f3f4f6"
   },
   pickLabel: {
     color: "#4b5563",
@@ -343,20 +343,20 @@ const styles = StyleSheet.create({
     backgroundColor: "white"
   },
   pillSelected: {
-    borderColor: "#1d4ed8",
-    backgroundColor: "#dbeafe"
+    borderColor: "#111111",
+    backgroundColor: "#f3f4f6"
   },
   pillText: {
     color: "#374151"
   },
   pillTextSelected: {
-    color: "#1e40af",
+    color: "#111111",
     fontWeight: "600"
   },
   button: {
     marginTop: 16,
     borderRadius: 8,
-    backgroundColor: "#1d4ed8",
+    backgroundColor: "#111111",
     alignItems: "center",
     paddingVertical: 12
   },

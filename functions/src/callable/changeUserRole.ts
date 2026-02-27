@@ -25,6 +25,17 @@ function normalizeRole(input: unknown): AppRole | null {
   return null;
 }
 
+function normalizeName(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function normalizePhoneDigits(value: unknown) {
+  return String(value ?? "").replace(/[^\d]/g, "");
+}
+
 async function assertCallerAdmin(uid: string) {
   const callerUser = await auth.getUser(uid);
   const callerRoleFromClaim = normalizeRole(callerUser.customClaims?.role);
@@ -41,7 +52,15 @@ async function assertCallerAdmin(uid: string) {
 
 async function getAdminCount() {
   const snapshot = await db.collection("users").where("role", "==", "admin").get();
-  return snapshot.size;
+  const identities = new Set<string>();
+  snapshot.docs.forEach((entry) => {
+    const row = entry.data() as Record<string, unknown>;
+    const uid = String(row.uid ?? "").trim();
+    const email = String(row.email ?? "").trim().toLowerCase();
+    const key = uid || email || entry.id;
+    identities.add(key);
+  });
+  return identities.size;
 }
 
 async function setUserRole(uid: string, role: AppRole, existingData: Record<string, unknown>) {
@@ -64,6 +83,43 @@ async function setUserRole(uid: string, role: AppRole, existingData: Record<stri
   await db.collection("users").doc(uid).set(rolePayload, { merge: true });
 }
 
+async function resolveTargetAuthUid(inputTargetUid: string) {
+  try {
+    const user = await auth.getUser(inputTargetUid);
+    return user.uid;
+  } catch {
+    // Continue with fallback resolution.
+  }
+
+  const targetDoc = await db.collection("users").doc(inputTargetUid).get();
+  if (!targetDoc.exists) {
+    throw new HttpsError("not-found", "Target user was not found.");
+  }
+  const targetData = targetDoc.data() as Record<string, unknown>;
+
+  const docUid = String(targetData.uid ?? "").trim();
+  if (docUid) {
+    try {
+      const user = await auth.getUser(docUid);
+      return user.uid;
+    } catch {
+      // Continue to email fallback.
+    }
+  }
+
+  const docEmail = String(targetData.email ?? "").trim().toLowerCase();
+  if (docEmail) {
+    try {
+      const user = await auth.getUserByEmail(docEmail);
+      return user.uid;
+    } catch {
+      // Fall through to not-found below.
+    }
+  }
+
+  throw new HttpsError("not-found", "Target auth account was not found.");
+}
+
 export const changeUserRole = onCall(async (request) => {
   const requesterUid = request.auth?.uid;
   if (!requesterUid) {
@@ -72,8 +128,8 @@ export const changeUserRole = onCall(async (request) => {
 
   await assertCallerAdmin(requesterUid);
 
-  const targetUid = String(request.data?.targetUid ?? "").trim();
-  if (!targetUid) {
+  const requestedTargetUid = String(request.data?.targetUid ?? "").trim();
+  if (!requestedTargetUid) {
     throw new HttpsError("invalid-argument", "targetUid is required.");
   }
 
@@ -82,17 +138,39 @@ export const changeUserRole = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "targetRole must be candidate or admin.");
   }
 
+  const targetUid = await resolveTargetAuthUid(requestedTargetUid);
   if (targetUid === requesterUid) {
     throw new HttpsError("failed-precondition", "You cannot change your own role.");
   }
 
-  const targetDocRef = db.collection("users").doc(targetUid);
-  const targetDoc = await targetDocRef.get();
-  if (!targetDoc.exists) {
-    throw new HttpsError("not-found", "Target user was not found.");
-  }
+  const canonicalDocRef = db.collection("users").doc(targetUid);
+  const canonicalDoc = await canonicalDocRef.get();
+  const canonicalData = (canonicalDoc.data() ?? {}) as Record<string, unknown>;
+  const canonicalEmail = String(canonicalData.email ?? "").trim().toLowerCase();
+  const canonicalName = normalizeName(canonicalData.fullName);
+  const canonicalPhoneDigits = normalizePhoneDigits(canonicalData.mobile);
 
-  const currentRole = normalizeRole(targetDoc.data()?.role) ?? "candidate";
+  const usersSnapshot = await db.collection("users").get();
+  const relatedDocs = usersSnapshot.docs.filter((entry) => {
+    const row = entry.data() as Record<string, unknown>;
+    const rowUid = String(row.uid ?? "").trim();
+    const rowEmail = String(row.email ?? "").trim().toLowerCase();
+    const rowName = normalizeName(row.fullName);
+    const rowPhoneDigits = normalizePhoneDigits(row.mobile);
+
+    const matchesUid = entry.id === targetUid || rowUid === targetUid;
+    const matchesEmail = Boolean(canonicalEmail) && rowEmail === canonicalEmail;
+    const matchesNameAndPhone =
+      Boolean(canonicalName) &&
+      Boolean(canonicalPhoneDigits) &&
+      rowName === canonicalName &&
+      rowPhoneDigits === canonicalPhoneDigits;
+
+    return matchesUid || matchesEmail || matchesNameAndPhone;
+  });
+
+  const currentRole =
+    relatedDocs.some((entry) => normalizeRole(entry.data()?.role) === "admin") ? "admin" : "candidate";
   if (currentRole === targetRole) {
     return { success: true, uid: targetUid, role: targetRole, unchanged: true };
   }
@@ -104,7 +182,23 @@ export const changeUserRole = onCall(async (request) => {
     }
   }
 
-  await setUserRole(targetUid, targetRole, targetDoc.data() ?? {});
+  await setUserRole(targetUid, targetRole, canonicalData);
+
+  const rolePayload: Record<string, unknown> = {
+    uid: targetUid,
+    role: targetRole,
+    updatedAt: FieldValue.serverTimestamp()
+  };
+  if (targetRole === "candidate" && !canonicalData.preferences) {
+    rolePayload.preferences = DEFAULT_CANDIDATE_PREFERENCES;
+  }
+
+  const batch = db.batch();
+  batch.set(canonicalDocRef, rolePayload, { merge: true });
+  relatedDocs.forEach((entry) => {
+    batch.set(entry.ref, rolePayload, { merge: true });
+  });
+  await batch.commit();
 
   return {
     success: true,

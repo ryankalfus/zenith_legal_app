@@ -21,6 +21,15 @@ function normalizeRole(input) {
     }
     return null;
 }
+function normalizeName(value) {
+    return String(value ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+}
+function normalizePhoneDigits(value) {
+    return String(value ?? "").replace(/[^\d]/g, "");
+}
 async function assertCallerAdmin(uid) {
     const callerUser = await auth.getUser(uid);
     const callerRoleFromClaim = normalizeRole(callerUser.customClaims?.role);
@@ -35,7 +44,15 @@ async function assertCallerAdmin(uid) {
 }
 async function getAdminCount() {
     const snapshot = await db.collection("users").where("role", "==", "admin").get();
-    return snapshot.size;
+    const identities = new Set();
+    snapshot.docs.forEach((entry) => {
+        const row = entry.data();
+        const uid = String(row.uid ?? "").trim();
+        const email = String(row.email ?? "").trim().toLowerCase();
+        const key = uid || email || entry.id;
+        identities.add(key);
+    });
+    return identities.size;
 }
 async function setUserRole(uid, role, existingData) {
     const userRecord = await auth.getUser(uid);
@@ -53,29 +70,81 @@ async function setUserRole(uid, role, existingData) {
     }
     await db.collection("users").doc(uid).set(rolePayload, { merge: true });
 }
+async function resolveTargetAuthUid(inputTargetUid) {
+    try {
+        const user = await auth.getUser(inputTargetUid);
+        return user.uid;
+    }
+    catch {
+        // Continue with fallback resolution.
+    }
+    const targetDoc = await db.collection("users").doc(inputTargetUid).get();
+    if (!targetDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Target user was not found.");
+    }
+    const targetData = targetDoc.data();
+    const docUid = String(targetData.uid ?? "").trim();
+    if (docUid) {
+        try {
+            const user = await auth.getUser(docUid);
+            return user.uid;
+        }
+        catch {
+            // Continue to email fallback.
+        }
+    }
+    const docEmail = String(targetData.email ?? "").trim().toLowerCase();
+    if (docEmail) {
+        try {
+            const user = await auth.getUserByEmail(docEmail);
+            return user.uid;
+        }
+        catch {
+            // Fall through to not-found below.
+        }
+    }
+    throw new https_1.HttpsError("not-found", "Target auth account was not found.");
+}
 exports.changeUserRole = (0, https_1.onCall)(async (request) => {
     const requesterUid = request.auth?.uid;
     if (!requesterUid) {
         throw new https_1.HttpsError("unauthenticated", "Sign-in required.");
     }
     await assertCallerAdmin(requesterUid);
-    const targetUid = String(request.data?.targetUid ?? "").trim();
-    if (!targetUid) {
+    const requestedTargetUid = String(request.data?.targetUid ?? "").trim();
+    if (!requestedTargetUid) {
         throw new https_1.HttpsError("invalid-argument", "targetUid is required.");
     }
     const targetRole = normalizeRole(request.data?.targetRole);
     if (!targetRole) {
         throw new https_1.HttpsError("invalid-argument", "targetRole must be candidate or admin.");
     }
+    const targetUid = await resolveTargetAuthUid(requestedTargetUid);
     if (targetUid === requesterUid) {
         throw new https_1.HttpsError("failed-precondition", "You cannot change your own role.");
     }
-    const targetDocRef = db.collection("users").doc(targetUid);
-    const targetDoc = await targetDocRef.get();
-    if (!targetDoc.exists) {
-        throw new https_1.HttpsError("not-found", "Target user was not found.");
-    }
-    const currentRole = normalizeRole(targetDoc.data()?.role) ?? "candidate";
+    const canonicalDocRef = db.collection("users").doc(targetUid);
+    const canonicalDoc = await canonicalDocRef.get();
+    const canonicalData = (canonicalDoc.data() ?? {});
+    const canonicalEmail = String(canonicalData.email ?? "").trim().toLowerCase();
+    const canonicalName = normalizeName(canonicalData.fullName);
+    const canonicalPhoneDigits = normalizePhoneDigits(canonicalData.mobile);
+    const usersSnapshot = await db.collection("users").get();
+    const relatedDocs = usersSnapshot.docs.filter((entry) => {
+        const row = entry.data();
+        const rowUid = String(row.uid ?? "").trim();
+        const rowEmail = String(row.email ?? "").trim().toLowerCase();
+        const rowName = normalizeName(row.fullName);
+        const rowPhoneDigits = normalizePhoneDigits(row.mobile);
+        const matchesUid = entry.id === targetUid || rowUid === targetUid;
+        const matchesEmail = Boolean(canonicalEmail) && rowEmail === canonicalEmail;
+        const matchesNameAndPhone = Boolean(canonicalName) &&
+            Boolean(canonicalPhoneDigits) &&
+            rowName === canonicalName &&
+            rowPhoneDigits === canonicalPhoneDigits;
+        return matchesUid || matchesEmail || matchesNameAndPhone;
+    });
+    const currentRole = relatedDocs.some((entry) => normalizeRole(entry.data()?.role) === "admin") ? "admin" : "candidate";
     if (currentRole === targetRole) {
         return { success: true, uid: targetUid, role: targetRole, unchanged: true };
     }
@@ -85,7 +154,21 @@ exports.changeUserRole = (0, https_1.onCall)(async (request) => {
             throw new https_1.HttpsError("failed-precondition", "At least one admin account must remain active.");
         }
     }
-    await setUserRole(targetUid, targetRole, targetDoc.data() ?? {});
+    await setUserRole(targetUid, targetRole, canonicalData);
+    const rolePayload = {
+        uid: targetUid,
+        role: targetRole,
+        updatedAt: firestore_1.FieldValue.serverTimestamp()
+    };
+    if (targetRole === "candidate" && !canonicalData.preferences) {
+        rolePayload.preferences = DEFAULT_CANDIDATE_PREFERENCES;
+    }
+    const batch = db.batch();
+    batch.set(canonicalDocRef, rolePayload, { merge: true });
+    relatedDocs.forEach((entry) => {
+        batch.set(entry.ref, rolePayload, { merge: true });
+    });
+    await batch.commit();
     return {
         success: true,
         uid: targetUid,

@@ -19,6 +19,8 @@ exports.flagCandidateAppointmentUpdates = (0, firestore_1.onDocumentWritten)("ap
     const detailsChanged = before?.startsAt !== after.startsAt ||
         before?.endsAt !== after.endsAt ||
         before?.phoneNumber !== after.phoneNumber ||
+        before?.recruiterId !== after.recruiterId ||
+        before?.recruiterName !== after.recruiterName ||
         before?.notes !== after.notes;
     if (!(actor === "admin" || actor === "system")) {
         return;

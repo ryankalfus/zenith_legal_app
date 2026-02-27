@@ -196,8 +196,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff"
   },
   contactText: {
-    color: theme.colors.primary,
-    fontWeight: "600",
+    color: "#111",
+    fontWeight: "700",
+    textDecorationLine: "underline",
     fontSize: 12
   },
   card: {

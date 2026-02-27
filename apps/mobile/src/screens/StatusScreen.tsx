@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   statusLabel: {
-    color: "#1d4ed8"
+    color: "#111827"
   },
   empty: {
     textAlign: "center",

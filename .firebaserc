@@ -1,5 +1,12 @@
 {
   "projects": {
     "default": "zenith-legal-dev"
-  }
+  },
+  "targets": {},
+  "etags": {
+    "zenith-legal-dev": {
+      "extensionInstances": {}
+    }
+  },
+  "dataconnectEmulatorConfig": {}
 }

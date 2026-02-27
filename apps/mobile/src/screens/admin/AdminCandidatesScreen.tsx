@@ -195,15 +195,13 @@ export function AdminCandidatesScreen() {
       topRightLogoStyle={styles.dashboardHeroLogo}
       scroll
     >
-      <SurfaceCard>
-        <TextInput
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search by name/email/phone"
-          placeholderTextColor="#7f8b9d"
-        />
-      </SurfaceCard>
+      <TextInput
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search by name/email/phone"
+        placeholderTextColor="#7f8b9d"
+      />
 
       <View style={styles.sectionWrap}>
         <Text style={styles.sectionTitle}>Recruiters</Text>

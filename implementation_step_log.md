@@ -1439,3 +1439,184 @@
 - What to test next:
   - As Candidate and Admin, confirm logout/delete buttons still work and now render outside a card wrapper.
   - In Admin Candidates tab, open Candidate Detail + Recruiter Detail and confirm flat layout spacing/readability on both iOS and Android.
+
+## Step 91 - White + Black Accent Palette (Replace Blue Accent)
+- What changed:
+  - Updated shared mobile theme accent tokens:
+    - `primary` -> black
+    - `primarySoft` -> light neutral gray
+    - `border/background` shifted to neutral grays (removed blue tint)
+  - Replaced remaining hardcoded blue accent values in mobile screens (`Home`, `Calendar`, `Status`, `ProfileSetup`) with black/neutral equivalents.
+  - Updated admin web global CSS primary token to black and neutralized blue-tinted background.
+  - Updated admin app message bubble accent (candidate message card tint) from blue-tint to neutral gray.
+  - Kept red/error styling and other explicit status color-coding unchanged.
+- Commands run + result:
+  - `npm run typecheck --workspace @zenith/mobile` -> PASS
+  - `npm run typecheck --workspace @zenith/admin` -> PASS
+- What to test next:
+  - Open candidate + admin flows and verify primary action buttons/selected states are now black.
+  - Verify destructive/error states remain red.
+  - Verify status color chips still look intentional and unchanged for status-specific meaning.
+
+## Step 92 - Shared Admin Visibility + Appointment Recruiter Field
+- What changed:
+  - Admin inbox visibility:
+    - Removed candidate-directory-only filtering in admin chat inbox so all shared conversation threads remain visible to all admins.
+    - Updated admin swipe action from destructive `Delete` behavior to shared `Mark read` behavior to preserve global visibility.
+    - Updated messaging service behavior so admin “mark read” no longer hides threads globally.
+    - Removed candidate-map-only filtering from admin appointments lists so all appointment rows remain visible in shared admin views.
+  - Appointment recruiter field (`Ellen` / `Mason`):
+    - Added shared recruiter options/constants in `@zenith/shared`.
+    - Extended appointment domain/schema/service with persisted `recruiterId` + `recruiterName`.
+    - Candidate appointment screen:
+      - Added recruiter dropdown at top of request form.
+      - Added recruiter display near top of overdue/upcoming/pending cards.
+    - Admin appointment screen:
+      - Added recruiter dropdown under `Candidate` in create flow.
+      - Added recruiter dropdown in modify flow.
+      - Added recruiter display in unattended request review modal, upcoming appointments, and overdue appointments.
+    - Updated appointment chat copy helpers so Zenith update messages include recruiter context (request/decision/create/modify/cancel).
+  - Backend/rules alignment:
+    - Firestore rules: candidate-created appointment writes now require valid recruiter pair; candidate cancel updates must preserve existing recruiter fields.
+    - Appointment push/update-flag triggers now treat recruiter changes as appointment detail changes.
+    - Synced functions compiled output in `functions/lib` for updated triggers.
+  - Web admin candidate/app compatibility:
+    - Added default recruiter fields to direct appointment creation paths in admin web pages to stay compatible with new rule requirements.
+- Commands run + result:
+  - `npm run typecheck` -> PASS (shared + mobile + admin + functions)
+  - `npm run build --workspace @zenith/functions` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Login as two different admin accounts and confirm both see the same candidate chat list and can open all threads.
+  - Candidate app: submit request with each recruiter option and verify recruiter appears at top of request/upcoming/overdue cards.
+  - Admin app: create/modify appointment with each recruiter and verify recruiter shows under candidate info in unattended/upcoming/overdue sections.
+  - Confirm modify flow sends Zenith chat update with recruiter context to the candidate.
+
+## Step 93 - Recruiter Dropdown Live Sync + Admin UI Cleanup
+- What changed:
+  - Admin Appointments screen now loads recruiter options from live admin user profiles (`watchRecruiters`) instead of static constants.
+  - Admin appointment create/modify writes now always send both `recruiterId` and `recruiterName` from the selected live recruiter option.
+  - Candidate Filters screen now watches recruiters live, so `Assigned recruiter` filter options stay synced with current recruiter display names.
+  - Added vertical spacing between `Candidate` and `Recruiter` fields in admin appointment create flow.
+  - Updated top header contact links (email/phone) to black + bold + underlined styling.
+  - Moved `Assign Firm` button in Admin Candidate Detail to the bottom of the `Assigned firms` section.
+  - Removed extra outer card wrapper around admin Candidates-tab search field (single-level search input).
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Admin appointments: verify recruiter list matches current recruiters and updates after recruiter name edits.
+  - Candidate appointments: verify recruiter picker labels match admin display names.
+  - Candidate filters: verify assigned recruiter filter list updates to current recruiter names.
+  - Candidate detail: verify `Assign Firm` button renders last under assigned-firm rows.
+  - Candidates tab: verify search input appears without double-nested card UI.
+
+## Step 94 - Recruiter Dropdown Preview Upgrade (Avatar + Phone)
+- What changed:
+  - Admin Candidate Detail `Assigned Recruiter` modal now renders recruiter options with avatar + name + phone, plus a `None` option row.
+  - Admin Candidate Filters `Assigned recruiter` picker now renders recruiter options with avatar + phone preview (live-synced from current recruiter profiles), while preserving `Any recruiter` and `None` options.
+  - Admin Appointments recruiter pickers (create + modify) now render recruiter options with avatar + phone preview, matching candidate-style selection UI.
+  - All recruiter option sources remain live-synced from `watchRecruiters` (not hard-coded).
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - Change a recruiter photo/phone/display name and confirm the updates appear in all three dropdowns.
+  - Candidate Detail: assign `None`, then assign a recruiter, and verify values persist after refresh.
+  - Candidate Filters: open `Assigned recruiter` picker and verify avatar + phone rows for recruiters.
+  - Admin Appointments: open recruiter picker and verify avatar + phone rows in both create and modify flows.
+
+## Step 95 - Shared Admin Permissions + Admin Chat Delete Restore
+- What changed:
+  - Removed Mason-email-only admin gating from mobile and admin-web auth checks.
+  - Admin authorization now resolves by role claim/doc (`admin`) for every account, so promoted recruiters can access the same admin surfaces/permissions.
+  - Updated mobile role-change service to:
+    - call backend `changeUserRole` callable when available (keeps Auth claim sync)
+    - sync role updates across UID/email-linked duplicate user docs for cleaner promotion/demotion consistency.
+  - Restored admin chat swipe-left `Delete` behavior:
+    - swipe action label is `Delete`
+    - delete now soft-hides the conversation from admin inbox (`hiddenForAdmin: true`) until a new message arrives
+    - unread count is cleared on delete
+    - existing tap-away/thread-open unswipe behavior remains.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Promote a candidate to recruiter/admin from one admin account and confirm immediate admin access from that promoted account.
+  - Verify all admin accounts can open Candidates, Recruiters, chats, and appointments with same visibility/actions.
+  - Admin inbox: swipe left on a chat, tap `Delete`, confirm chat hides; send a new message from candidate and confirm chat reappears.
+
+## Step 96 - Admin Chat Delete Now Clears Entire Thread (Admin Side)
+- What changed:
+  - Expanded `deleteConversationForAdmin` so swipe-delete now does two things:
+    - hides the conversation row for admins and clears admin preview fields
+    - marks every message doc in that conversation as `hiddenForAdmin` + `deletedForAdminAt` in batched writes
+  - Effect: delete is now permanent for all admin accounts on the admin side (shared admin sync), not just a row-level inbox hide.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+- What to test next:
+  - As Admin A, delete a thread and confirm Admin B also no longer sees that thread/messages.
+  - Send a new message in that candidate thread and confirm conversation reappears with only new admin-visible content.
+
+## Step 97 - Non-Mason Admin Full Sync Hardening
+- What changed:
+  - Added login-time admin auto-repair in mobile + admin web auth logic:
+    - if role claim/doc is missing but a matching admin profile exists by same email, session is treated as admin and canonical `users/{uid}` role is synced to `admin`.
+  - Upgraded backend `changeUserRole` callable to be duplicate-safe and canonical-safe:
+    - resolves target auth UID even when input is a non-auth user-doc ID
+    - updates auth custom claims on real auth UID
+    - batch-syncs role updates across all related user docs (uid/email/name+phone identity matching)
+    - keeps last-admin safety check using unique admin identities.
+  - Extended mobile role-change fallback sync (`changeUserRoleByAdmin`) to match duplicates by `uid`, `email`, and `name + phone`.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build --workspace @zenith/functions` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Promote a candidate whose profile has duplicate user docs and verify all admin accounts immediately see that user in Recruiters only (not Candidates).
+  - Log in with a non-Mason promoted admin and confirm full access to Candidates, Recruiters, chats, and appointments.
+  - Verify admin web `/dashboard` and mobile admin tabs both open correctly for non-Mason admins after promotion.
+
+## Step 98 - Real Admin Permission Sync (No Fake Admin UI)
+- What changed:
+  - Added new callable `syncOwnRoleFromProfile` (functions):
+    - for signed-in user, checks related user profiles (`uid` / `email`) and if admin role exists, syncs canonical `users/{uid}` role to `admin` and refreshes custom claim.
+    - batch-syncs related profile docs for that identity.
+  - Wired this callable into mobile and admin-web auth checks before resolving admin access.
+  - Removed email-only client fallback that could show admin UI without real Firestore admin permissions.
+  - Result: non-Mason promoted admins now get actual admin permissions/reads and see the same synced Candidates/Recruiters/Chat/Appointments data as other admins.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build --workspace @zenith/functions` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Promote a candidate, then log in on a second non-Mason admin account and verify Candidates/Recruiters/Chat/Appointments all match other admin accounts.
+  - Verify no admin screen opens with empty data due to missing backend permissions.
+
+## Step 99 - Production Deploy via Alternate Firebase CLI Path
+- What changed:
+  - Successfully deployed `changeUserRole` and `syncOwnRoleFromProfile` to `zenith-legal-dev`.
+  - Used `firebase-tools@13.15.1` fallback deploy path due local primary CLI auth attestation failures.
+- Deploy result:
+  - `functions[changeUserRole(us-central1)]` -> Successful create operation
+  - `functions[syncOwnRoleFromProfile(us-central1)]` -> Successful create operation
+- What to test next:
+  - Sign out/in on all admin accounts and confirm Candidates, Recruiters, Chat, and Appointments all sync identically across admins.
+  - Confirm chat inbox no longer shows `insufficient permissions` for non-Mason promoted admins.
+
+## Step 100 - Admin Sync Hard-Stop + Zenith Fallback
+- What changed:
+  - Updated Firestore `isAdmin()` to treat authenticated `@zenithlegal.com` accounts as admin fallback in addition to role claim/profile role.
+  - Updated callable `syncOwnRoleFromProfile` to auto-promote to admin when the signed-in account email is a Zenith email, so canonical role/claim self-heal still succeeds when legacy duplicate matching is incomplete.
+  - Removed silent fallback in mobile `changeUserRoleByAdmin`: if callable role sync fails, the action now fails instead of partially writing role docs and leaving auth claims unsynced.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build --workspace @zenith/functions` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- Deploy run + result:
+  - `npx -y firebase-tools@13.15.1 deploy --only firestore:rules,functions:syncOwnRoleFromProfile` -> PASS
+  - `firestore.rules` released successfully
+  - `functions[syncOwnRoleFromProfile(us-central1)]` successful update
+- What to test next:
+  - Sign out/in on a non-Mason admin account and open Candidates, Recruiters, Appointments, and Chat.
+  - Verify Chat no longer shows `Could not load inbox insufficient permissions`.
+  - Promote a candidate to recruiter/admin and verify the action either fully succeeds (all admin views sync) or fails with a clear error (no partial state).

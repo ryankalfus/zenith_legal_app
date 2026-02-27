@@ -26,14 +26,52 @@ export type AppointmentRow = {
   startsAt: string;
   endsAt: string;
   phoneNumber: string;
+  recruiterId: string;
+  recruiterName: string;
   notes?: string;
 };
 
+function normalizeRecruiter(input: {
+  recruiterId?: unknown;
+  recruiterName?: unknown;
+}): { recruiterId: string; recruiterName: string } {
+  const rawId = String(input.recruiterId ?? "").trim();
+  const rawName = String(input.recruiterName ?? "").trim();
+  if (rawId && rawName) {
+    return { recruiterId: rawId, recruiterName: rawName };
+  }
+
+  if (rawId) {
+    return { recruiterId: rawId, recruiterName: "Recruiter" };
+  }
+  return { recruiterId: "unknown", recruiterName: rawName || "Recruiter" };
+}
+
 function mapAppointmentSnapshot(snapshot: any): AppointmentRow[] {
-  return snapshot.docs.map((entry: any) => ({
-    id: entry.id,
-    ...(entry.data() as Omit<AppointmentRow, "id">)
-  }));
+  return snapshot.docs.map((entry: any) => {
+    const data = entry.data() as Record<string, unknown>;
+    const recruiter = normalizeRecruiter({
+      recruiterId: data.recruiterId,
+      recruiterName: data.recruiterName
+    });
+
+    return {
+      id: entry.id,
+      candidateId: String(data.candidateId ?? ""),
+      createdBy: String(data.createdBy ?? ""),
+      createdByRole: String(data.createdByRole ?? "candidate") as "candidate" | "admin",
+      updatedBy: String(data.updatedBy ?? ""),
+      updatedByRole: String(data.updatedByRole ?? "") as "candidate" | "admin" | "system",
+      status: String(data.status ?? "requested") as AppointmentStatus,
+      title: String(data.title ?? "Call appointment"),
+      startsAt: String(data.startsAt ?? ""),
+      endsAt: String(data.endsAt ?? ""),
+      phoneNumber: String(data.phoneNumber ?? ""),
+      recruiterId: recruiter.recruiterId,
+      recruiterName: recruiter.recruiterName,
+      notes: String(data.notes ?? "")
+    };
+  });
 }
 
 function buildEndsAt(startsAt: string) {
@@ -111,8 +149,14 @@ export async function createAppointmentRequest(payload: {
   createdByRole: "candidate" | "admin";
   startsAt: string;
   phoneNumber: string;
+  recruiterId: string;
+  recruiterName: string;
   notes?: string;
 }) {
+  const recruiter = normalizeRecruiter({
+    recruiterId: payload.recruiterId,
+    recruiterName: payload.recruiterName
+  });
   const created = await addDoc(collection(db, "appointments"), {
     candidateId: payload.candidateId,
     createdBy: payload.createdBy,
@@ -123,6 +167,8 @@ export async function createAppointmentRequest(payload: {
     startsAt: payload.startsAt,
     endsAt: buildEndsAt(payload.startsAt),
     phoneNumber: payload.phoneNumber,
+    recruiterId: recruiter.recruiterId,
+    recruiterName: recruiter.recruiterName,
     notes: payload.notes ?? "",
     status: "requested",
     reminderMinutesBefore: 30,
@@ -160,15 +206,23 @@ export async function updateAppointmentDetails(input: {
   appointmentId: string;
   startsAt: string;
   phoneNumber: string;
+  recruiterId: string;
+  recruiterName: string;
   notes?: string;
   updatedBy: string;
   updatedByRole: "candidate" | "admin";
 }) {
+  const recruiter = normalizeRecruiter({
+    recruiterId: input.recruiterId,
+    recruiterName: input.recruiterName
+  });
   const ref = doc(db, "appointments", input.appointmentId);
   await updateDoc(ref, {
     startsAt: input.startsAt,
     endsAt: buildEndsAt(input.startsAt),
     phoneNumber: input.phoneNumber,
+    recruiterId: recruiter.recruiterId,
+    recruiterName: recruiter.recruiterName,
     notes: input.notes ?? "",
     updatedBy: input.updatedBy,
     updatedByRole: input.updatedByRole,
@@ -186,8 +240,14 @@ export async function createAdminAppointment(payload: {
   createdBy: string;
   startsAt: string;
   phoneNumber: string;
+  recruiterId: string;
+  recruiterName: string;
   notes?: string;
 }) {
+  const recruiter = normalizeRecruiter({
+    recruiterId: payload.recruiterId,
+    recruiterName: payload.recruiterName
+  });
   const created = await addDoc(collection(db, "appointments"), {
     candidateId: payload.candidateId,
     createdBy: payload.createdBy,
@@ -198,6 +258,8 @@ export async function createAdminAppointment(payload: {
     startsAt: payload.startsAt,
     endsAt: buildEndsAt(payload.startsAt),
     phoneNumber: payload.phoneNumber,
+    recruiterId: recruiter.recruiterId,
+    recruiterName: recruiter.recruiterName,
     notes: payload.notes ?? "",
     status: "scheduled",
     reminderMinutesBefore: 30,
@@ -234,9 +296,17 @@ export async function createAppointment(payload: {
   endsAt: string;
   notes?: string;
   phoneNumber?: string;
+  recruiterId?: string;
+  recruiterName?: string;
 }) {
+  const recruiter = normalizeRecruiter({
+    recruiterId: payload.recruiterId,
+    recruiterName: payload.recruiterName
+  });
   await addDoc(collection(db, "appointments"), {
     ...payload,
+    recruiterId: recruiter.recruiterId,
+    recruiterName: recruiter.recruiterName,
     updatedBy: payload.createdBy,
     updatedByRole: payload.createdByRole,
     phoneNumber: payload.phoneNumber ?? "",
