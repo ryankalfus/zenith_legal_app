@@ -1,7 +1,6 @@
 import {
   addDoc,
   collection,
-  getDoc,
   increment,
   onSnapshot,
   doc,
@@ -62,25 +61,20 @@ export function watchAdminConversations(
 
   return onSnapshot(
     q,
-    async (snapshot) => {
-      const rows: any[] = await Promise.all(
-        snapshot.docs.map(async (entry) => {
-          const data = entry.data();
-          const candidateId = String(data.candidateId ?? entry.id);
-          const candidateDoc = await getDoc(doc(db, "users", candidateId));
-          const candidate = candidateDoc.data();
-          return {
-            id: entry.id,
-            ...data,
-            candidateId,
-            candidateName: String(data.candidateNameSnapshot ?? candidate?.fullName ?? "Candidate"),
-            candidateEmail: String(candidate?.email ?? ""),
-            candidateAvatarUrl: String(data.candidateAvatarUrlSnapshot ?? candidate?.avatarUrl ?? ""),
-            unreadByAdminCount: Number(data.unreadByAdminCount ?? 0),
-            unreadByCandidateCount: Number(data.unreadByCandidateCount ?? 0)
-          };
-        })
-      );
+    (snapshot) => {
+      const rows: any[] = snapshot.docs.map((entry) => {
+        const data = entry.data();
+        const candidateId = String(data.candidateId ?? entry.id);
+        return {
+          id: entry.id,
+          ...data,
+          candidateId,
+          candidateName: String(data.candidateNameSnapshot ?? "Candidate"),
+          candidateAvatarUrl: String(data.candidateAvatarUrlSnapshot ?? ""),
+          unreadByAdminCount: Number(data.unreadByAdminCount ?? 0),
+          unreadByCandidateCount: Number(data.unreadByCandidateCount ?? 0)
+        };
+      });
       rows.sort((a, b) => {
         const aMs = toSortMs(a.lastMessageAt ?? a.updatedAt);
         const bMs = toSortMs(b.lastMessageAt ?? b.updatedAt);
@@ -163,6 +157,8 @@ export async function sendMessage(input: {
     fileName: string;
   };
 }) {
+  const previewText = input.text.trim() || "(attachment)";
+  const unreadField = input.senderRole === "candidate" ? "unreadByAdminCount" : "unreadByCandidateCount";
   const conversationRef = doc(db, "conversations", input.candidateId);
   await setDoc(
     conversationRef,
@@ -171,6 +167,10 @@ export async function sendMessage(input: {
       participantIds: [input.candidateId, "zenith-team"],
       unreadByAdminCount: increment(0),
       unreadByCandidateCount: increment(0),
+      [unreadField]: increment(1),
+      lastMessageText: previewText,
+      lastMessageAt: serverTimestamp(),
+      lastMessageSenderRole: input.senderRole,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
     },
@@ -208,6 +208,7 @@ export async function sendMessage(input: {
     senderRole: input.senderRole,
     text: input.text,
     attachments,
+    metaHandledClient: true,
     createdAt: serverTimestamp()
   });
 }

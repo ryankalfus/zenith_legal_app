@@ -109,16 +109,24 @@ export function CandidateDashboardScreen() {
         status: nextStatus,
         candidateUid: session.user.uid
       });
-      await sendMessage({
-        candidateId: session.user.uid,
-        senderId: session.user.uid,
-        senderRole: "candidate",
-        text: detailText
-      });
+      try {
+        await sendMessage({
+          candidateId: session.user.uid,
+          senderId: session.user.uid,
+          senderRole: "candidate",
+          text: detailText
+        });
+      } catch {
+        // Keep status save successful even if DM transport fails once.
+      }
       setSelectedRow(null);
       Alert.alert("Saved", "Your choice was sent to Zenith Legal.");
     } catch (err: any) {
-      Alert.alert("Could not save", err?.message ?? "Please try again.");
+      const message =
+        err?.code === "permission-denied"
+          ? "You no longer have permission for this status change. Refresh and try again."
+          : err?.message ?? "Please try again.";
+      Alert.alert("Could not save", message);
     } finally {
       setSubmitting(false);
     }

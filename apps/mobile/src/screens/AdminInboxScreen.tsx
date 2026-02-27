@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import { AppShell, EmptyState } from "../components/AppShell";
 import { Avatar } from "../components/Avatar";
 import { markConversationRead, watchAdminConversations } from "../services/messagingService";
+import { watchCandidates } from "../services/adminService";
 import { theme } from "../ui/theme";
 
 type InboxRow = {
@@ -63,6 +64,7 @@ export function AdminInboxScreen() {
   const navigation = useNavigation<any>();
   const [rows, setRows] = useState<InboxRow[]>([]);
   const [search, setSearch] = useState("");
+  const [candidateDirectory, setCandidateDirectory] = useState<Record<string, { name: string; avatarUrl: string }>>({});
 
   useEffect(() => {
     return watchAdminConversations(
@@ -71,16 +73,35 @@ export function AdminInboxScreen() {
     );
   }, []);
 
+  useEffect(() => {
+    return watchCandidates(
+      (next) => {
+        const directory: Record<string, { name: string; avatarUrl: string }> = {};
+        next.forEach((entry) => {
+          directory[entry.id] = {
+            name: String(entry.fullName ?? "Candidate"),
+            avatarUrl: String(entry.avatarUrl ?? "")
+          };
+        });
+        setCandidateDirectory(directory);
+      },
+      () => setCandidateDirectory({})
+    );
+  }, []);
+
+  const getDisplayName = (row: InboxRow) => row.candidateName || candidateDirectory[row.candidateId]?.name || "Candidate";
+  const getDisplayAvatar = (row: InboxRow) => row.candidateAvatarUrl || candidateDirectory[row.candidateId]?.avatarUrl || "";
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) {
       return rows;
     }
     return rows.filter((row) => {
-      const name = String(row.candidateName ?? "").toLowerCase();
+      const name = getDisplayName(row).toLowerCase();
       return name.includes(term);
     });
-  }, [rows, search]);
+  }, [rows, search, candidateDirectory]);
 
   const openThread = async (item: InboxRow) => {
     try {
@@ -91,7 +112,7 @@ export function AdminInboxScreen() {
 
     navigation.navigate("Messages", {
       candidateId: item.candidateId,
-      title: item.candidateName || "Candidate"
+      title: getDisplayName(item)
     });
   };
 
@@ -117,13 +138,13 @@ export function AdminInboxScreen() {
               <Pressable key={item.id} style={styles.row} onPress={() => openThread(item)}>
                 <View style={styles.avatarWrap}>
                   {unread ? <View style={styles.unreadDot} /> : null}
-                  <Avatar uri={item.candidateAvatarUrl} name={item.candidateName || "Candidate"} size={46} />
+                  <Avatar uri={getDisplayAvatar(item)} name={getDisplayName(item)} size={46} />
                 </View>
 
                 <View style={styles.rowBody}>
                   <View style={styles.rowTop}>
                     <Text style={[styles.name, unread && styles.boldText]} numberOfLines={1}>
-                      {item.candidateName || "Candidate"}
+                      {getDisplayName(item)}
                     </Text>
                     <Text style={[styles.time, unread && styles.boldTime]}>{formatPreviewTime(item.lastMessageAt)}</Text>
                   </View>

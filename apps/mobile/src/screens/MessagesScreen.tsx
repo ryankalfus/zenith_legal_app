@@ -13,7 +13,6 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useIsFocused, useRoute } from "@react-navigation/native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../state/AuthContext";
 import { markConversationRead, sendMessage, watchMessages } from "../services/messagingService";
@@ -30,7 +29,6 @@ const ZENITH_LOGO = require("../../assets/zenith-legal-logo.png");
 export function MessagesScreen() {
   const { session } = useAuth();
   const route = useRoute<RouteProp<AdminChatStackParamList, "Messages">>();
-  const tabBarHeight = useBottomTabBarHeight();
   const isFocused = useIsFocused();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
@@ -183,7 +181,7 @@ export function MessagesScreen() {
           </Text>
         </View>
 
-        <ScrollView ref={listRef} contentContainerStyle={[styles.list, { paddingBottom: Math.max(14, tabBarHeight - 8) }]}>
+        <ScrollView ref={listRef} contentContainerStyle={styles.list}>
           {messages.map((item) => {
             const mine = item.senderId === session?.user.uid;
             const otherIsZenith = session?.role === "candidate";
@@ -219,7 +217,7 @@ export function MessagesScreen() {
           })}
         </ScrollView>
 
-        <View style={[styles.composerWrap, { paddingBottom: Math.max(6, tabBarHeight - 18) }]}>
+        <View style={styles.composerWrap}>
           <View style={styles.composer}>
             <Pressable style={styles.attachButton} onPress={onPickFile}>
               <Text style={styles.attachText}>+</Text>
@@ -268,7 +266,8 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: 12,
-    gap: 10
+    gap: 10,
+    paddingBottom: 10
   },
   messageRow: {
     flexDirection: "row",
@@ -309,7 +308,8 @@ const styles = StyleSheet.create({
     color: "#61708a"
   },
   composerWrap: {
-    paddingHorizontal: 10
+    paddingHorizontal: 10,
+    paddingBottom: 2
   },
   composer: {
     flexDirection: "row",

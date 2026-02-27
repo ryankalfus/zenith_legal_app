@@ -6,7 +6,6 @@ export { notifyOnCandidateAppointmentCancel } from "./triggers/appointmentCancel
 export { flagCandidateAppointmentUpdates } from "./triggers/appointmentUpdateFlag";
 export { autoCancelExpiredAppointmentRequests } from "./triggers/appointmentRequestExpiry";
 export { sendSignupSummaryEmail } from "./triggers/signupSummaryEmail";
-export { notifyOnCandidateStatusRequestCreate } from "./triggers/candidateStatusRequestNotify";
 export { deleteCandidateAccountData } from "./callable/deleteAccount";
 export { setAdminRoleByEmail } from "./callable/adminRole";
 export { ensureZenithAdminClaim } from "./callable/ensureZenithAdmin";

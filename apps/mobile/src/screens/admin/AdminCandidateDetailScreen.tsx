@@ -20,11 +20,6 @@ import { Avatar } from "../../components/Avatar";
 import { StatusChip } from "../../components/StatusChip";
 import { watchCandidateById, watchFirms, FirmRow } from "../../services/adminService";
 import {
-  resolveCandidateStatusRequest,
-  watchAdminPendingCandidateStatusRequests,
-  CandidateStatusRequestRecord
-} from "../../services/candidateStatusRequestService";
-import {
   removeCandidateFirmStatus,
   saveCandidateFirmStatus,
   updateCandidateFirmStatus,
@@ -44,7 +39,6 @@ export function AdminCandidateDetailScreen() {
   const [candidate, setCandidate] = useState<any | null>(null);
   const [firms, setFirms] = useState<FirmRow[]>([]);
   const [statuses, setStatuses] = useState<CandidateFirmStatusRow[]>([]);
-  const [requests, setRequests] = useState<CandidateStatusRequestRecord[]>([]);
 
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignStep, setAssignStep] = useState<"pickFirm" | "pickStatus">("pickFirm");
@@ -58,13 +52,11 @@ export function AdminCandidateDetailScreen() {
     const unsubCandidate = watchCandidateById(candidateId, setCandidate, () => setCandidate(null));
     const unsubFirms = watchFirms(setFirms, () => setFirms([]));
     const unsubStatuses = watchAdminCandidateStatuses(candidateId, setStatuses, () => setStatuses([]));
-    const unsubRequests = watchAdminPendingCandidateStatusRequests(candidateId, setRequests, () => setRequests([]));
 
     return () => {
       unsubCandidate();
       unsubFirms();
       unsubStatuses();
-      unsubRequests();
     };
   }, [candidateId]);
 
@@ -111,18 +103,6 @@ export function AdminCandidateDetailScreen() {
     }
   };
 
-  const resolveRequest = async (requestId: string) => {
-    if (!session?.user.uid) {
-      return;
-    }
-
-    try {
-      await resolveCandidateStatusRequest(requestId, session.user.uid);
-    } catch (error: any) {
-      Alert.alert("Could not resolve", error?.message ?? "Please try again.");
-    }
-  };
-
   const updateStatus = async (status: CandidateFirmStatus) => {
     if (!session?.user.uid || !editingStatusRow) {
       return;
@@ -162,7 +142,7 @@ export function AdminCandidateDetailScreen() {
   };
 
   return (
-    <AppShell title="Candidate Detail" subtitle="Manage firms, statuses, and requests.">
+    <AppShell title="Candidate Detail" subtitle="Manage firms and statuses.">
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <SurfaceCard>
           <Pressable onPress={() => navigation.goBack()}>
@@ -205,22 +185,6 @@ export function AdminCandidateDetailScreen() {
           ))}
         </SurfaceCard>
 
-        <SurfaceCard>
-          <Text style={styles.sectionTitle}>Candidate status requests</Text>
-          {requests.length === 0 ? <EmptyState message="No requests." /> : null}
-          {requests.map((request) => (
-            <View key={request.id} style={styles.requestRow}>
-              <Text style={styles.firmName}>{firmMap[request.firmId] ?? request.firmId}</Text>
-              <Text style={styles.meta}>Type: {request.requestType}</Text>
-              <Text style={styles.meta}>State: {request.state}</Text>
-              {request.state === "pending" ? (
-                <Pressable style={styles.resolveButton} onPress={() => resolveRequest(request.id)}>
-                  <Text style={styles.resolveButtonText}>Mark resolved</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ))}
-        </SurfaceCard>
       </ScrollView>
 
       <Modal

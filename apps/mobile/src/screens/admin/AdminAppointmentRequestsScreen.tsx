@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Pressable,
@@ -17,9 +18,11 @@ import { Avatar } from "../../components/Avatar";
 import {
   AppointmentRow,
   createAdminAppointment,
+  deleteAppointment,
   updateAppointmentDetails,
   updateAppointmentStatus,
-  watchAdminAppointmentRequests
+  watchAdminAppointmentRequests,
+  watchAdminUnattendedRequests
 } from "../../services/appointmentService";
 import { watchCandidates } from "../../services/adminService";
 import { useAuth } from "../../state/AuthContext";
@@ -61,10 +64,13 @@ function badgeText(count: number) {
 export function AdminAppointmentRequestsScreen() {
   const { session } = useAuth();
   const [rows, setRows] = useState<AppointmentRow[]>([]);
+  const [unattendedRows, setUnattendedRows] = useState<AppointmentRow[]>([]);
   const [candidates, setCandidates] = useState<CandidateOption[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [showCreateCandidateModal, setShowCreateCandidateModal] = useState(false);
+  const [unattendedLoading, setUnattendedLoading] = useState(true);
+  const [unattendedError, setUnattendedError] = useState<string | null>(null);
 
   const [createCandidateId, setCreateCandidateId] = useState("");
   const [createDate, setCreateDate] = useState<Date>(new Date());
@@ -87,6 +93,17 @@ export function AdminAppointmentRequestsScreen() {
 
   useEffect(() => {
     const unsubAppointments = watchAdminAppointmentRequests(setRows, () => setRows([]));
+    const unsubUnattended = watchAdminUnattendedRequests(
+      (next) => {
+        setUnattendedRows(next);
+        setUnattendedLoading(false);
+        setUnattendedError(null);
+      },
+      (error) => {
+        setUnattendedLoading(false);
+        setUnattendedError(error.message);
+      }
+    );
     const unsubCandidates = watchCandidates(
       (next) => {
         const mapped = next.map((entry) => ({
@@ -102,6 +119,7 @@ export function AdminAppointmentRequestsScreen() {
 
     return () => {
       unsubAppointments();
+      unsubUnattended();
       unsubCandidates();
     };
   }, []);
@@ -130,9 +148,9 @@ export function AdminAppointmentRequestsScreen() {
   }, [rows]);
 
   const now = Date.now();
-  const unattendedRequests = sortedRows.filter((row) => {
-    return row.status === "requested";
-  });
+  const unattendedRequests = useMemo(() => {
+    return [...unattendedRows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [unattendedRows]);
 
   const overdueScheduled = sortedRows.filter((row) => {
     if (row.status !== "scheduled") {
@@ -165,6 +183,27 @@ export function AdminAppointmentRequestsScreen() {
     } catch (error: any) {
       Alert.alert("Could not update status", error?.message ?? "Please try again.");
     }
+  };
+
+  const confirmIgnoreOverdue = (row: AppointmentRow) => {
+    Alert.alert(
+      "Ignore overdue appointment",
+      "Are you sure? This will hide it for both sides permanently.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Ignore",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAppointment(row.id);
+            } catch (error: any) {
+              Alert.alert("Could not ignore", error?.message ?? "Please try again.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const onCreateDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
@@ -364,6 +403,9 @@ export function AdminAppointmentRequestsScreen() {
                           {expanded ? <Text style={styles.noteText}>{row.notes}</Text> : null}
                         </>
                       ) : null}
+                      <Pressable style={styles.ignoreButton} onPress={() => confirmIgnoreOverdue(row)}>
+                        <Text style={styles.ignoreButtonText}>Ignore</Text>
+                      </Pressable>
                     </View>
                   );
                 })}
@@ -404,6 +446,14 @@ export function AdminAppointmentRequestsScreen() {
                           {expanded ? <Text style={styles.noteText}>{row.notes}</Text> : null}
                         </>
                       ) : null}
+                      <View style={styles.actionRow}>
+                        <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>
+                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </Pressable>
+                        <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row, false)}>
+                          <Text style={styles.modifyButtonText}>Modify</Text>
+                        </Pressable>
+                      </View>
                     </View>
                   );
                 })}
@@ -431,38 +481,50 @@ export function AdminAppointmentRequestsScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCardLarge}>
             <Text style={styles.modalTitle}>Unattended Requests</Text>
-            {unattendedRequests.length === 0 ? <EmptyState message="No unattended requests." /> : null}
+            {unattendedLoading ? (
+              <View style={styles.modalLoading}>
+                <ActivityIndicator />
+                <Text style={styles.modalLoadingText}>Loading unattended requests...</Text>
+              </View>
+            ) : null}
+            {!unattendedLoading && unattendedError ? <Text style={styles.modalError}>{unattendedError}</Text> : null}
+            {!unattendedLoading && !unattendedError && unattendedRequests.length === 0 ? (
+              <EmptyState message="No unattended requests." />
+            ) : null}
             <ScrollView style={styles.modalList}>
-              {unattendedRequests.map((row) => {
-                const starts = parseDate(row.startsAt) ?? new Date();
-                const candidate = candidateMap[row.candidateId];
-                return (
-                  <View key={row.id} style={styles.requestItem}>
-                    <View style={styles.appointmentHeader}>
-                      <Avatar uri={candidate?.avatarUrl} name={candidate?.name || "Candidate"} size={36} />
-                      <View style={styles.headerBody}>
-                        <Text style={styles.name}>{candidate?.name || "Candidate"}</Text>
-                        <Text style={styles.meta}>{row.phoneNumber || candidate?.phone || "n/a"}</Text>
+              {!unattendedLoading &&
+                !unattendedError &&
+                unattendedRequests.map((row) => {
+                  const starts = parseDate(row.startsAt) ?? new Date();
+                  const candidate = candidateMap[row.candidateId];
+                  return (
+                    <View key={row.id} style={styles.requestItem}>
+                      <View style={styles.appointmentHeader}>
+                        <Avatar uri={candidate?.avatarUrl} name={candidate?.name || "Candidate"} size={36} />
+                        <View style={styles.headerBody}>
+                          <Text style={styles.name}>{candidate?.name || "Candidate"}</Text>
+                          <Text style={styles.meta}>{row.phoneNumber || candidate?.phone || "n/a"}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.meta}>
+                        {formatDate(starts)} {formatTime(starts)}
+                      </Text>
+                      <Text style={styles.meta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
+                      {String(row.notes ?? "").trim() ? <Text style={styles.meta}>Note: {row.notes}</Text> : null}
+                      <View style={styles.actionRow}>
+                        <Pressable style={styles.actionButton} onPress={() => setStatus(row.id, "scheduled")}>
+                          <Text style={styles.actionButtonText}>Accept</Text>
+                        </Pressable>
+                        <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>
+                          <Text style={styles.cancelButtonText}>Decline</Text>
+                        </Pressable>
+                        <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row, true)}>
+                          <Text style={styles.modifyButtonText}>Modify</Text>
+                        </Pressable>
                       </View>
                     </View>
-                    <Text style={styles.meta}>
-                      {formatDate(starts)} {formatTime(starts)}
-                    </Text>
-                    {String(row.notes ?? "").trim() ? <Text style={styles.meta}>Note: {row.notes}</Text> : null}
-                    <View style={styles.actionRow}>
-                      <Pressable style={styles.actionButton} onPress={() => setStatus(row.id, "scheduled")}>
-                        <Text style={styles.actionButtonText}>Accept</Text>
-                      </Pressable>
-                      <Pressable style={styles.cancelButton} onPress={() => setStatus(row.id, "canceled")}>
-                        <Text style={styles.cancelButtonText}>Decline</Text>
-                      </Pressable>
-                      <Pressable style={styles.modifyButton} onPress={() => openModifyModal(row, true)}>
-                        <Text style={styles.modifyButtonText}>Modify</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
             </ScrollView>
             <Pressable style={styles.closeModalButton} onPress={() => setShowRequestsModal(false)}>
               <Text style={styles.closeModalButtonText}>Close</Text>
@@ -715,6 +777,20 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: theme.colors.textPrimary
   },
+  ignoreButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#f0c18a",
+    backgroundColor: "#fff4e9",
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12
+  },
+  ignoreButtonText: {
+    color: "#ba6a00",
+    fontWeight: "700"
+  },
   requestsFab: {
     position: "absolute",
     right: 16,
@@ -775,6 +851,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  modalLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 2
+  },
+  modalLoadingText: {
+    color: theme.colors.textSecondary
+  },
+  modalError: {
+    color: theme.colors.danger,
+    fontWeight: "600"
   },
   modalList: {
     maxHeight: 360,

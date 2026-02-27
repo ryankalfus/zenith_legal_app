@@ -584,3 +584,78 @@
   - Auto DM text after candidate decision includes candidate name + firm name with exact wording.
   - Admin chat tab badge reflects unread message totals (`9+` cap), not thread count.
   - Admin inbox unread row uses blue dot + bold preview and clears when opening the thread.
+
+## Step 35 - Reliability Follow-up (Bell Detail + Preview Freshness + Status-Request Removal)
+- What changed:
+  - Added a dedicated admin unattended appointment watcher (`status == requested`) for the bell flow so unattended items do not depend on filtered general appointment streams.
+  - Added explicit unattended bell modal loading/error states to prevent silent-empty screens.
+  - Updated admin unattended request rows to always include status text plus candidate/date/time/phone/note details.
+  - Removed async per-conversation `getDoc` enrichment from mobile admin inbox watcher to eliminate stale snapshot overwrite races.
+  - Added immediate conversation preview metadata writes inside mobile `sendMessage`:
+    - `lastMessageText`
+    - `lastMessageAt`
+    - `lastMessageSenderRole`
+  - Added candidate-directory fallback in admin inbox UI so name/avatar render even for older conversation docs without snapshot fields.
+  - Lowered mobile chat composer by reducing bottom padding/offset so input sits closer to tab icons.
+  - Removed mobile admin candidate-detail `Candidate status requests` section and associated live watcher/action wiring.
+  - Disabled active `candidateStatusRequests` write path in Firestore rules (workflow deprecated; legacy data preserved).
+  - Removed status-request trigger export from `functions/src/index.ts` so new deployments no longer activate status-request notifications.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Candidate submits appointment request -> admin bell count updates and bell modal shows full detail row immediately.
+  - Admin inbox preview text/time refreshes after every message from either side.
+  - Chat composer sits near tab bar without clipping on iOS/Android.
+  - Candidate authorize/cancel still performs direct status updates and auto-DM without permission errors.
+
+## Step 36 - Reliability Hotfixes (Permission Save + Bell Index + Unread Counters)
+- What changed:
+  - Fixed admin unattended bell query crash (`query requires an index`) by making unattended watcher index-free:
+    - query now uses `where("status", "==", "requested")` only
+    - unattended request ordering handled in UI with local sort.
+  - Hardened candidate authorize/cancel save service:
+    - added status-doc existence check
+    - added ownership check (`candidateId` must match current user)
+    - switched to merge write with explicit `candidateId/firmId` preservation.
+  - Updated candidate dashboard action flow so DM send failure does not roll back user-facing status save result.
+  - Stabilized chat unread counters end-to-end:
+    - `sendMessage` now increments unread count for the opposite side immediately
+    - message docs include `metaHandledClient: true`
+    - `conversationMeta` trigger now skips counter increments for client-handled messages to avoid double-counting.
+  - Lowered chat composer closer to bottom tab area (`composerWrap` bottom spacing reduced).
+  - Updated theme status chip palette so `canceled` status is color-coded red.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Candidate taps `Authorize` / `Cancel` on waiting status without `Missing or insufficient permissions`.
+  - Admin bell opens unattended requests without index error and shows details.
+  - Chat tab badges show unread totals (`9+` max) and clear correctly on read.
+  - Admin inbox unread rows show blue dot + bold preview and clear after opening thread.
+
+## Step 37 - Appointment Routing Completion (Overdue Ignore + Admin Upcoming Controls)
+- What changed:
+  - Added `deleteAppointment` service path and wired overdue `Ignore` action in both candidate/admin appointment screens.
+  - Overdue action UX now matches spec:
+    - orange `Ignore` button
+    - confirmation prompt: hide permanently for both sides
+    - no overdue modify/reschedule actions.
+  - Updated admin upcoming appointment cards to include:
+    - `Modify` (edit date/time/phone/note)
+    - `Cancel` (status -> `canceled`)
+  - Kept request-to-upcoming transitions consistent:
+    - admin `Accept` from bell -> `scheduled` -> upcoming
+    - admin `Modify` from bell -> detail save + promote to `scheduled` -> upcoming.
+  - Tightened candidate authorize/cancel service guard to return a clear error when assignment is no longer in `authorization_pending`.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+  - `npm run test:rules` -> PASS (`12 passed, 0 failed`)
+- What to test next:
+  - Admin-created appointment appears in upcoming and supports modify/cancel.
+  - Overdue sections (red) show only for past scheduled appointments.
+  - Candidate/admin `Ignore` removes overdue appointment globally.
+  - Candidate authorize/cancel updates status + DM and no longer shows generic permission failure for valid rows.

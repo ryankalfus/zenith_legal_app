@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ensureZenithAdminClaim = exports.setAdminRoleByEmail = exports.deleteCandidateAccountData = exports.notifyOnCandidateStatusRequestCreate = exports.sendSignupSummaryEmail = exports.autoCancelExpiredAppointmentRequests = exports.flagCandidateAppointmentUpdates = exports.notifyOnCandidateAppointmentCancel = exports.syncAppointmentRequestMessage = exports.sendPushOnAppointmentChange = exports.syncConversationMetaOnMessageCreate = exports.sendPushOnMessageCreate = void 0;
+exports.ensureZenithAdminClaim = exports.setAdminRoleByEmail = exports.deleteCandidateAccountData = exports.sendSignupSummaryEmail = exports.autoCancelExpiredAppointmentRequests = exports.flagCandidateAppointmentUpdates = exports.notifyOnCandidateAppointmentCancel = exports.syncAppointmentRequestMessage = exports.sendPushOnAppointmentChange = exports.syncConversationMetaOnMessageCreate = exports.sendPushOnMessageCreate = void 0;
 var messagePush_1 = require("./triggers/messagePush");
 Object.defineProperty(exports, "sendPushOnMessageCreate", { enumerable: true, get: function () { return messagePush_1.sendPushOnMessageCreate; } });
 var conversationMeta_1 = require("./triggers/conversationMeta");
@@ -17,8 +17,6 @@ var appointmentRequestExpiry_1 = require("./triggers/appointmentRequestExpiry");
 Object.defineProperty(exports, "autoCancelExpiredAppointmentRequests", { enumerable: true, get: function () { return appointmentRequestExpiry_1.autoCancelExpiredAppointmentRequests; } });
 var signupSummaryEmail_1 = require("./triggers/signupSummaryEmail");
 Object.defineProperty(exports, "sendSignupSummaryEmail", { enumerable: true, get: function () { return signupSummaryEmail_1.sendSignupSummaryEmail; } });
-var candidateStatusRequestNotify_1 = require("./triggers/candidateStatusRequestNotify");
-Object.defineProperty(exports, "notifyOnCandidateStatusRequestCreate", { enumerable: true, get: function () { return candidateStatusRequestNotify_1.notifyOnCandidateStatusRequestCreate; } });
 var deleteAccount_1 = require("./callable/deleteAccount");
 Object.defineProperty(exports, "deleteCandidateAccountData", { enumerable: true, get: function () { return deleteAccount_1.deleteCandidateAccountData; } });
 var adminRole_1 = require("./callable/adminRole");

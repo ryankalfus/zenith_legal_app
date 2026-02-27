@@ -147,28 +147,6 @@ service cloud.firestore {
       );
     }
 
-    match /candidateStatusRequests/{requestId} {
-      allow read: if isAdmin() || (
-        isAuthenticated() && request.auth.uid == resource.data.candidateId
-      );
-
-      allow create: if (
-        isAuthenticated() &&
-        request.auth.uid == request.resource.data.candidateId &&
-        request.resource.data.requestType in ['authorization', 'cancellation'] &&
-        request.resource.data.state == 'pending'
-      );
-
-      allow update: if (
-        isAdmin() &&
-        request.resource.data.candidateId == resource.data.candidateId &&
-        request.resource.data.firmId == resource.data.firmId &&
-        request.resource.data.requestType == resource.data.requestType
-      );
-
-      allow delete: if isAdmin();
-    }
-
     match /deletionRequests/{requestId} {
       allow read: if isAdmin() || (
         isAuthenticated() && request.auth.uid == resource.data.candidateId

@@ -14,6 +14,7 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { AppShell, EmptyState, SurfaceCard } from "../../components/AppShell";
 import {
   createAppointmentRequest,
+  deleteAppointment,
   watchCandidateAppointments,
   updateAppointmentStatus
 } from "../../services/appointmentService";
@@ -158,6 +159,27 @@ export function CandidateAppointmentsScreen() {
     ]);
   };
 
+  const confirmIgnoreOverdue = (row: AppointmentViewRow) => {
+    Alert.alert(
+      "Ignore overdue appointment",
+      "Are you sure? This will hide it for both sides permanently.",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Ignore",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAppointment(row.id);
+            } catch (error: any) {
+              Alert.alert("Could not ignore", error?.message ?? "Please try again.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const now = Date.now();
   const sorted = [...rows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const overdueScheduled = sorted.filter((row) => {
@@ -246,8 +268,8 @@ export function CandidateAppointmentsScreen() {
                   <Text style={styles.historyMeta}>Phone: {row.phoneNumber || "n/a"}</Text>
                   <Text style={styles.historyMeta}>Status: {APPOINTMENT_STATUS_LABELS[row.status]}</Text>
                   {row.notes ? <Text style={styles.historyMeta}>Note: {row.notes}</Text> : null}
-                  <Pressable style={styles.cancelButton} onPress={() => confirmCancel(row)}>
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Pressable style={styles.ignoreButton} onPress={() => confirmIgnoreOverdue(row)}>
+                    <Text style={styles.ignoreButtonText}>Ignore</Text>
                   </Pressable>
                 </View>
               );
@@ -423,6 +445,20 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: theme.colors.danger,
+    fontWeight: "700"
+  },
+  ignoreButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#f0c18a",
+    backgroundColor: "#fff4e9",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  ignoreButtonText: {
+    color: "#ba6a00",
     fontWeight: "700"
   },
   scheduleLink: {

@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -28,6 +29,13 @@ export type AppointmentRow = {
   notes?: string;
 };
 
+function mapAppointmentSnapshot(snapshot: any): AppointmentRow[] {
+  return snapshot.docs.map((entry: any) => ({
+    id: entry.id,
+    ...(entry.data() as Omit<AppointmentRow, "id">)
+  }));
+}
+
 function buildEndsAt(startsAt: string) {
   const startsDate = new Date(startsAt);
   return new Date(startsDate.getTime() + 30 * 60 * 1000).toISOString();
@@ -47,7 +55,7 @@ export function watchCandidateAppointments(
   return onSnapshot(
     q,
     (snapshot) => {
-      onData(snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AppointmentRow, "id">) })));
+      onData(mapAppointmentSnapshot(snapshot));
     },
     (err) => onError(err as Error)
   );
@@ -66,7 +74,23 @@ export function watchAdminAppointmentRequests(
   return onSnapshot(
     q,
     (snapshot) => {
-      onData(snapshot.docs.map((entry) => ({ id: entry.id, ...(entry.data() as Omit<AppointmentRow, "id">) })));
+      onData(mapAppointmentSnapshot(snapshot));
+    },
+    (err) => onError(err as Error)
+  );
+}
+
+export function watchAdminUnattendedRequests(
+  onData: (rows: AppointmentRow[]) => void,
+  onError: (err: Error) => void
+) {
+  // Keep this query index-free (status equality only); sort in UI.
+  const q = query(collection(db, "appointments"), where("status", "==", "requested"));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      onData(mapAppointmentSnapshot(snapshot));
     },
     (err) => onError(err as Error)
   );
@@ -183,6 +207,10 @@ export async function updateAppointmentStatusLegacy(appointmentId: string, statu
     status,
     updatedAt: serverTimestamp()
   });
+}
+
+export async function deleteAppointment(appointmentId: string) {
+  await deleteDoc(doc(db, "appointments", appointmentId));
 }
 
 // Backward-compatible aliases for existing imports during transition.

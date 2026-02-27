@@ -147,3 +147,38 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for direct candidate authorize/cancel status transitions, shared status-model expansion, and message-count-based chat badge behavior.
+
+## Reliability Follow-up (2026-02-27)
+- [x] `MVP` Admin appointments bell flow now uses a dedicated unattended (`requested`) data stream so unattended request rows reliably appear with full details.
+- [x] `MVP` Admin unattended requests modal now includes explicit loading/error states to avoid silent empty views.
+- [x] `MVP` Admin chat preview metadata now updates immediately after each send (`lastMessageText`, `lastMessageAt`, `lastMessageSenderRole`) and no longer depends on race-prone async enrichment.
+- [x] `MVP` Mobile chat composer is positioned closer to the tab bar while preserving send/attachment behavior and safe spacing.
+- [x] `MVP` Candidate status-request workflow is deprecated in mobile admin detail (status-requests section removed) and new `candidateStatusRequests` writes are disabled in Firestore rules.
+- [x] `MVP` Candidate waiting-state decisions continue as direct status transitions (`Authorize` -> `Waiting for submission`, `Cancel` -> `Canceled`) with automatic DM to Zenith Legal.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for unattended-request bell reliability, immediate chat preview refresh behavior, low composer placement, and status-request workflow deprecation.
+
+## Reliability Hotfixes (2026-02-27)
+- [x] `MVP` Admin unattended bell query no longer requires a new Firestore composite index (requested-only query is index-free and sorted client-side).
+- [x] `MVP` Candidate authorize/cancel save path is hardened with ownership/doc checks and merge-write semantics to reduce permission/save failures.
+- [x] `MVP` Chat unread counters now update immediately at send-time and avoid duplicate increments by marking client-handled messages.
+- [x] `MVP` Chat tab badge behavior remains unread-message-count based (`9+` max) with correct clear semantics on read.
+- [x] `MVP` Admin unread DM preview behavior remains blue-dot + bold preview text until thread open.
+- [x] `MVP` Firm status `Canceled` is now color-coded red across status chips.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for unattended bell index fix, authorize/cancel permission-hardening, unread counter reliability, and canceled-status red mapping.
+
+## Appointment Routing Completion (2026-02-27)
+- [x] `MVP` Overdue appointment sections now support `Ignore` (orange) for both candidate and admin, with global hide implemented via appointment deletion.
+- [x] `MVP` Overdue cards intentionally have no modify/reschedule controls; only `Ignore` is available.
+- [x] `MVP` Zenith admin upcoming appointment cards now support `Modify` and `Cancel` after appointments move out of request queue.
+- [x] `MVP` Appointment routing is consistently applied by status/time:
+  - `requested` -> unattended requests (bell)
+  - `scheduled` future -> upcoming
+  - `scheduled` past -> overdue (red)
+- [x] `MVP` Candidate authorize/cancel status writes enforce active waiting-state checks and fail with explicit stale-state messaging instead of generic permission ambiguity.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for overdue ignore flow, admin upcoming appointment controls, and final appointment routing consistency.

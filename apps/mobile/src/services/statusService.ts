@@ -133,16 +133,36 @@ export async function updateCandidateFirmStatusByCandidate(input: {
   status: CandidateFirmStatus;
   candidateUid: string;
 }) {
-  await updateDoc(doc(db, "candidateFirmStatuses", input.statusRecordId), {
-    status: input.status,
-    updatedBy: input.candidateUid,
-    updatedAt: serverTimestamp(),
-    history: arrayUnion({
+  const statusRef = doc(db, "candidateFirmStatuses", input.statusRecordId);
+  const snapshot = await getDoc(statusRef);
+  if (!snapshot.exists()) {
+    throw new Error("This firm assignment is no longer available.");
+  }
+
+  const current = snapshot.data() as Partial<CandidateFirmStatusRow>;
+  if (String(current.candidateId ?? "") !== input.candidateUid) {
+    throw new Error("You do not have access to change this firm status.");
+  }
+  if (String(current.status ?? "") !== "authorization_pending") {
+    throw new Error("This firm status is no longer waiting on your authorization.");
+  }
+
+  await setDoc(
+    statusRef,
+    {
+      candidateId: current.candidateId,
+      firmId: current.firmId,
       status: input.status,
       updatedBy: input.candidateUid,
-      updatedAt: new Date().toISOString()
-    })
-  });
+      updatedAt: serverTimestamp(),
+      history: arrayUnion({
+        status: input.status,
+        updatedBy: input.candidateUid,
+        updatedAt: new Date().toISOString()
+      })
+    },
+    { merge: true }
+  );
 }
 
 export async function removeCandidateFirmStatus(statusRecordId: string) {

@@ -51,9 +51,9 @@ export const statusColors: Record<CandidateFirmStatus, { background: string; tex
     border: "#b7e5c8"
   },
   canceled: {
-    background: "#ecfaef",
-    text: "#1f7a45",
-    border: "#b8e8c1"
+    background: "#ffecec",
+    text: "#b02525",
+    border: "#f5b8b8"
   },
   rejected: {
     background: "#ffecec",

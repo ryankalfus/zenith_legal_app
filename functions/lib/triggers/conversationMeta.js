@@ -19,6 +19,7 @@ exports.syncConversationMetaOnMessageCreate = (0, firestore_1.onDocumentCreated)
     const senderRole = message.senderRole === "admin" || message.senderRole === "system" ? message.senderRole : "candidate";
     const text = String(message.text ?? "").trim() || "(attachment)";
     const createdAt = message.createdAt ?? firestore_2.FieldValue.serverTimestamp();
+    const handledClient = Boolean(message.metaHandledClient);
     await db.collection("conversations").doc(candidateId).set({
         candidateId,
         participantIds: [candidateId, "zenith-team"],
@@ -27,10 +28,16 @@ exports.syncConversationMetaOnMessageCreate = (0, firestore_1.onDocumentCreated)
         lastMessageText: text,
         lastMessageAt: createdAt,
         lastMessageSenderRole: senderRole,
-        unreadByAdminCount: senderRole === "candidate" ? firestore_2.FieldValue.increment(1) : firestore_2.FieldValue.increment(0),
-        unreadByCandidateCount: senderRole === "admin" || senderRole === "system"
-            ? firestore_2.FieldValue.increment(1)
-            : firestore_2.FieldValue.increment(0),
+        unreadByAdminCount: handledClient
+            ? firestore_2.FieldValue.increment(0)
+            : senderRole === "candidate"
+                ? firestore_2.FieldValue.increment(1)
+                : firestore_2.FieldValue.increment(0),
+        unreadByCandidateCount: handledClient
+            ? firestore_2.FieldValue.increment(0)
+            : senderRole === "admin" || senderRole === "system"
+                ? firestore_2.FieldValue.increment(1)
+                : firestore_2.FieldValue.increment(0),
         updatedAt: firestore_2.FieldValue.serverTimestamp(),
         createdAt: firestore_2.FieldValue.serverTimestamp()
     }, { merge: true });

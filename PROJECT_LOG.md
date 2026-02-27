@@ -138,3 +138,16 @@
 - 02.27.2026: Changed admin chat tab badge logic to count total unread messages (not unread threads), capped at `9+`, and updated admin inbox unread indicator to blue-dot styling with bold preview text.
 - 02.27.2026: Increased/normalized contact header height so the Zenith contact bar sits safely below iPhone status hardware area and remains consistent across screens.
 - 02.27.2026: Re-ran full validation after status/notification updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`12 passed, 0 failed`).
+- 02.27.2026: Switched admin unattended appointment bell flow to a dedicated `requested` watcher with explicit loading/error UI so unattended requests reliably show full detail rows in the bell modal.
+- 02.27.2026: Removed race-prone async candidate enrichment from mobile admin conversation watcher and added local preview writes (`lastMessageText`, `lastMessageAt`, `lastMessageSenderRole`) at send-time for immediate chat preview refresh after every message.
+- 02.27.2026: Lowered mobile chat composer positioning near the tab bar by tightening bottom offsets/padding while preserving attachment/send behavior.
+- 02.27.2026: Abolished active status-request workflow in mobile admin candidate detail (removed `Candidate status requests` section) and disabled `candidateStatusRequests` writes in Firestore rules; candidate waiting decisions remain direct status updates + DM.
+- 02.27.2026: Re-ran validation after reliability fixes: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`12 passed, 0 failed`).
+- 02.27.2026: Fixed admin unattended-request bell index failure by removing `orderBy(startsAt)` from the `status == requested` watcher query and sorting unattended requests client-side.
+- 02.27.2026: Hardened candidate authorize/cancel save path with preflight ownership checks + merge writes, and prevented DM-send transport failures from masking successful status changes.
+- 02.27.2026: Finalized unread-notification reliability by incrementing unread counters at mobile send-time and marking client-handled messages so the conversation trigger does not double-increment counts.
+- 02.27.2026: Lowered chat composer closer to bottom tab area and updated firm-status color mapping so `Canceled` now renders in red.
+- 02.27.2026: Added overdue `Ignore` action for both candidate and admin appointment views (orange destructive style + confirmation), with global hide behavior implemented as appointment document deletion.
+- 02.27.2026: Updated admin upcoming appointments to include `Modify` and `Cancel` actions so admin-created or accepted appointments remain fully manageable after they move to upcoming.
+- 02.27.2026: Aligned appointment routing behavior so active appointments consistently resolve into requests (`requested` bell queue), upcoming (`scheduled` future), or overdue (`scheduled` past, red section) with realtime cross-account sync.
+- 02.27.2026: Re-ran validation after overdue-ignore and appointment-management updates: `npm run typecheck` PASS, `npm run build` PASS, `npm run test:rules` PASS (`12 passed, 0 failed`).
