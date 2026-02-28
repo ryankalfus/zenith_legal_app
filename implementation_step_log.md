@@ -1428,6 +1428,20 @@
 - What to test next:
   - Open admin Candidates tab and confirm `ryan kLfus` no longer appears while `Ryan Kalfus` remains.
 
+## Step 90 - Remove DOB Fields + Age References
+- What changed:
+  - Removed DOB from profile setup flow and candidate profile edit flow in mobile.
+  - Removed DOB requirement/validation and DOB picker UI from profile setup.
+  - Removed DOB display + Age display rows from admin candidate detail view.
+  - Removed DOB field from shared user domain/schema types.
+  - Removed DOB writes from mobile user profile service and auth profile-completion payloads.
+- Commands run + result:
+  - `npm run typecheck` -> PASS
+  - `npm run build` -> PASS
+- What to test next:
+  - Candidate profile setup/edit no longer shows DOB field.
+  - Admin candidate detail no longer shows DOB or Age.
+
 ## Step 90 - Un-nest Profile Actions + Admin Detail Views
 - What changed:
   - Candidate Profile: moved `Log out` + `Delete my account/data` actions out of nested `SurfaceCard` into flat screen-level actions.
@@ -1620,3 +1634,15 @@
   - Sign out/in on a non-Mason admin account and open Candidates, Recruiters, Appointments, and Chat.
   - Verify Chat no longer shows `Could not load inbox insufficient permissions`.
   - Promote a candidate to recruiter/admin and verify the action either fully succeeds (all admin views sync) or fails with a clear error (no partial state).
+
+## Step 101 - Connected Jeremy Repo as Upstream Remote
+- What changed:
+  - Added `jeremy` git remote pointing to `https://github.com/JeremyKalfus/Zenith-Legal-App.git`.
+  - Fetched upstream branches so we can compare, cherry-pick, or build feature branches directly from `jeremy/main`.
+- Commands run + result:
+  - `git remote add jeremy https://github.com/JeremyKalfus/Zenith-Legal-App.git` -> PASS
+  - `git remote set-url jeremy https://github.com/JeremyKalfus/Zenith-Legal-App.git` -> PASS
+  - `git fetch jeremy --prune` -> PASS
+  - `git branch -r` -> PASS (`jeremy/main` and `jeremy/codex/*` branches available)
+- What to do next:
+  - Start requested UI restyle/features on a new branch from `jeremy/main` so changes can be pushed back to their repo cleanly.

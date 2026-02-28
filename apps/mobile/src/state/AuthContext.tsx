@@ -37,7 +37,6 @@ type AuthContextValue = {
     mobile: string;
     preferredCities: string[];
     practiceArea: string;
-    dateOfBirth?: string;
     jdDegreeDate?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
@@ -196,7 +195,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fullName: input.fullName,
       email: input.email,
       mobile: input.mobile,
-      dateOfBirth: input.dateOfBirth || deleteField(),
       jdDegreeDate: input.jdDegreeDate || deleteField(),
       preferences: {
         preferredCities: input.preferredCities,

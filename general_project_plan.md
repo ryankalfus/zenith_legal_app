@@ -250,3 +250,7 @@ This can be either:
 - 02.26.2026 Plan Update: Mobile appointment workflow now includes admin-side candidate dropdown appointment creation, request accept/decline mapping (`scheduled`/`canceled`), and synchronized detail modification.
 - 02.26.2026 Plan Update: Mobile firm assignment UX updated to explicit 2-step flow (`Assign Firm` then `Firm Assigned` status selection) while preserving one-record-per-candidate+firm data model.
 - 02.26.2026 Plan Update: Mobile message composer visual language refined toward cleaner rounded iOS-style controls without changing core messaging backend behavior.
+
+## Repo Integration Plan Update (2026-02-27)
+- Added upstream remote `jeremy` (`JeremyKalfus/Zenith-Legal-App`) to this local workspace.
+- Next execution path: branch from `jeremy/main`, apply your UI style system first, then add missing features one-by-one with test checks per feature.

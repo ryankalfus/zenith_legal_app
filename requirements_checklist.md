@@ -579,3 +579,11 @@ Legend:
 
 ## Step Log
 - 2026-02-27: Added requirement coverage for targeted stale-candidate purge and safe UI fallback filtering.
+
+## Remove DOB + Age References (2026-02-27)
+- [x] `MVP` Removed Date of Birth fields from candidate profile setup and profile tab.
+- [x] `MVP` Removed all Age references/displays from admin candidate views.
+- [x] `Tech` Removed DOB from shared user domain/schema definitions and mobile profile write paths.
+
+## Step Log
+- 2026-02-27: Added requirement coverage for full DOB and Age removal.

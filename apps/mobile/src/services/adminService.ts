@@ -31,7 +31,6 @@ export type CandidateRow = {
   fullName?: string;
   email?: string;
   mobile?: string;
-  dateOfBirth?: string;
   jdDegreeDate?: string;
   avatarUrl?: string;
   avatarPath?: string;
@@ -112,7 +111,6 @@ function getProfileCompleteness(row: CandidateRow) {
   if (String(row.fullName ?? "").trim()) score += 1;
   if (String(row.mobile ?? "").trim()) score += 1;
   if (String(row.avatarUrl ?? "").trim()) score += 1;
-  if (String(row.dateOfBirth ?? "").trim()) score += 1;
   if (String(row.jdDegreeDate ?? "").trim()) score += 1;
   if (String(row.preferences?.practiceArea ?? "").trim()) score += 1;
   if ((row.preferences?.preferredCities ?? []).length > 0) score += 1;

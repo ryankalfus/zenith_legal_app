@@ -39,14 +39,12 @@ export async function updateCandidateProfile(
     mobile: string;
     preferredCities: string[];
     practiceArea: string;
-    dateOfBirth?: string;
     jdDegreeDate?: string;
   }
 ) {
   await updateDoc(doc(db, "users", uid), {
     fullName: payload.fullName,
     mobile: payload.mobile,
-    dateOfBirth: payload.dateOfBirth || deleteField(),
     jdDegreeDate: payload.jdDegreeDate || deleteField(),
     preferences: {
       preferredCities: payload.preferredCities,

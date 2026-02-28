@@ -52,7 +52,6 @@ export function CandidateProfileScreen() {
   const { session, logout } = useAuth();
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
   const [jdDegreeDate, setJdDegreeDate] = useState("");
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
@@ -70,7 +69,7 @@ export function CandidateProfileScreen() {
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [activeDatePicker, setActiveDatePicker] = useState<"dob" | "jd" | null>(null);
+  const [activeDatePicker, setActiveDatePicker] = useState<"jd" | null>(null);
 
   useEffect(() => {
     if (!session?.user.uid) {
@@ -85,7 +84,6 @@ export function CandidateProfileScreen() {
         const nextEmail = authEmail || storedEmail;
         setFullName(String(data?.fullName ?? ""));
         setMobile(String(data?.mobile ?? ""));
-        setDateOfBirth(String(data?.dateOfBirth ?? ""));
         setJdDegreeDate(String(data?.jdDegreeDate ?? ""));
         setAvatarUrl(String(data?.avatarUrl ?? ""));
         setAvatarPath(String(data?.avatarPath ?? ""));
@@ -111,10 +109,6 @@ export function CandidateProfileScreen() {
       Alert.alert("Display name required", "Please enter your display name.");
       return;
     }
-    if (dateOfBirth.trim() && !isIsoDate(dateOfBirth.trim())) {
-      Alert.alert("Invalid date of birth", "Use YYYY-MM-DD format.");
-      return;
-    }
     if (jdDegreeDate.trim() && !isIsoDate(jdDegreeDate.trim())) {
       Alert.alert("Invalid JD date", "Use YYYY-MM-DD format.");
       return;
@@ -125,7 +119,6 @@ export function CandidateProfileScreen() {
       await updateCandidateProfile(session.user.uid, {
         fullName: fullName.trim(),
         mobile: mobile.trim(),
-        dateOfBirth: dateOfBirth.trim() || undefined,
         jdDegreeDate: jdDegreeDate.trim() || undefined,
         preferredCities,
         practiceArea
@@ -136,13 +129,6 @@ export function CandidateProfileScreen() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const onDobChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (!selectedDate) {
-      return;
-    }
-    setDateOfBirth(formatIsoDate(selectedDate));
   };
 
   const onJdChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -365,25 +351,6 @@ export function CandidateProfileScreen() {
           placeholder="Phone number"
           placeholderTextColor="#7f8b9d"
         />
-
-        <Text style={styles.label}>Date of birth</Text>
-        <Pressable
-          style={[styles.pickButton, activeDatePicker === "dob" && styles.pickButtonActive]}
-          onPress={() => setActiveDatePicker((current) => (current === "dob" ? null : "dob"))}
-        >
-          <Text style={styles.pickLabel}>Date of birth</Text>
-          <Text style={styles.pickValue}>{formatDisplayDate(dateOfBirth)}</Text>
-        </Pressable>
-        {activeDatePicker === "dob" ? (
-          <View style={styles.inlinePickerWrap}>
-            <DateTimePicker
-              value={parseIsoDate(dateOfBirth) ?? new Date(1998, 0, 1)}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "spinner"}
-              onChange={onDobChange}
-            />
-          </View>
-        ) : null}
 
         <Text style={styles.label}>JD (Law) degree date (optional)</Text>
         <View style={styles.optionalPickerRow}>

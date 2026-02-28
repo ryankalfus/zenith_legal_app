@@ -24,7 +24,6 @@ export const userProfileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
   mobile: z.string().min(7),
-  dateOfBirth: z.string().optional(),
   jdDegreeDate: z.string().optional(),
   assignedHeaderEmail: z.string().email().optional(),
   assignedHeaderPhone: z.string().optional(),

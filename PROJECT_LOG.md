@@ -256,6 +256,8 @@
 - 02.27.2026: Removed drop shadows from mobile UI components by zeroing shared card shadow tokens and stripping explicit composer/FAB shadow styles for a fully flat look.
 - 02.27.2026: Added one-time targeted stale-candidate cleanup for legacy `ryan kLfus` record (`ryansamuelkalfus@gmail.com`) and wired it to run from admin Candidates screen; preserved `Ryan Kalfus` by exact normalized-name/email match guard.
 - 02.27.2026: Added candidate-list fallback guard to hide that exact legacy record immediately in UI even before deletion completes.
+- 02.27.2026: Removed candidate date-of-birth fields from profile setup/profile edit flows and stopped saving DOB data in mobile profile updates.
+- 02.27.2026: Removed all Age and DOB displays from admin candidate detail/profile views and shared mobile data models/schemas.
 - 02.27.2026: Flattened admin/candidate account action areas by un-nesting `Log out` + `Delete account` buttons from profile cards, and flattened Admin `Candidate Detail` + `Recruiter Detail` layouts by removing top-level `SurfaceCard` wrappers and grouped nested detail containers.
 - 02.27.2026: Switched app accent palette from blue to black across mobile + admin surfaces (theme primary/colors, buttons, selected chips, and message bubble accents) while preserving red/error and other explicit status color-coding.
 - 02.27.2026: Expanded shared-admin visibility so admin inbox no longer drops chat threads when candidate directory rows are missing, and aligned chat action to shared `Mark read` behavior instead of per-admin hidden thread state.
@@ -270,3 +272,4 @@
 - 02.27.2026: Deployed admin-sync callable fixes to production (`changeUserRole`, `syncOwnRoleFromProfile`) using fallback Firebase CLI v13 path after primary CLI attestation auth failures, so role self-heal is now live in `zenith-legal-dev`.
 - 02.27.2026: Added hard-stop admin sync protections: Firestore `isAdmin()` now accepts authenticated `@zenithlegal.com` accounts as admin fallback, `syncOwnRoleFromProfile` now auto-heals admin role for Zenith email accounts, and mobile admin role-change no longer silently falls back when callable sync fails (prevents half-synced promotions).
 - 02.27.2026: Deployed updated Firestore rules + updated `syncOwnRoleFromProfile` function to `zenith-legal-dev` using `firebase-tools@13.15.1`, so non-Mason admin/recruiter accounts stop hitting `insufficient permissions` due stale role sync.
+- 02.27.2026: Connected external upstream repo `JeremyKalfus/Zenith-Legal-App` as git remote `jeremy` and fetched all remote branches so we can apply your UI/features onto their codebase directly.

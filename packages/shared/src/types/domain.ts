@@ -30,7 +30,6 @@ export interface UserProfile {
   fullName: string;
   email: string;
   mobile: string;
-  dateOfBirth?: string;
   jdDegreeDate?: string;
   assignedHeaderEmail?: string;
   assignedHeaderPhone?: string;

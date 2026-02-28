@@ -45,17 +45,16 @@ export function ProfileSetupScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(session?.user.email ?? "");
   const [mobile, setMobile] = useState(session?.user.phoneNumber ?? "");
-  const [dateOfBirth, setDateOfBirth] = useState("");
   const [jdDegreeDate, setJdDegreeDate] = useState("");
   const [preferredCities, setPreferredCities] = useState<string[]>([]);
   const [practiceArea, setPracticeArea] = useState<string>(PRACTICE_AREAS[0]);
   const [photoFile, setPhotoFile] = useState<ProfilePhotoFile | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeDatePicker, setActiveDatePicker] = useState<"dob" | "jd" | null>(null);
+  const [activeDatePicker, setActiveDatePicker] = useState<"jd" | null>(null);
 
   const isValid = useMemo(() => {
-    return fullName.trim().length > 0 && email.trim().length > 0 && isIsoDate(dateOfBirth.trim());
-  }, [dateOfBirth, email, fullName]);
+    return fullName.trim().length > 0 && email.trim().length > 0;
+  }, [email, fullName]);
 
   const toggleCity = (city: string) => {
     setPreferredCities((prev) =>
@@ -76,14 +75,6 @@ export function ProfileSetupScreen() {
       Alert.alert("Email required", "Please enter your email.");
       return;
     }
-    if (!dateOfBirth.trim()) {
-      Alert.alert("Date of birth required", "Please select your date of birth.");
-      return;
-    }
-    if (!isIsoDate(dateOfBirth.trim())) {
-      Alert.alert("Invalid date of birth", "Use YYYY-MM-DD format.");
-      return;
-    }
     if (jdDegreeDate.trim() && !isIsoDate(jdDegreeDate.trim())) {
       Alert.alert("Invalid JD date", "Use YYYY-MM-DD format.");
       return;
@@ -95,7 +86,6 @@ export function ProfileSetupScreen() {
         fullName,
         email,
         mobile,
-        dateOfBirth: dateOfBirth.trim() || undefined,
         jdDegreeDate: jdDegreeDate.trim() || undefined,
         preferredCities,
         practiceArea
@@ -119,13 +109,6 @@ export function ProfileSetupScreen() {
         Alert.alert("Could not choose photo", error?.message ?? "Try again.");
       }
     );
-  };
-
-  const onDobChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (!selectedDate) {
-      return;
-    }
-    setDateOfBirth(formatIsoDate(selectedDate));
   };
 
   const onJdChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -164,25 +147,6 @@ export function ProfileSetupScreen() {
 
         <Text style={styles.label}>Mobile</Text>
         <TextInput style={styles.input} value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
-
-        <Text style={styles.label}>Date of birth</Text>
-        <Pressable
-          style={[styles.pickButton, activeDatePicker === "dob" && styles.pickButtonActive]}
-          onPress={() => setActiveDatePicker((current) => (current === "dob" ? null : "dob"))}
-        >
-          <Text style={styles.pickLabel}>Date of birth</Text>
-          <Text style={styles.pickValue}>{formatDisplayDate(dateOfBirth)}</Text>
-        </Pressable>
-        {activeDatePicker === "dob" ? (
-          <View style={styles.inlinePickerWrap}>
-            <DateTimePicker
-              value={parseIsoDate(dateOfBirth) ?? new Date(1998, 0, 1)}
-              mode="date"
-              display={Platform.OS === "ios" ? "inline" : "spinner"}
-              onChange={onDobChange}
-            />
-          </View>
-        ) : null}
 
         <Text style={styles.label}>JD (Law) degree date (optional)</Text>
         <View style={styles.optionalPickerRow}>

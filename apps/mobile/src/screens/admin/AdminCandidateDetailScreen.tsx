@@ -56,21 +56,6 @@ function formatShortDate(input?: string) {
   return parsed.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 
-function getAge(input?: string) {
-  const dob = parseIsoDate(input);
-  if (!dob) {
-    return "Not set";
-  }
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  const dayDiff = today.getDate() - dob.getDate();
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age -= 1;
-  }
-  return age >= 0 ? String(age) : "Not set";
-}
-
 function formatStatusUpdatedDate(input: unknown) {
   if (!input) {
     return "Not set";
@@ -368,18 +353,10 @@ export function AdminCandidateDetailScreen() {
             <Text style={styles.detailLabel}>Preferred cities</Text>
             <Text style={styles.detailValue}>{preferredCities || "None"}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Date of birth</Text>
-            <Text style={styles.detailValue}>{formatShortDate(String(candidate?.dateOfBirth ?? ""))}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Age</Text>
-            <Text style={styles.detailValue}>{getAge(String(candidate?.dateOfBirth ?? ""))}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>JD degree received</Text>
-            <Text style={styles.detailValue}>{formatShortDate(String(candidate?.jdDegreeDate ?? ""))}</Text>
-          </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>JD degree received</Text>
+              <Text style={styles.detailValue}>{formatShortDate(String(candidate?.jdDegreeDate ?? ""))}</Text>
+            </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Role</Text>
             <Pressable
